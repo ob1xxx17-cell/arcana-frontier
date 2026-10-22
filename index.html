@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>เกมการ์ด (ต้นแบบ)</title>
+<link rel="stylesheet" href="ui/style.css">
+</head>
+<body>
+<div id="lobby"></div>
+<div id="game" class="hidden"></div>
+<div id="overlayRoot"></div>
+<div id="toastRoot"></div>
+<!-- classic script ทั้งหมด เปิดด้วยดับเบิลคลิกได้ (CONTRACT ข้อ 3) ลำดับไม่สำคัญเพราะไม่เรียกกันตอนโหลด ยกเว้น app.js ท้ายสุดเพื่อเริ่มระบบ -->
+<script src="cards/dinosaur.js"></script>
+<script src="cards/aquila.js"></script>
+<script src="engine/core.js"></script>
+<script src="effects/runner.js"></script>
+<script src="effects/primitives_core.js"></script>
+  <script src="effects/primitives_combat.js"></script>
+<script src="effects/primitives_move.js"></script>
+<script src="engine/setup.js"></script>
+<script src="engine/turn.js"></script>
+<script src="engine/summon.js"></script>
+<script src="engine/battle.js"></script>
+<script src="engine/effectBridge.js"></script>
+<script src="engine/actions.js"></script>
+<script src="ui/strings_th.js"></script>
+<script src="ui/view.js"></script>
+<script src="ui/app.js"></script>
+</body>
+</html>
