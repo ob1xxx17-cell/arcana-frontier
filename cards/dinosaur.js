@@ -81,6 +81,32 @@
       "text": "(0) ฝูง: ถ้าคุมแรปเตอร์เล็กอีกตัว +400 ATK (1) เมื่อไดโนอื่นของเราถูกส่งไปสุสาน เรียกตัวเองจากมือ เทิร์นละ 1 ครั้ง",
       "effects": [
         {
+          "id": "pack_boost",
+          "trigger": "continuous",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "condition": [
+            {
+              "op": "controls",
+              "filter": {
+                "tag": "small_raptor"
+              },
+              "min": 2
+            }
+          ],
+          "do": [
+            {
+              "op": "modifyStat",
+              "aura": true,
+              "stat": "atk",
+              "target": "self",
+              "amount": 400
+            }
+          ]
+        },
+        {
           "id": "pack_summon",
           "trigger": "onSentToGrave",
           "speed": 1,
@@ -283,7 +309,46 @@
         "raptor"
       ],
       "text": "กินเหยื่อ: ทำลายแรปเตอร์เล็กของเรา 1 ตัว +800 ATK จนจบเทิร์น",
-      "effects": []
+      "effects": [
+        {
+          "id": "eat_prey",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 1
+          },
+          "condition": [
+            {
+              "op": "controls",
+              "filter": {
+                "cardId": "dino_small_raptor"
+              },
+              "min": 1
+            }
+          ],
+          "do": [
+            {
+              "op": "destroy",
+              "target": {
+                "side": "self",
+                "zone": "monster",
+                "filter": {
+                  "cardId": "dino_small_raptor"
+                },
+                "count": 1,
+                "choose": "player"
+              }
+            },
+            {
+              "op": "modifyStat",
+              "target": "self",
+              "stat": "atk",
+              "amount": 800,
+              "duration": "endTurn"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_anky",
@@ -350,7 +415,91 @@
         "dino"
       ],
       "text": "ราชาแห่งการกิน (3): เทิร์นละ 1 ครั้ง ทำลายไดโนของเรา 1 ตัว (ไม่ใช่ตัวเอง) +ครึ่งหนึ่งของ ATK ตัวนั้นถาวร เมื่อสำเร็จได้ +1 มานา; คำรามราชา (1): เทิร์นละ 1 ครั้ง ลด ATK ศัตรูทุกตัว 300 ถาวร แต่เร็กซ์โจมตีไม่ได้ในเทิร์นนี้",
-      "effects": []
+      "effects": [
+        {
+          "id": "eat_king",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 3
+          },
+          "limit": {
+            "per": "turn",
+            "key": "eat_king",
+            "count": 1
+          },
+          "condition": [
+            {
+              "op": "controls",
+              "filter": {
+                "tag": "dino"
+              },
+              "min": 2
+            }
+          ],
+          "do": [
+            {
+              "op": "destroy",
+              "target": {
+                "side": "self",
+                "zone": "monster",
+                "filter": {
+                  "tag": "dino"
+                },
+                "other": true,
+                "count": 1,
+                "choose": "player"
+              }
+            },
+            {
+              "op": "modifyStat",
+              "target": "self",
+              "stat": "atk",
+              "duration": "permanent",
+              "requireSuccess": true,
+              "amount": {
+                "fromResult": "atk",
+                "multiplier": 0.5
+              }
+            },
+            {
+              "op": "addMana",
+              "amount": 1,
+              "requireSuccess": true
+            }
+          ]
+        },
+        {
+          "id": "roar_king",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 1
+          },
+          "limit": {
+            "per": "turn",
+            "key": "roar_king",
+            "count": 1
+          },
+          "do": [
+            {
+              "op": "modifyStat",
+              "target": {
+                "side": "opp",
+                "zone": "monster"
+              },
+              "stat": "atk",
+              "amount": -300,
+              "duration": "permanent"
+            },
+            {
+              "op": "cannotAttack",
+              "target": "self",
+              "duration": "endTurn"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_spino",
@@ -395,6 +544,32 @@
               "count": 2
             }
           ]
+        },
+        {
+          "id": "royal_authority",
+          "trigger": "continuous",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "condition": [
+            {
+              "op": "mana",
+              "greaterThan": 5
+            }
+          ],
+          "do": [
+            {
+              "op": "cannotAttack",
+              "target": {
+                "side": "opp",
+                "zone": "monster",
+                "filter": {
+                  "atkBelowSource": true
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -411,7 +586,30 @@
         "dino"
       ],
       "text": "ไข่ไดโนของเราฟักได้ทันทีที่ลงสนาม",
-      "effects": []
+      "effects": [
+        {
+          "id": "nest_hatch",
+          "trigger": "onSummon",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "watch": {
+            "zone": "field",
+            "side": "self",
+            "filter": {
+              "tag": "egg"
+            }
+          },
+          "do": [
+            {
+              "op": "fireEffect",
+              "target": "watched",
+              "effectId": "hatch"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_dig",
@@ -462,7 +660,31 @@
         "dino"
       ],
       "text": "เลือกไข่ไดโนบนสนาม 1 ใบ ฟักทันที",
-      "effects": []
+      "effects": [
+        {
+          "id": "fast_hatch",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 1
+          },
+          "do": [
+            {
+              "op": "fireEffect",
+              "target": {
+                "side": "self",
+                "zone": "monster",
+                "filter": {
+                  "tag": "egg"
+                },
+                "count": 1,
+                "choose": "player"
+              },
+              "effectId": "hatch"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_call",
@@ -545,7 +767,40 @@
         "dino"
       ],
       "text": "ใช้มอนสเตอร์ไดโนจากมือหรือสนามตามที่ Fusion ระบุเป็นวัสดุ แล้วเรียก Fusion ไดโน 1 ใบจาก Extra Deck",
-      "effects": []
+      "effects": [
+        {
+          "id": "fusion_summon",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 2
+          },
+          "condition": [
+            {
+              "op": "canFusionSummon",
+              "filter": {
+                "tag": "dino"
+              },
+              "materialsFrom": [
+                "hand",
+                "monster"
+              ]
+            }
+          ],
+          "do": [
+            {
+              "op": "fusionSummon",
+              "filter": {
+                "tag": "dino"
+              },
+              "materialsFrom": [
+                "hand",
+                "monster"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_extinct",
@@ -600,7 +855,23 @@
         "dino"
       ],
       "text": "ใช้จากมือ ต้องส่งไดโนบนสนาม 1 ตัวไปสุสาน ยกเลิกการเปิดเอฟเฟกต์มอนสเตอร์ศัตรู 1 ครั้ง",
-      "effects": []
+      "effects": [
+        {
+          "id": "roar_negate",
+          "trigger": "quick",
+          "speed": 3,
+          "timingWindow": ["anyActivation"],
+          "cost": { "mana": 2 },
+          "condition": [
+            { "op": "controls", "filter": { "tag": "dino" }, "min": 1 },
+            { "op": "targetLink", "side": "opp" }
+          ],
+          "do": [
+            { "op": "sendToGrave", "target": { "side": "self", "zone": "monster", "filter": { "tag": "dino" }, "count": 1, "choose": "player" } },
+            { "op": "negate", "requireSuccess": true }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_escape",
@@ -615,7 +886,22 @@
         "dino"
       ],
       "text": "ใช้จากมือ เมื่อไดโนของเราถูกโจมตี เปลี่ยนเป็นท่าป้องกันและ DEF +800 จนจบเทิร์น",
-      "effects": []
+      "effects": [
+        {
+          "id": "escape_def",
+          "trigger": "quick",
+          "speed": 3,
+          "timingWindow": ["attackDeclared"],
+          "cost": { "mana": 1 },
+          "condition": [
+            { "op": "attackTarget", "side": "self", "filter": { "tag": "dino" } }
+          ],
+          "do": [
+            { "op": "changePosition", "target": "attacked", "position": "def" },
+            { "op": "modifyStat", "target": "attacked", "stat": "def", "amount": 800, "duration": "endTurn" }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_mud",
@@ -630,7 +916,22 @@
         "dino"
       ],
       "text": "เมื่อศัตรูประกาศโจมตี มอนสเตอร์ตัวนั้นถูกบังคับเป็นท่าป้องกัน โจมตีไม่ได้ในเทิร์นนี้",
-      "effects": []
+      "effects": [
+        {
+          "id": "mud_trap",
+          "trigger": "quick",
+          "speed": 2,
+          "timingWindow": ["attackDeclared"],
+          "cost": { "mana": 1 },
+          "condition": [
+            { "op": "attackDeclaredByOpp" }
+          ],
+          "do": [
+            { "op": "changePosition", "target": "attacker", "position": "def" },
+            { "op": "cannotAttack", "target": "attacker", "duration": "endTurn" }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_hidden_egg",
@@ -645,7 +946,21 @@
         "dino"
       ],
       "text": "เมื่อไดโนของเราถูกทำลาย เรียกไข่ไดโนจากเด็ค 1 ใบ",
-      "effects": []
+      "effects": [
+        {
+          "id": "hidden_egg_summon",
+          "trigger": "quick",
+          "speed": 2,
+          "timingWindow": ["monsterDestroyed"],
+          "cost": { "mana": 1 },
+          "condition": [
+            { "op": "destroyedMonster", "side": "self", "filter": { "tag": "dino" } }
+          ],
+          "do": [
+            { "op": "specialSummon", "from": ["deck"], "filter": { "cardId": "dino_egg" }, "count": 1 }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_pack_hunt",
@@ -660,7 +975,21 @@
         "dino"
       ],
       "text": "เมื่อศัตรูประกาศโจมตี เรียกแรปเตอร์เล็ก 2 ตัวจากเด็ค/สุสาน",
-      "effects": []
+      "effects": [
+        {
+          "id": "pack_hunt_summon",
+          "trigger": "quick",
+          "speed": 2,
+          "timingWindow": ["attackDeclared"],
+          "cost": { "mana": 2 },
+          "condition": [
+            { "op": "attackDeclaredByOpp" }
+          ],
+          "do": [
+            { "op": "specialSummon", "from": ["deck", "grave"], "filter": { "cardId": "dino_small_raptor" }, "count": 2 }
+          ]
+        }
+      ]
     }
   ],
   "extra": [
@@ -673,13 +1002,71 @@
       "def": 1800,
       "mana": "0",
       "materials": "ไทแรนโนซอรัสเร็กซ์ + แรปเตอร์นักล่า (จากมือหรือสนาม)",
+      "materialSlots": [
+        { "cardId": "dino_trex" },
+        { "cardId": "dino_hunter_raptor" }
+      ],
       "proposed_level": false,
       "tags": [
         "dino",
         "raptor"
       ],
       "text": "ล่าเหยื่อ (2): เมื่อเรียกสำเร็จ ทำลายมอนสเตอร์ศัตรู 1 ตัว และ ATK +500 ถาวร; ล่าอย่างไม่หยุด (0): เมื่อทำลายมอนสเตอร์ศัตรูในการต่อสู้ ATK +500 ถาวร และโจมตีได้อีก 1 ครั้ง เทิร์นละ 1 ครั้ง",
-      "effects": []
+      "effects": [
+        {
+          "id": "hunt_prey",
+          "trigger": "onSummon",
+          "speed": 1,
+          "cost": {
+            "mana": 2
+          },
+          "do": [
+            {
+              "op": "destroy",
+              "target": {
+                "side": "opp",
+                "zone": "monster",
+                "count": 1,
+                "choose": "player"
+              }
+            },
+            {
+              "op": "modifyStat",
+              "target": "self",
+              "stat": "atk",
+              "amount": 500,
+              "duration": "permanent"
+            }
+          ]
+        },
+        {
+          "id": "hunt_endless",
+          "trigger": "onBattleDestroy",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "limit": {
+            "per": "turn",
+            "key": "hunt_endless",
+            "count": 1
+          },
+          "do": [
+            {
+              "op": "modifyStat",
+              "target": "self",
+              "stat": "atk",
+              "amount": 500,
+              "duration": "permanent"
+            },
+            {
+              "op": "extraAttack",
+              "target": "self",
+              "count": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_raptor_swarm",
@@ -690,6 +1077,10 @@
       "def": 1000,
       "mana": "0",
       "materials": "มอนสเตอร์ชื่อมีคำว่า แรปเตอร์ 1 ตัว + มอนสเตอร์ Lv1 1 ตัว",
+      "materialSlots": [
+        { "tag": "raptor" },
+        { "level": 1 }
+      ],
       "proposed_level": false,
       "tags": [
         "dino",
@@ -729,12 +1120,48 @@
       "def": 3000,
       "mana": "0",
       "materials": "มอนสเตอร์ไดโน Lv2 2 ตัวที่ชื่อต่างกัน",
+      "materialSlots": [
+        { "tag": "dino", "level": 2 },
+        { "tag": "dino", "level": 2 }
+      ],
+      "distinctNames": true,
+      "materialConstraint": {
+        "distinctNames": true
+      },
       "proposed_level": false,
       "tags": [
         "dino"
       ],
       "text": "เงาทอดยาว (0): ฝ่ายตรงข้ามต้องโจมตีมอนสเตอร์นี้ก่อนตัวอื่น; กินยอดไม้สูง (0): ไม่ถูกทำลายจากการต่อสู้ขณะอยู่ในท่าป้องกัน",
-      "effects": []
+      "effects": [
+        {
+          "id": "shadows",
+          "trigger": "continuous",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "do": [
+            {
+              "op": "restrictAttack",
+              "target": "self"
+            },
+            {
+              "op": "preventDestruction",
+              "condition": [
+                {
+                  "op": "selfPosition",
+                  "position": "def"
+                },
+                {
+                  "op": "cause",
+                  "cause": "battle"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dino_mega_tyrant",
@@ -749,8 +1176,47 @@
       "tags": [
         "dino"
       ],
+      "extraSummon": {
+        "onto": {
+          "tag": "dino"
+        },
+        "cost": [
+          {
+            "op": "returnToDeck",
+            "target": {
+              "side": "self",
+              "zone": "grave",
+              "filter": {
+                "cardId": "dino_egg"
+              },
+              "count": 3
+            },
+            "shuffle": true
+          }
+        ]
+      },
+      "immune": {
+        "source": "spell"
+      },
       "text": "เงื่อนไข: เอาไข่ไดโน 3 ใบจากสุสานกลับเข้าเด็ค (สับเด็ค) แล้วเรียกลงทับมอนสเตอร์ไดโนของเรา 1 ตัว เอฟเฟกต์ (0): ไม่รับผลของการ์ดสเปลทุกใบ จบเทิร์น: กลับ Extra Deck และทำลายมอนสเตอร์ที่ถูกทับอยู่ใต้มัน (ข้อสมมติ ยังไม่ยืนยัน)",
-      "effects": []
+      "effects": [
+        {
+          "id": "destroy_under_on_end",
+          "trigger": "onEndPhase",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "do": [
+            {
+              "op": "destroy",
+              "target": {
+                "zone": "under"
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 };

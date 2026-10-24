@@ -9,9 +9,10 @@ const cardDef = id => ALL().find(c => c.id === id);
 const eff = (id, i) => cardDef(id).effects[i || 0];
 const ids = list => list.filter(Boolean).map(c => c.cardId);
 const TRIGGERS = ['ignition', 'quick', 'continuous', 'onSummon', 'onFlip', 'onOverlay', 'onStandby', 'onEndPhase',
-  'onAttackDeclared', 'onBattleDestroy', 'onDestroyed', 'onSentToGrave', 'onTributed', 'onNormalSummon', 'onAttacked', 'onBattleDestroyed'];
+  'onAttackDeclared', 'onBattleDestroy', 'onDestroyed', 'onSentToGrave', 'onTributed', 'onNormalSummon', 'onAttacked', 'onBattleDestroyed', 'overlay'];
 const WITH_EFFECTS = ['aq_sagittarius', 'aq_gladiator', 'aq_consul', 'aq_armory', 'aq_war', 'aq_scutatus', 'aq_explorator',
-  'aq_centurion', 'aq_castra', 'aq_imperator', 'aq_recruit', 'aq_muster', 'aq_tiro', 'aq_assault'];   // 2 ใบแรกเพิ่มใน 4E-2A, 7 ใบหลังเพิ่มใน 4E-2B
+  'aq_centurion', 'aq_castra', 'aq_imperator', 'aq_recruit', 'aq_muster', 'aq_tiro', 'aq_assault',
+  'aq_shield_wall', 'aq_retreat', 'aq_pit', 'aq_triumph', 'aq_spear', 'aq_hastatus'];   // 5C: 4 ใบ, 6A: aq_spear (overlay), 6D: aq_hastatus
 const NO_EFFECT_BY_DESIGN = ['aq_eques', 'aq_dictator'];   // ข้อความการ์ด: "ไม่มีเอฟเฟกต์" / "เอฟเฟกต์: ยังไม่กำหนด"
 
 module.exports = [

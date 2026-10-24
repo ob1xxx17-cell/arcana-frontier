@@ -19,8 +19,18 @@
     const m = me.monsters[a.from];
     if (!m) return 'NO_MONSTER';
     if (m.faceDown || m.position !== 'atk') return 'NOT_ATTACK_POSITION';
-    if (m.flags.attackedThisTurn) return 'ALREADY_ATTACKED';
-    if (!m.flags.canAttack) return 'CANNOT_ATTACK';
+    const maxAttacks = 1 + (m.extraAttacksTurn === state.turn ? (m.extraAttacks || 0) : 0);
+    const attacksDone = (m.attacksTurn === state.turn ? (m.attacksThisTurn || 0) : (m.flags.attackedThisTurn ? 1 : 0));
+    if (attacksDone >= maxAttacks) return 'ALREADY_ATTACKED';
+    if (E.canMonsterAttack ? !E.canMonsterAttack(state, m) : !m.flags.canAttack) return 'CANNOT_ATTACK';
+    // 4E-2C-1: ถ้าฝ่ายตรงข้ามมีมอนสเตอร์ที่ติด restrictAttack ต้องเลือกเป้านั้นก่อน
+    const restrictedSlots = [];
+    opp.monsters.forEach((om, s) => {
+      if (om && !om.faceDown && E.isRestrictedTarget && E.isRestrictedTarget(state, om)) restrictedSlots.push(s);
+    });
+    if (restrictedSlots.length > 0) {
+      if (a.to === null || !restrictedSlots.includes(a.to)) return 'MUST_ATTACK_RESTRICTED';
+    }
     if (a.to === null) return opp.monsters.some(Boolean) ? 'MUST_ATTACK_MONSTER' : null;
     if (!Number.isInteger(a.to) || a.to < 0 || a.to >= n || !opp.monsters[a.to]) return 'INVALID_TARGET';
     return null;
@@ -30,7 +40,11 @@
     const err = E.validateAttack(state, a); if (err) return err;
     const me = state.players[a.player], opp = state.players[1 - a.player];
     const m = me.monsters[a.from];
-    m.flags.attackedThisTurn = true;
+    const maxAttacks = 1 + (m.extraAttacksTurn === state.turn ? (m.extraAttacks || 0) : 0);
+    const attacksDone = (m.attacksTurn === state.turn ? (m.attacksThisTurn || 0) : (m.flags.attackedThisTurn ? 1 : 0));
+    m.attacksTurn = state.turn;
+    m.attacksThisTurn = attacksDone + 1;
+    m.flags.attackedThisTurn = m.attacksThisTurn >= maxAttacks;
     state.attack = {
       player: a.player, from: a.from, to: a.to, attackerUid: m.uid,
       targetUid: a.to === null ? null : opp.monsters[a.to].uid, destroyed: []
@@ -55,6 +69,7 @@
   function enterStep(state, events, step) {
     state.battleStep = step;
     const at = state.attack;
+    if (at && at.negated) return endAttack(state);
     const me = state.players[at.player], opp = state.players[1 - at.player];
     const attacker = me.monsters[at.from];
     const target = at.to === null ? null : opp.monsters[at.to];
@@ -94,15 +109,26 @@
         for (const p of state.players) for (const z of ['grave', 'extra']) for (const c of p[z]) if (c.uid === vUid) v = c;
         if (v) E.fire(state, events, 'onBattleDestroyed', { source: v, killerUid: kUid });
       }
+      if (!state.ended && killers.length > 0 && state.config && state.config.chainMode) {
+        let k = null;
+        for (const p of state.players) for (const m of p.monsters) if (m && m.uid === killers[0][0]) k = m;
+        if (k && E.openWindow(state, events, { kind: 'battleWon', player: k.controller, killerUid: killers[0][0], victimUid: killers[0][1] })) {
+          return;
+        }
+      }
       return endAttack(state);
     }
 
-    if (WINDOWED[step] && E.openWindow(state, events, { kind: 'battle', step })) return; // หยุดรอ pending
+    if (WINDOWED[step]) {
+      if (E.openWindow(state, events, { kind: 'battle', step })) return; // หยุดรอ pending
+    }
     enterStep(state, events, STEPS[STEPS.indexOf(step) + 1]);
   }
 
   E.battleResume = function (state, events) {
     if (!state.attack) return;
+    if (state.attack.negated) return endAttack(state);
+    if (state.battleStep === 'afterDamage') return endAttack(state);
     enterStep(state, events, STEPS[STEPS.indexOf(state.battleStep) + 1]);
   };
 
@@ -110,7 +136,7 @@
   function calc(state, events, at, attacker, target, me, opp) {
     const A = E.atk(attacker);
     if (!target) { E.changeLp(state, events, opp.idx, -A, 'battle'); return; }       // โจมตีตรง
-    const kill = (pIdx, slot, uid) => { E.destroyMonster(state, events, pIdx, slot, 'battle'); at.destroyed.push(uid); };
+    const kill = (pIdx, slot, uid) => { const killed = E.destroyMonster(state, events, pIdx, slot, 'battle'); if (killed) at.destroyed.push(uid); };
     if (target.position === 'atk') {
       const D = E.atk(target);
       if (A > D) { kill(opp.idx, at.to, target.uid); E.changeLp(state, events, opp.idx, -(A - D), 'battle'); }

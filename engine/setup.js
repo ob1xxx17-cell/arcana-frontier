@@ -39,6 +39,11 @@
 
   E.createGame = function (opts) {
     opts = opts || {};
+    // 5D: เกมจริง (มี mode) เปิด autoChoose=false, chainMode=true เป็นค่าเริ่มต้น
+    // เทสต์ที่ไม่ได้ส่ง mode จะได้ค่าเริ่มต้นเดิม (autoChoose=true, chainMode=false)
+    if (opts.mode) {
+      opts.config = Object.assign({ autoChoose: false, chainMode: true }, opts.config);
+    }
     const state = E.buildState(opts);
     const events = [];
     state.players.forEach(p => { for (let i = 0; i < state.config.startHand; i++) E.drawCard(state, events, p.idx, false); });

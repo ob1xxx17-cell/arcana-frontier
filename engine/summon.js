@@ -70,7 +70,11 @@
     if (p.flags.tributeSummonUsed) return 'TRIBUTE_SUMMON_USED';
     const mats = a.materials;
     if (!Array.isArray(mats) || !mats.length || new Set(mats).size !== mats.length) return 'MATERIAL_INVALID';
-    for (const s of mats) if (!slotOk(state, s) || !p.monsters[s]) return 'MATERIAL_INVALID';
+    for (const s of mats) {
+      if (!slotOk(state, s) || !p.monsters[s]) return 'MATERIAL_INVALID';
+      const mDef = E.cardOf(p.monsters[s]);
+      if (mDef && mDef.noTribute) return 'MATERIAL_INVALID';
+    }
     const e2 = E.checkTributeMaterials(c.level, mats.map(s => p.monsters[s].level));
     if (e2) return e2;
     if (!slotOk(state, a.slot)) return 'INVALID_SLOT';
@@ -133,7 +137,7 @@
     events.push({ type: 'positionChange', uid: m.uid, position: 'atk', faceDown: false });
     events.push({ type: 'summon', player: a.player, uid: m.uid, slot: a.slot, how: 'flip' });
     E.fire(state, events, 'onFlip', { source: m });
-    E.openWindow(state, events, { kind: 'summon', uid: m.uid });
+    E.openWindow(state, events, { kind: 'flip', uid: m.uid });
     return null;
   };
   E.validateChangePosition = function (state, a) {

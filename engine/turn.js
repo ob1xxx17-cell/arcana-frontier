@@ -128,7 +128,7 @@
         const m = p.monsters[s]; if (!m) continue;
         m.tempAtkMod = 0; m.tempDefMod = 0;
         const def = E.cardOf(m);
-        if (def && def.type === 'grade4') E.leaveField(state, events, p.idx, s, 'extra');
+        if (def && def.type === 'grade4') E.leaveField(state, events, p.idx, s, 'extra', { keepUnder: true });
       }
     }
     for (const p of state.players) {

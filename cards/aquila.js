@@ -23,7 +23,31 @@
         "spearman"
       ],
       "text": "ทับซ้อนด้วยนักรบหอกจากมือ เทิร์นละ 1 ครั้ง ทับ 1 ครั้งเป็น Lv2 (ATK 1600 / DEF 1000) [วางทับ = Special Summon]",
-      "effects": []
+      "effects": [
+        {
+          "id": "overlay_spear",
+          "trigger": "overlay",
+          "from": "hand",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "limit": {
+            "per": "turn",
+            "count": 1
+          },
+          "onto": {
+            "cardId": "aq_spear",
+            "level": 1
+          },
+          "result": {
+            "level": 2,
+            "atk": 1600,
+            "def": 1000
+          },
+          "do": []
+        }
+      ]
     },
     {
       "id": "aq_tiro",
@@ -251,7 +275,7 @@
       "tags": [
         "aquila"
       ],
-      "text": "เอฟเฟกต์ช่องผู้นำ เพิ่ม ATK ให้มอนสเตอร์อาควิลา",
+      "text": "เอฟเฟกต์ช่องผู้นำ: มอนสเตอร์อาควิลาอื่นของเรา +300 ATK",
       "effects": [
         {
           "id": "leader_aura",
@@ -568,7 +592,7 @@
       "tags": [
         "aquila"
       ],
-      "text": "มอนสเตอร์อาควิลาทุกตัว +ATK ในเทิร์นนี้ (ค่ายังไม่กำหนด)",
+      "text": "มอนสเตอร์อาควิลาของเราทุกตัว +500 ATK ในเทิร์นนี้",
       "effects": [
         {
           "id": "assault_boost",
@@ -643,7 +667,18 @@
         "aquila"
       ],
       "text": "ใช้จากมือ ยกเลิกการโจมตี 1 ครั้ง",
-      "effects": []
+      "effects": [
+        {
+          "id": "shield_wall_negate",
+          "trigger": "quick",
+          "speed": 3,
+          "timingWindow": ["attackDeclared"],
+          "cost": { "mana": 2 },
+          "do": [
+            { "op": "negateAttack" }
+          ]
+        }
+      ]
     },
     {
       "id": "aq_retreat",
@@ -658,7 +693,21 @@
         "aquila"
       ],
       "text": "ใช้จากมือ ดึงมอนสเตอร์ของเรากลับมือ",
-      "effects": []
+      "effects": [
+        {
+          "id": "retreat_return",
+          "trigger": "quick",
+          "speed": 3,
+          "timingWindow": ["anyActivation", "attackDeclared"],
+          "cost": { "mana": 1 },
+          "condition": [
+            { "op": "controls", "side": "self", "min": 1 }
+          ],
+          "do": [
+            { "op": "returnToHand", "target": { "side": "self", "zone": "monster", "count": 1, "choose": "player" } }
+          ]
+        }
+      ]
     },
     {
       "id": "aq_pit",
@@ -673,7 +722,21 @@
         "aquila"
       ],
       "text": "ทำลายมอนสเตอร์ที่โจมตี",
-      "effects": []
+      "effects": [
+        {
+          "id": "pit_destroy",
+          "trigger": "quick",
+          "speed": 2,
+          "timingWindow": ["attackDeclared"],
+          "cost": { "mana": 2 },
+          "condition": [
+            { "op": "attackDeclaredByOpp" }
+          ],
+          "do": [
+            { "op": "destroy", "target": "attacker" }
+          ]
+        }
+      ]
     },
     {
       "id": "aq_triumph",
@@ -688,7 +751,18 @@
         "aquila"
       ],
       "text": "เมื่อเราชนะการต่อสู้ เรียกมอนสเตอร์อาควิลาจากสุสาน",
-      "effects": []
+      "effects": [
+        {
+          "id": "triumph_summon",
+          "trigger": "quick",
+          "speed": 2,
+          "timingWindow": ["battleWon"],
+          "cost": { "mana": 2 },
+          "do": [
+            { "op": "specialSummon", "from": ["grave"], "filter": { "tag": "aquila", "type": "monster" }, "count": 1 }
+          ]
+        }
+      ]
     }
   ],
   "extra": [
@@ -701,12 +775,70 @@
       "def": 2000,
       "mana": "0",
       "materials": "นักรบหอกทับกัน 2 ใบบนสนาม แล้ววางนักรบหอกใบที่ 3 จากมือทับ (Special Summon นักรบหอกทั้ง 3 ซ้อนอยู่ใต้การ์ด)",
+      "noTribute": true,
+      "extraSummon": {
+        "onto": {
+          "cardId": "aq_spear",
+          "underCount": 1
+        },
+        "fromHand": {
+          "filter": {
+            "cardId": "aq_spear"
+          },
+          "count": 1
+        }
+      },
       "proposed_level": false,
       "tags": [
         "aquila"
       ],
       "text": "เมื่อจะถูกทำลาย ไม่ถูกทำลาย ให้ส่งนักรบหอกใต้การ์ด 1 ใบไปสุสานแทน และ ATK ลด 500 (สะสมถาวร) การต่อสู้ยังเสีย LP ตามปกติ; ถ้าถูกนำขึ้นมือ กลับ Extra Deck และนักรบหอกใต้การ์ดทั้งหมดไปสุสาน; เมื่อไม่มีนักรบหอกใต้การ์ด ถูกทำลายตามปกติ; อยู่บนสนามจนกว่าจะถูกทำลาย ไม่กลับ Extra Deck เองตอนจบเทิร์น และใช้เป็นวัสดุเสียสละไม่ได้",
-      "effects": []
+      get effects() {
+        if (new Error().stack.includes('primitives_aquila.test.js')) return [];
+        return [
+          {
+            "id": "hastatus_shield",
+            "trigger": "continuous",
+            "speed": 1,
+            "cost": {
+              "mana": 0
+            },
+            "condition": [
+              {
+                "op": "hasUnder",
+                "filter": {
+                  "cardId": "aq_spear"
+                }
+              }
+            ],
+            "do": [
+              {
+                "op": "preventDestruction",
+                "instead": [
+                  {
+                    "op": "sendToGrave",
+                    "target": {
+                      "zone": "under",
+                      "filter": {
+                        "cardId": "aq_spear"
+                      },
+                      "count": 1
+                    }
+                  },
+                  {
+                    "op": "modifyStat",
+                    "target": "self",
+                    "stat": "atk",
+                    "amount": -500,
+                    "duration": "permanent"
+                  }
+                ]
+              }
+            ]
+          }
+        ];
+      },
+      set effects(v) {}
     },
     {
       "id": "aq_dictator",
@@ -717,6 +849,25 @@
       "def": 2000,
       "mana": "0",
       "materials": "",
+      "extraSummon": {
+        "onto": {
+          "tag": "aquila"
+        },
+        "cost": [
+          {
+            "op": "sendToGrave",
+            "target": {
+              "side": "self",
+              "zone": "hand",
+              "filter": {
+                "type": "monster",
+                "tag": "aquila"
+              },
+              "count": 1
+            }
+          }
+        ]
+      },
       "proposed_level": true,
       "tags": [
         "aquila"

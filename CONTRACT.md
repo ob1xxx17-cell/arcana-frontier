@@ -1,4 +1,4 @@
-# CONTRACT.md — ข้อตกลงกลางโปรเจกต์เกมการ์ด (v0.3)
+# CONTRACT.md — ข้อตกลงกลางโปรเจกต์เกมการ์ด (v0.8)
 
 ไฟล์นี้คือ "ภาษากลาง" ของทุกแชท อ่านก่อนทำงานทุกครั้ง
 
@@ -305,7 +305,7 @@ effects: [{
 | `extraAttack` {count} | โจมตีเพิ่ม |
 | `restrictAttack` {target} | ห้ามโจมตี |
 
-**สถานะชิ้นส่วน (อัปเดต v0.3):** ทำแล้ว 12 ตัว = `draw`, `addMana`, `modifyStat`, `destroy`, `sendToGrave`, `damage`, `heal`, `preventDestruction` (ผ่านเงื่อนไขใน `destroy`), `search`, `specialSummon`, `returnToHand`, `returnToDeck`, `banish` ที่ยังไม่ทำ: `negate` (ทำพร้อม Chain ขั้น 5), `extraAttack`, `restrictAttack`
+**สถานะชิ้นส่วน (อัปเดต v0.4 — ปิดขั้น 4):** ทำแล้ว = `draw`, `addMana`, `modifyStat` (ปกติ/ถาวร/endTurn/continuous aura/ค่าตามสัดส่วน), `destroy`, `sendToGrave`, `damage`, `heal`, `preventDestruction` (มีเงื่อนไขได้), `search` (distinctName), `specialSummon` (self), `returnToHand`, `returnToDeck`, `banish`, `choice`, `reduceCost`, `changePosition`, `extraAttack`, `restrictAttack` (บังคับให้ตีตัวนี้ก่อน), `cannotAttack`, `fireEffect` ที่ยังไม่ทำ: `negate`/`negateAttack` และเอฟเฟกต์สเปลคว่ำ/สวนกลับ (ขั้น 5), วางทับ/Fusion/Grade 4 (ขั้น 6) รายละเอียดชิ้นส่วนใหม่ดูหัวข้อ 10-ก ด้านล่าง
 
 **พารามิเตอร์ที่ชิ้นส่วนรองรับจริง**
 - `search` {from, filter, to, count} ไม่ได้มานา ไม่สับเด็ค
@@ -320,12 +320,78 @@ effects: [{
 
 ---
 
-## 11. บอท
+
+### 10-ก. ชิ้นส่วนและกติกาที่เพิ่มในขั้น 4E (v0.4)
+(รับตามคำตัดสินของแชทกติกา ตัวอย่างรูปแบบและชื่อพารามิเตอร์ละเอียดอยู่ใน CONTRACT_PROPOSALS.md หัวข้อ 4E-2A ถึง 4E-4 ซึ่งเก็บเป็นเอกสารอ้างอิง ถ้าขัดกับข้อนี้ ให้ข้อนี้ชนะ)
+
+**Trigger ใหม่ (4E-2A)**
+| trigger | ยิงเมื่อ | ctx |
+|---|---|---|
+| `onTributed` | ตัวที่ถูกใช้เป็นวัสดุเสียสละตอนอัญเชิญแบบเสียสละ (ไม่นับวัสดุ Fusion/วางทับ) ยิงหลังตัวเรียกลงสนาม แล้ว `onSentToGrave` ของวัสดุยิงตามปกติ | source, summonedUid |
+| `onNormalSummon` | อัญเชิญปกติสำเร็จ (ไม่ยิงตอน Set คว่ำหรืออัญเชิญพิเศษ) | source, how (`normal`/`tribute`) |
+| `onAttacked` | ประกาศโจมตีมีเป้าเป็นมอนสเตอร์หงาย ไม่ว่าท่าไหน (ไม่ยิงโจมตีตรงหรือเป้าคว่ำ) | source, attackerUid |
+| `onBattleDestroyed` | ตัวที่ถูกทำลายจากการต่อสู้ (ไม่ยิงถ้าตายด้วยเอฟเฟกต์) | source, killerUid |
+watcher "การ์ดอื่นของเราถูกส่งไปสุสาน" ใช้ `onSentToGrave` เดิม + `watch.other:true` + filter
+
+**Condition ใหม่:** `inLeaderSlot`, `controls {side?, filter, min?}` (นับเฉพาะหงาย), `hasUnder {filter?, min?}`, `mana {greaterThan|lessThan|min|max|equals, side?}`
+**Filter/selector ใหม่:** `atkBelowSource`, `pick:"lowestAtk"` (เสมอกันได้ทุกตัว), `other:true`, `zone:"under"`
+**Op/พารามิเตอร์ใหม่:**
+- continuous aura: `trigger:"continuous"` + `modifyStat {aura:true}` มีผลขณะต้นทางหงายบนสนามและ condition จริง เก็บใน `inst.auraAtk/auraDef` (คำนวณซ้ำได้ ไม่ใช่ atkMod)
+- ค่าตามสัดส่วน: `amount` เป็นออบเจกต์ (นับการ์ดตามตัวกรอง × multiplier + base) ใช้กับ modifyStat/damage/heal
+- ผลลัพธ์ op ก่อนหน้า: `fromResult:"atk"` + `multiplier` (ปัดลง) และ `requireSuccess` ถ้า op ก่อนหน้าไม่สำเร็จ op นี้ไม่ทำงาน
+- `search {distinctName:true}`, `specialSummon {self:true}`, `choice {options,pick?}` (ชั่วคราว: engine เลือกข้อแรกที่ทำได้ ขั้น 5 เปลี่ยนเป็น pending), `reduceCost {filter,amount}` (ลดเอฟเฟกต์มอนสเตอร์ cost>0 ตาม limit)
+- `preventDestruction` มี condition ได้ (ไม่จริง = ถูกทำลายตามปกติ) และ `instead` ใช้ `zone:"under"` ได้
+- `changePosition {target, position:"atk"|"def"|"toggle"}`, `extraAttack {target,count}`
+- `restrictAttack {target,duration}` = **ฝ่ายตรงข้ามต้องเลือกตีตัวที่ติดสถานะนี้ก่อน** (ยกเลิกความหมาย "ห้ามโจมตี" เดิมของ v0.3): ติดหลายตัวเลือกตีตัวไหนก็ได้ในกลุ่ม, ท่าป้องกันหงายยังมีผล ตัวคว่ำไม่มีผล, ถ้าตัวติดสถานะตกเป็นเป้าไม่ได้ให้ตีตัวอื่นได้, ห้ามโจมตีตรงขณะมี, รหัส error `MUST_ATTACK_RESTRICTED`
+- `cannotAttack {target, duration:"endTurn"|"permanent"|"whileSource"}` = มอนสเตอร์เป้าหมายประกาศโจมตีไม่ได้ (รวมโจมตีตรง) รหัส error `CANNOT_ATTACK` และ getLegalActions ไม่เสนอ
+- `fireEffect {target, effectId}` = รันเอฟเฟกต์ของการ์ดอื่นทันทีโดยข้ามเงื่อนไขจังหวะ trigger แต่ยังจ่าย cost และเคารพ limit ของเอฟเฟกต์นั้น
+
+**ข้อ 7 เพิ่ม:** `activateEffect {player, handIdx, effectId}` ใช้เอฟเฟกต์มอนสเตอร์จากมือ (เอฟเฟกต์ต้องประกาศ `from:"hand"`, ค่าเริ่มต้น `"field"`) รหัสใหม่ `WRONG_ZONE`, `NOT_MONSTER`, `INVALID_HAND_INDEX`
+**ข้อ 1 เพิ่ม:** `leaderSlot: 2` (ช่องผู้นำของมอนสเตอร์ 5 ช่อง; ถ้าไม่มีใน config โค้ดใช้ floor(ช่อง/2))
+
+**ค้างไปขั้น 6 (พร้อมวางทับ/Fusion):** `E.destroyMonster` (ทำลายจากต่อสู้) ต้องตรวจ `preventDestruction`, `moveTo` ต้องแยกปลายทางตัวใต้, ฟิวชันไม่กลับ Extra เองตอนจบเทิร์นและห้ามเป็นวัสดุเสียสละ (ฮาสตาตัส, ส่วนกินยอดไม้ของบราคิโอ)
+
+
+### 10-ข. ระบบ pending และ Chain (ขั้น 5, v0.5)
+(รายละเอียดเต็มและรูปข้อมูลอยู่ใน CONTRACT_PROPOSALS.md หัวข้อ 5A ถึง 5D เก็บเป็นเอกสารอ้างอิง ถ้าขัดกับข้อนี้ ให้ข้อนี้ชนะ)
+
+**สวิตช์ config:** `autoChoose` (false = ผู้เล่นเลือกเองผ่าน pending, true = เลือกตัวแรกอัตโนมัติแบบเดิม) และ `chainMode` (true = ใช้ Chain/หน้าต่างตอบโต้, false = เอฟเฟกต์ทำงานทันทีแบบเดิม) เกมจริงที่ส่ง `mode` เข้า `createGame` ได้ `autoChoose:false, chainMode:true` เป็นค่าเริ่มต้น เทสต์ที่ไม่ส่ง `mode` ได้ค่าเดิม (true / false)
+
+**pending (5A):** kind = `chooseTarget` | `chooseCards` | `chooseSlot` | `yesNo` | `chooseOption`; ผู้ตัดสินใจคือผู้คุมเอฟเฟกต์; ถ้าตัวเลือกพอดีหรือน้อยกว่าจำนวนที่ต้องเลือก engine เลือกครบเอง ไม่ถาม; `resume` เป็น JSON ล้วน (cloneState ใช้ได้กลาง pending) action `respond {player, choice:[ดัชนีใน options]}` รหัส error `NO_PENDING`, `NOT_YOUR_PENDING`, `INVALID_CHOICE`, `PENDING_OPEN` (action อื่นขณะมี pending) ต้นทุนมานากับ limit จ่าย/นับตอนประกาศเท่านั้น ไม่จ่ายซ้ำตอนต่อ event `pendingOpen`, `pendingResolved`
+
+**Chain (5B):** `state.chain` = ลิงก์ JSON ล้วน (linkId, uid, cardId, effectId, speed, controller, trigger, targetUid, isSpell, negated ฯลฯ) action `activateSpell`, `activateResponse`, `passPriority`, `setSpell` (5C) รหัส error `SPEED_TOO_LOW`, `NO_PRIORITY` ความเร็วตอบโต้ต้อง >= ลิงก์บนสุด (ความเร็ว 1 ตอบโต้ไม่ได้, ความเร็ว 3 ตอบความเร็ว 3 ได้เท่านั้น) แก้ผลแบบ LIFO; ลิงก์ที่เป้าหายไป fizzle (ไม่คืนต้นทุน); หน้าต่างตอบโต้เปิดเฉพาะเมื่อฝ่ายตอบมีตัวตอบโต้ที่ใช้ได้จริง ไม่งั้นข้ามอัตโนมัติ; trigger อัตโนมัติ (onSummon ฯลฯ) ยังทำงานทันทีไม่เข้า Chain; op `negate`, `negateAttack`; event `chainLinkAdded`, `chainResolving`, `chainLinkResolved`, `chainLinkNegated`, `chainLinkFizzled`, `chainClosed`, `attackNegated`
+**หน้าต่างเหตุการณ์:** `attackDeclared`, `summon`, `flip`, `anyActivation`, `monsterDestroyed`, `battleWon` (เอฟเฟกต์ระบุ `window:` ในข้อมูล) **condition เพิ่ม:** `attackDeclaredByOpp`, `attackTarget`, `destroyedMonster`, `targetLink` **selector เพิ่ม:** `attacker`, `attacked`
+
+**สเปล (5C):** สเปลหมอบรอ (ความเร็ว 2) วางด้วย `setSpell` ใช้ได้ตั้งแต่เทิร์นถัดไป ทั้งเทิร์นตัวเองและเทิร์นอีกฝ่ายในหน้าต่างตอบโต้ พลิกหงายตอนประกาศ ส่งสุสานหลังแก้ผลหรือถูก negate (ยกเว้นสเปลต่อเนื่อง/สนาม); สเปลสวนกลับ (ความเร็ว 3) ใช้จากมือในหน้าต่างที่ตรง `window`/`anyActivation`
+
+**UI/บอท (5D):** overlay เลือกตาม kind, กองลิงก์ Chain, ปุ่มตอบโต้/ผ่าน, บอทตัดสินแบบกำหนดแน่นอน ตัวยึดสถานะ: การ์ดครบ 41 ใบ, บางส่วน 1 ใบ (บราคิโอ), ไม่มีเอฟเฟกต์ 2 ใบ, รอขั้น 6 อีก 4 ใบ (ตัวเลข "ครบ 42" ใน STATUS_STEP4.md นับบราคิโอรวมอยู่)
+
+**หนี้เทคนิคที่ต้องจ่ายก่อนขั้น 6 (ขั้น 5E):** ตรรกะ "ต่อการต่อสู้/ต่อช่วงเริ่มเทิร์นหลัง Chain ปิด" ถูกใส่เป็น wrapper ซ้ำกัน 2 ที่ (ui/app.js บรรทัด 15-50 และ tests/bot_vs_bot.test.js) แทนที่จะอยู่ใน engine ต้องย้ายเข้า engine (applyAction/passPriority) แล้วลบ wrapper ทั้งสองที่ เพื่อให้ engine เรียกตรง ๆ ไม่ค้าง
+
+
+### 10-ค. วางทับ, Fusion, Extra Deck, Grade 4 (ขั้น 6, v0.6)
+(รายละเอียดเต็มอยู่ใน CONTRACT_PROPOSALS.md หัวข้อ 6A ถึง 6D เก็บเป็นเอกสารอ้างอิง ถ้าขัดกับข้อนี้ ให้ข้อนี้ชนะ)
+
+**วางทับ (6A):** action `overlay {player, handIdx, targetSlot}` ใช้ได้เฉพาะการ์ดในมือที่ `effects[]` ระบุ `trigger:"overlay"` พร้อม `onto` (ตัวกรองเป้าหมายบนสนามเรา) และ `result {level, atk, def}` ผลลัพธ์: การ์ดจากมือเป็นตัวบน, `under = [...target.under, target]`, ตัวบนได้สเตตัสตาม result และล้างตัวปรับเดิม, ท่า/หงายสืบทอดจากเป้า, ธง `attackedThisTurn`/`positionChangedThisTurn` สืบทอด (กันโจมตีซ้ำ) นับเป็น Special Summon ยิง event `summon {how:"overlay"}`, `onSummon`, `onOverlay` จำกัดเทิร์นละ 1 ครั้งต่อชื่อ ในโหมด chainMode เป็นลิงก์ความเร็ว 1 (เป้าหายตอนแก้ผล = fizzle การ์ดค้างมือ) ไฟล์ `engine/overlay.js`
+**Fusion (6B):** op `fusionSummon` + condition `canFusionSummon` ข้อมูลวัสดุแบบเครื่องอ่านได้ใน `materialSlots` (ตัวกรอง cardId/tag/level + `distinctNames`) วัสดุจากมือ/สนามไปสุสาน (พา under ไปด้วย) ไม่นับเป็นการทำลาย แต่ `onSentToGrave` ยิง ตัว Fusion ลงช่องที่เลือกด้วย pending ท่าโจมตีหงาย `summon {how:"fusion"}` ไม่มีเพดานต่อเกม การออกจากสนามของ Fusion ตามที่ระบุใน 6B ข้อ 3
+**เรียกจาก Extra Deck ลงทับ (6C):** ฟิลด์ `extraSummon {onto, cost, fromHand?}` บนการ์ดใน Extra Deck และ action `extraSummon {player, extraIdx, targetSlot, ...}` ใช้ฟังก์ชันกลางเดียวกับวางทับ รหัส error `GRADE4_LIMIT` (Grade 4 เรียกได้เทิร์นละ 1 ใบรวมทุกใบ) ต้นทุนจ่ายตอนประกาศ ไม่ครบถูกปฏิเสธโดยไม่จ่าย
+**Grade 4 กฎที่ตัดสินแล้ว:** จบเทิร์นกลับ Extra Deck **แบบปกติ ไม่ทำลายตัวที่ถูกทับ** ตัวใต้ที่ติดใต้ตัวบนขึ้นมาเป็นตัวบนในช่องเดิม สเตตัสกลับเป็นค่าของการ์ดนั้น ไม่ยิง trigger เรียก ถ้า Grade 4 **ถูกทำลายระหว่างเทิร์น** ตัวใต้ถูกทำลายตาม overlayDestroyTogether เดิม การทำลายตัวที่ถูกทับเป็น **เอฟเฟกต์ของการ์ดแต่ละใบ** ตอนนี้มีเฉพาะ dino_mega_tyrant (onEndPhase ทำลายตัวใต้ก่อนกลับ Extra) aq_dictator ไม่มีเอฟเฟกต์นี้
+**ความสามารถเพิ่ม:** `immune {source:"spell"}` (เอฟเฟกต์ที่ต้นทางเป็นสเปลเลือกเป้า/กระทบไม่ได้ ตรวจจุดเดียวใน engine), `noTribute:true` (ใช้เป็นวัสดุเสียสละไม่ได้), `returnToDeck {shuffle:true}` ฮาสตาตัส (type fusion) ไม่กลับ Extra เองตอนจบเทิร์น
+**กันตายทุกเส้นทาง (6D):** ฟังก์ชันกลาง `E.getDestructionPreventer(state, inst, cause)` รองรับ `cause:"battle"|"effect"` และเงื่อนไขของ preventDestruction (`selfPosition`, `hasUnder` ฯลฯ) `E.destroyMonster` ทุกเส้นทางรวมการต่อสู้ผ่านจุดนี้ การต่อสู้ที่การ์ดกันตายยังเสีย LP ตามปกติ
+
+**สถานะปิดขั้น 6:** เทสต์ผ่าน 315 บอทสู้บอทเกิดวางทับ/Fusion/Grade 4 จริงในเกือบทุกเกม การ์ด 47 ใบแปลงครบ, ไม่มีเอฟเฟกต์ 1 ใบ (aq_eques) **ข้อสังเกตที่ยังเปิดอยู่:** ดิกเตเตอร์ไม่มีเอฟเฟกต์กำหนด เรียกฟรีต้นทุนต่ำ ตัวใต้รอดตอนกลับ ต้องดูสมดุลในขั้น 8
+
+## 11. บอท (อัปเดต v0.7)
 
 ```js
-CG.bot.chooseAction(state, playerIdx, legalActions) → Action
+CG.bot.choose(state, playerIdx, legalActions, options?) → Action   // options.level: 'easy' | 'normal'
+CG.bot.chooseAction  // alias ของ choose
+CG.ui.botChoose      // alias เดิม ยังใช้ได้
 ```
-ฟังก์ชันล้วน ห้ามมีเวลาหน่วง ตัวรันเกม (UI หรือ `tests/botMatch.js`) เป็นคนเรียกวนและใส่ความหน่วงเอง บอทใช้ `cloneState` + `applyAction` ลองล่วงหน้าได้
+ไฟล์ `bot/bot.js` ฟังก์ชันล้วน ไม่แตะ DOM ไม่มีเวลาหน่วง ไม่สุ่ม (คะแนนเท่ากันเลือกตัวแรกตามลำดับ getLegalActions) ระดับไม่รู้จักตกกลับเป็น `easy` ผู้เรียก (UI หรือ `tests/sim.js`) เป็นคนวนเรียกและใส่ความหน่วงเอง (UI หน่วงตามความเร็ว ช้า ≈1500 ms / ปกติ ≈800 / เร็ว ≈250 ms ต่อการกระทำสำคัญ, การกระทำเบาหน่วงครึ่งหนึ่ง) `easy` = บอทเดิมทุกประการ (เทสต์ตรึงผลด้วย seed คงที่) `normal` = กฎประเมินแบบกำหนดแน่นอน (lethal, เลือกเป้าที่ชนะได้, เสียสละตัวต่ำสุด, สวนกลับเมื่อโดนกระทบ)
+**เครื่องมือวัดผล:** `node tests/sim.js [จำนวนเกม] [ระดับฝั่งไดโน] [ระดับฝั่งอาควิลา]` สลับข้างผู้เล่นคนแรก เด็คและ Extra Deck จริง โหมดเกมจริง รายงานลง `tests/sim_report.txt` (ผลชนะต่อเด็ค/ข้าง, ความยาวเกม, อัตราเกิดวางทับ/Fusion/Grade 4/Chain, ความถี่การใช้การ์ดทุกใบ)
+**UI ที่ผู้เล่นใช้ (6E):** เมนูปุ่มสร้างจาก getLegalActions เท่านั้น มีเทสต์ `ui_menu.test.js` ตรวจว่าทุก action ที่เกิดได้มีปุ่มที่ตรงกัน
+**ข้อมูลที่รู้ตอนปิดขั้น 7 (จาก sim ของผู้ตัดสิน):** normal ชนะ easy ได้เพียง ~57-58% (เป้าหมายเดิม 65% ยังไม่ถึง), ผู้เล่นเริ่มหลังชนะ ~52-55% ทุกคู่ระดับ, อาควิลาชนะไดโน ~57-63%, Grade 4 เกิดในเกือบทุกเกม (99.6% ของเกม ~4.3 ครั้งต่อเกม) ทั้งหมดเป็นหัวข้อสมดุลของขั้น 8
 
 ---
 
@@ -336,6 +402,23 @@ CG.bot.chooseAction(state, playerIdx, legalActions) → Action
 - ตัวช่วยไฮไลต์ช่องที่ทำได้ ให้ใช้ผลจาก `getLegalActions` ไม่คำนวณกติกาซ้ำใน UI
 
 ---
+
+### 12-ก. ชื่อเรียกบนหน้าจอ กติกาช่อง Field และหน้าการ์ด (v0.8)
+
+ชื่อเรียกฉบับจริง (Arcana Frontier) ใช้เฉพาะ**ข้อความที่แสดงผู้เล่น**ใน `ui/strings_th.js` ชื่อในโค้ดและ CONTRACT (monster, spell, mana, lp ฯลฯ) คงเดิม
+
+| ในโค้ด | ชื่อที่แสดง | ในโค้ด | ชื่อที่แสดง |
+|---|---|---|---|
+| monster | Entity (เอนทิตี) | grave | Abyss (อะบิส) |
+| leader (ช่องกลาง index 2) | Pioneer (ไพโอเนียร์) | removed | Exile (เอ็กไซล์) |
+| spell / trap | Distortion (ดิสทอร์ชัน) | fusion | Resonance (เรโซแนนซ์) |
+| deck | Chronicle (โครนิเคิล) | grade4 | Apex (เอเปกซ์) |
+| extra | Astral Gate (แอสทรัลเกต) | mana | Arcana (อาร์คานา) |
+| lp | FP (Frontier Point) | overlay | Eclipse (เอ็กลิปส์) |
+
+กติกาช่อง Field (ตัดสินแล้ว): มี 1 ช่องกลางสนาม ใช้ร่วมกันทั้งสองฝ่าย มีการ์ดสนามได้ใบเดียวในสนาม ถ้ามีอยู่แล้วต้องทำลายก่อนจึงลงใบใหม่ได้ ยังไม่มีการ์ด `field: true` ในเด็คปัจจุบัน จึงยังไม่แก้ engine (ที่เก็บยังเป็น `players[i].fieldSpell`) จะบังคับกติกานี้ในขั้นที่เพิ่มการ์ดสนามใบแรก UI แสดงช่องกลางโดยอ่านจากผู้เล่นคนใดก็ตามที่ `fieldSpell` ไม่ว่าง
+
+หน้าการ์ด: ไอคอนแท็ก 1 อัน กึ่งกลางด้านบน ไฟล์ `assets/icons/{entity,eclipse,pioneer,resonance,apex}.png` ลำดับเลือก apex > resonance > eclipse > pioneer > entity (สเปลไม่มีไอคอน) ค่าโจมตีสีแดง ป้องกันสีน้ำเงิน เวลสีเหลือง กรอบข้อความเอฟเฟกต์สูงได้ไม่เกิน 40% ของการ์ด เกินแล้วลดขนาดตัวอักษร
 
 ## 13. เทสต์
 
@@ -399,3 +482,8 @@ _(แชทอื่นเขียนเพิ่มที่นี่ แล�
 **บันทึกการตัดสิน**
 - v0.3 (จากขั้น 4B) รับการตัดสินของแชท 4B ทั้ง 5 ข้อ: returnToDeck ใต้เด็คเป็นค่าเริ่มต้น / ตัวซ้อนไปพร้อมตัวบนทุกการย้ายโซน / banish ไม่ยิง onSentToGrave / ไม่สับเด็คหลัง search และ returnToDeck (เพิ่มตัวเลือกสับได้ภายหลัง) / เลือกเป้าอัตโนมัติชั่วคราว ย้ายการเลือกโดยผู้เล่นไปทำพร้อมขั้น 5
 - v0.2 (จากข้อเสนอขั้น 1) รับทั้ง 4 ข้อ: (1) การ์ดใน `extra` ใส่ `mana: "0"` เป็นค่าเริ่มต้น (2) โครงเด็ค `{ key, name, main, extra }` ระบุในข้อ 4 (3) ขั้น 1 แตะ `tests/cards.test.js` ได้ ตามข้อ 14 (4) การ์ดที่ Level ยังเป็นข้อสมมติคงเครื่องหมาย `proposed_level` ไว้ตามข้อ 16
+- v0.4 (ปิดขั้น 4: 4E-1 ถึง 4E-4) รวมชิ้นส่วน/trigger/condition ใหม่ทั้งหมดไว้ที่ข้อ 10-ก, `restrictAttack` เปลี่ยนความหมายเป็นบังคับให้ตีตัวนี้ก่อนและเพิ่ม `cannotAttack`, เพิ่ม `leaderSlot` ที่ข้อ 1, `activateEffect` จากมือที่ข้อ 7, tags ทั้ง 48 ใบ (egg, small_raptor, raptor, spearman) CONTRACT_PROPOSALS.md ย้ายเป็นเอกสารอ้างอิง
+- v0.5 (ปิดขั้น 5A-5D) รวมระบบ pending/Chain/สเปลหมอบรอ-สวนกลับ/ค่าเริ่มต้นเกมจริงไว้ที่ข้อ 10-ข และบันทึกหนี้เทคนิค 5E (wrapper ต่อ Chain ซ้ำใน UI และเทสต์)
+- v0.6 (ปิดขั้น 6A-6D) เพิ่มข้อ 10-ค วางทับ/Fusion/extraSummon/Grade 4 (ตัวใต้ไม่ถูกทำลายตอนกลับ Extra ตามผู้ออกแบบ) และกันตายทุกเส้นทาง
+- v0.7 (ปิดขั้น 6E, 7P, 7A, 7B) ข้อ 11 บอทเขียนใหม่ให้ตรงโค้ดจริง (CG.bot.choose, ระดับ easy/normal, tests/sim.js) และบันทึกข้อมูลสมดุลจาก sim
+- v0.8 (ขั้น 7U) เพิ่มข้อ 12-ก ชื่อเรียกบนหน้าจอ, กติกาช่อง Field ร่วม 1 ใบ, โครงหน้าการ์ด

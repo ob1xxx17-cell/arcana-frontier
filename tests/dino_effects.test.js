@@ -10,7 +10,9 @@ const TRIGGERS = ['ignition', 'quick', 'continuous', 'onSummon', 'onFlip', 'onOv
   'onAttackDeclared', 'onBattleDestroy', 'onDestroyed', 'onSentToGrave', 'onTributed', 'onNormalSummon', 'onAttacked', 'onBattleDestroyed'];
 const WITH_EFFECTS = ['dino_egg', 'dino_compy', 'dino_anky', 'dino_spino', 'dino_dig', 'dino_hunt', 'dino_extinct', 'dino_raptor_swarm',
   'dino_ptero', 'dino_trike', 'dino_stego', 'dino_small_raptor',
-  'dino_call'];   // 4 ใบกลางเพิ่มใน 4E-2A, dino_call เพิ่มใน 4E-2B
+  'dino_call', 'dino_hunter_raptor', 'dino_tyrano_raptor', 'dino_brachio',
+  'dino_trex', 'dino_nest', 'dino_fast_hatch',
+  'dino_roar', 'dino_escape', 'dino_mud', 'dino_hidden_egg', 'dino_pack_hunt', 'dino_fusion', 'dino_mega_tyrant'];   // 5C: 5 ใบ, 6B: dino_fusion, 6C: dino_mega_tyrant
 
 module.exports = [
   { name: 'DINO-01 ไข่ฟักตอน Standby ของเจ้าของเท่านั้น (ไม่ฟักตอน Standby ฝ่ายตรงข้าม)', run(assert) {
@@ -125,11 +127,12 @@ module.exports = [
     }
   } },
 
-  { name: 'DINO-12 การ์ดที่ชิ้นส่วนยังทำไม่ได้คงเป็น effects: [] (ตามรายงานขั้น 4C) และมีเอฟเฟกต์เฉพาะ 13 ใบนี้', run(assert) {
+  { name: 'DINO-12 การ์ดที่ชิ้นส่วนยังทำไม่ได้คงเป็น effects: [] (ตามรายงานขั้น 4C/4E-3/4E-4) และมีเอฟเฟกต์เฉพาะ 19 ใบนี้', run(assert) {
     const all = [].concat(CG.cards.dinosaur.main, CG.cards.dinosaur.extra);
     assert.strictEqual(all.length, 26);
     assert.deepStrictEqual(all.filter(c => c.effects.length).map(c => c.id).sort(), WITH_EFFECTS.slice().sort());
     for (const c of all.filter(c => !WITH_EFFECTS.includes(c.id))) assert.deepStrictEqual(c.effects, [], c.id);
-    for (const id of WITH_EFFECTS) assert.strictEqual(cardDef(id).effects.length, 1, id);
+    const TWO_EFFECTS = ['dino_tyrano_raptor', 'dino_trex', 'dino_small_raptor', 'dino_spino'];
+    for (const id of WITH_EFFECTS) assert.strictEqual(cardDef(id).effects.length, TWO_EFFECTS.includes(id) ? 2 : 1, id);
   } }
 ];
