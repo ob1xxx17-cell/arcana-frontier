@@ -142,6 +142,26 @@ html, body {
   -webkit-user-select: none;
   user-select: none;
   position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* ปรับการตอบสนองระบบสัมผัส (Touch Responsiveness) ลดหน่วงและลื่นไหลทันที */
+button, input, select, .card, .slot, .wf-pill-btn, .wf-top-btn, .wf-btn,
+.wf-start-hero-btn, .wf-start-side-btn, .wf-profile-box, .wf-deck-slot,
+.wf-curr-badge, .wf-shop-arrow, .wf-gacha-banner, [data-ov], [data-act],
+[data-hand], [data-slot], [data-spell-slot], .modal, .quick-act-btn,
+.fanned-card, .btn-modal-close, .detail-action-btn, .tab-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+button:active, .wf-start-hero-btn:active, .wf-start-side-btn:active,
+.wf-pill-btn:active, .wf-top-btn:active, .gold:active, .wf-profile-box:active {
+  transform: scale(0.96);
+  filter: brightness(0.92);
 }
 
 body::before {

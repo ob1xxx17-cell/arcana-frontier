@@ -20,7 +20,7 @@
     state.players.forEach(p => { ['deck', 'hand', 'extra', 'grave', 'removed', 'monsters', 'spells'].forEach(z => p[z].forEach(add)); add(p.fieldSpell); });
     return m;
   };
-  V.pname = (state, i) => (i === 0 ? S().app.p1 : (state.mode === 'bot' ? S().app.bot : S().app.p2));
+  V.pname = (state, i) => (i === 0 ? ((CG.account && CG.account.current && CG.account.current.nickname) ? CG.account.current.nickname : S().app.p1) : (state.mode === 'bot' ? S().app.bot : S().app.p2));
 
   function fill(t, o) { return t.replace(/\{(\w+)\}/g, (_, k) => (o[k] == null ? '' : o[k])); }
 
@@ -1035,7 +1035,7 @@
       const isBot = st.mode === 'bot' && idx === 1;
       const avatarIcon = isBot ? '🤖' : '👤';
       const levelText = isBot ? 'Lv.AI' : 'Lv.14';
-      const idText = isBot ? 'ID: BOT-AI' : 'ID: AF-88294';
+      const idText = isBot ? 'ID: BOT-AI' : ((CG.account && CG.account.current && CG.account.current.id) ? ('ID: ' + CG.account.current.id) : 'ID: AF-88294');
 
       return '<div class="sketch-panel-stack ' + (act ? 'active' : '') + (isOpponent ? ' is-opp' : ' is-self') + '">' +
         '<div class="sketch-info-box fp-box">' +
