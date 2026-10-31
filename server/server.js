@@ -78,10 +78,11 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+    const isAsset = (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.mp3' || ext === '.wav');
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': stats.size,
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
+      'Cache-Control': isAsset ? 'public, max-age=86400' : 'no-cache, no-store, must-revalidate'
     });
 
     const stream = fs.createReadStream(filePath);

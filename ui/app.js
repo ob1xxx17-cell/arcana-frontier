@@ -2233,6 +2233,7 @@
               '<div class="wf-profile-meta">' +
                 '<div class="wf-profile-name">' + V().esc((Account.current && Account.current.nickname) || 'ผู้ท้าชิงนิรนาม') + '</div>' +
                 '<div class="wf-profile-id">ID: ' + V().esc((Account.current && Account.current.id) || 'AF-88294') + '</div>' +
+                '<div style="font-size:0.65rem;color:#b45309;font-weight:800;margin-top:1px">แตะดู PIN / ล็อกอิน 🔑</div>' +
               '</div>' +
             '</div>' +
             '<button class="wf-top-btn wf-btn-login" id="btnTopLogin" title="เข้าสู่ระบบด้วยไอดีเดิม หรือสลับบัญชี">' +
