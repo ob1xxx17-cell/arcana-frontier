@@ -554,7 +554,7 @@
 
     // 2. ภาพการ์ด (ดึงจาก assets/cards/[id].png หรือ d.image หากไม่มีแสดงสีพื้นหลัง)
     const artImg = d.image || ('assets/cards/' + d.id + '.png');
-    const artHtml = '<div class="card-art art-' + d.type + '"><img src="' + esc(artImg) + '" alt="" class="card-art-img" onerror="if(!this.dataset.t){this.dataset.t=\'1\';this.src=\'assets/cards/' + d.id + '.jpg\';}else{this.remove();}"></div>';
+    const artHtml = '<div class="card-art art-' + d.type + '"><img src="' + esc(artImg) + '" alt="" class="card-art-img" loading="lazy" onerror="if(!this.dataset.t){this.dataset.t=\'1\';this.src=\'assets/cards/' + d.id + '.jpg\';}"></div>';
 
     // 3. แถวค่า: ATK วงรีแดงซ้าย, Level วงกลมเหลืองกลาง, DEF วงรีน้ำเงินขวา
     let statsHtml = '';

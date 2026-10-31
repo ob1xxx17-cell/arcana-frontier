@@ -8011,7 +8011,10 @@ button.gold:hover:not(:disabled) {
   }
 
   /* 1. LOBBY COMPACT (ล็อบบี้แนวนอนมือถือ ใช้ position: fixed ขึงพอดีจอ 100% ตัดปัญหา URL bar ล้น) */
-  #lobby {
+  #lobby.hidden, #game.hidden {
+    display: none !important;
+  }
+  #lobby:not(.hidden) {
     position: fixed !important;
     inset: 0 !important;
     top: 0 !important;
@@ -8024,6 +8027,7 @@ button.gold:hover:not(:disabled) {
     margin: 0 !important;
     overflow: hidden !important;
     display: block !important;
+    z-index: 10 !important;
   }
   .grimoire-lobby {
     position: absolute !important;
@@ -8274,7 +8278,7 @@ button.gold:hover:not(:disabled) {
   }
 
   /* 2. BOARD & DUEL ARENA COMPACT (สนามประลองแนวนอนมือถือ) */
-  #game {
+  #game:not(.hidden) {
     position: fixed !important;
     inset: 0 !important;
     top: 0 !important;
@@ -8284,6 +8288,8 @@ button.gold:hover:not(:disabled) {
     width: 100% !important;
     height: 100% !important;
     overflow: hidden !important;
+    display: block !important;
+    z-index: 10 !important;
   }
   #game .main {
     position: absolute !important;
