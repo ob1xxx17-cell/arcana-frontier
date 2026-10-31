@@ -864,6 +864,28 @@
   };
   CG.account = Account;
 
+  // ---------------- ระบบ Modal กลาง (Modal Helper) ----------------
+  function showWfModal(title, contentHtml, extraCls, options = {}) {
+    const root = $('overlayRoot') || (typeof document !== 'undefined' ? document.body : null);
+    if (!root || typeof document.createElement !== 'function') return null;
+    const modalEl = document.createElement('div');
+    modalEl.className = 'wf-modal-overlay' + (extraCls ? (' ' + extraCls) : '');
+    const hideClose = (options && options.hideClose) || false;
+    const headerHtml = title ? (
+      '<div class="wf-modal-header">' +
+        '<div class="wf-modal-title">' + V().esc(title) + '</div>' +
+        (!hideClose ? '<button class="wf-modal-close" id="btnModalClose">✕</button>' : '') +
+      '</div>'
+    ) : '';
+    modalEl.innerHTML = 
+      '<div class="wf-modal-box">' +
+        headerHtml +
+        '<div class="wf-modal-content">' + contentHtml + '</div>' +
+      '</div>';
+    root.appendChild(modalEl);
+    return modalEl;
+  }
+
   // ---------------- หน้าเข้าสู่ระบบครั้งแรก (Auth Screen) ----------------
   function showAuthScreen() {
     if (typeof document === 'undefined') return;
@@ -994,48 +1016,56 @@
   // ---------------- ลำดับการต้อนรับ: สอนเล่น & เลือกเด็คเริ่มต้น ----------------
   function showOnboardingModal() {
     if (typeof document === 'undefined') return;
+    try {
+      // STEP 1: คำถามถามว่าจะเล่นโหมดสอนเล่นหรือไม่?
+      const step1Html = 
+        '<div style="text-align:center;padding:10px">' +
+          '<div style="font-size:3rem;margin-bottom:8px">🎓</div>' +
+          '<h3 style="margin:0 0 8px;font-size:1.35rem;font-weight:900;color:#1e293b">ยินดีต้อนรับสู่อาร์คานา ฟรอนเทียร์!</h3>' +
+          '<p style="font-size:0.95rem;color:#475569;line-height:1.5;margin-bottom:20px">' +
+            'คุณต้องการเข้าร่วม <strong>โหมดสอนเล่น (Tutorial)</strong> เพื่อเรียนรู้กติกาการดวลการ์ดก่อนหรือไม่?' +
+          '</p>' +
+          '<div style="display:flex;flex-direction:column;gap:10px">' +
+            '<button id="btnChooseTutorial" class="gold" style="padding:12px;font-size:1rem;font-weight:900;border:2.5px solid #2b1f1d">' +
+              '🎓 เข้าร่วมโหมดฝึกสอน (Tutorial)' +
+            '</button>' +
+            '<button id="btnSkipTutorial" style="background:#f1f5f9;border:2px solid #2b1f1d;padding:12px;font-size:1rem;font-weight:900;border-radius:8px;cursor:pointer">' +
+              '⚔️ เล่นเกมเลย (ไม่ต้องสอน / ข้ามการฝึกสอน)' +
+            '</button>' +
+          '</div>' +
+        '</div>';
 
-    // STEP 1: คำถามถามว่าจะเล่นโหมดสอนเล่นหรือไม่?
-    const step1Html = 
-      '<div style="text-align:center;padding:10px">' +
-        '<div style="font-size:3rem;margin-bottom:8px">🎓</div>' +
-        '<h3 style="margin:0 0 8px;font-size:1.35rem;font-weight:900;color:#1e293b">ยินดีต้อนรับสู่อาร์คานา ฟรอนเทียร์!</h3>' +
-        '<p style="font-size:0.95rem;color:#475569;line-height:1.5;margin-bottom:20px">' +
-          'คุณต้องการเข้าร่วม <strong>โหมดสอนเล่น (Tutorial)</strong> เพื่อเรียนรู้กติกาการดวลการ์ดก่อนหรือไม่?' +
-        '</p>' +
-        '<div style="display:flex;flex-direction:column;gap:10px">' +
-          '<button id="btnChooseTutorial" class="gold" style="padding:12px;font-size:1rem;font-weight:900;border:2.5px solid #2b1f1d">' +
-            '🎓 เข้าร่วมโหมดฝึกสอน (Tutorial)' +
-          '</button>' +
-          '<button id="btnSkipTutorial" style="background:#f1f5f9;border:2px solid #2b1f1d;padding:12px;font-size:1rem;font-weight:900;border-radius:8px;cursor:pointer">' +
-            '⚔️ เล่นเกมเลย (ไม่ต้องสอน / ข้ามการฝึกสอน)' +
-          '</button>' +
-        '</div>' +
-      '</div>';
-
-    const modalEl = showWfModal('🎮 ยินดีต้อนรับนักดวลการ์ดหน้าใหม่', step1Html);
-    if (!modalEl) return;
-
-    modalEl.onclick = (e) => {
-      if (e.target.closest('#btnChooseTutorial')) {
-        toast('🚧 โหมดฝึกสอนกำลังพัฒนา (เร็วๆ นี้!) กำลังนำคุณไปเลือกเด็คเริ่มต้น...');
-        AudioFX.play('click');
-        modalEl.remove();
+      const modalEl = showWfModal('🎮 ยินดีต้อนรับนักดวลการ์ดหน้าใหม่', step1Html, '', { hideClose: true });
+      if (!modalEl) {
         showStarterDeckSelectionModal();
         return;
       }
-      if (e.target.closest('#btnSkipTutorial')) {
-        toast('⚔️ ยอดเยี่ยม! ไปเลือกเด็คเริ่มต้นของคุณกันเลย');
-        AudioFX.play('click');
-        modalEl.remove();
-        showStarterDeckSelectionModal();
-        return;
-      }
-    };
+
+      modalEl.onclick = (e) => {
+        if (e.target.closest('#btnChooseTutorial')) {
+          toast('🚧 โหมดฝึกสอนกำลังพัฒนา (เร็วๆ นี้!) กำลังนำคุณไปเลือกเด็คเริ่มต้น...');
+          AudioFX.play('click');
+          modalEl.remove();
+          showStarterDeckSelectionModal();
+          return;
+        }
+        if (e.target.closest('#btnSkipTutorial')) {
+          toast('⚔️ ยอดเยี่ยม! ไปเลือกเด็คเริ่มต้นของคุณกันเลย');
+          AudioFX.play('click');
+          modalEl.remove();
+          showStarterDeckSelectionModal();
+          return;
+        }
+      };
+    } catch (err) {
+      console.error('showOnboardingModal error:', err);
+      showStarterDeckSelectionModal();
+    }
   }
 
   function showStarterDeckSelectionModal() {
-    let selectedDeck = 'dinosaur';
+    try {
+      let selectedDeck = 'dinosaur';
 
     const starterOptions = [
       {
@@ -1086,8 +1116,12 @@
         '✓ ยืนยันเลือกเด็คนี้และเข้าสู่เกม' +
       '</button>';
 
-    const modalEl = showWfModal('🎁 เลือกเด็คเริ่มต้นของคุณ', html);
-    if (!modalEl) return;
+    const modalEl = showWfModal('🎁 เลือกเด็คเริ่มต้นของคุณ', html, '', { hideClose: true });
+    if (!modalEl) {
+      Account.chooseStarterDeck(selectedDeck);
+      lobby();
+      return;
+    }
 
     modalEl.onclick = (e) => {
       const card = e.target.closest('[data-starter]');
@@ -1111,6 +1145,13 @@
         return;
       }
     };
+    } catch (err) {
+      console.error('showStarterDeckSelectionModal error:', err);
+      if (Account.current && !Account.current.onboarded) {
+        Account.chooseStarterDeck('dinosaur');
+      }
+      lobby();
+    }
   }
 
   function boot() {
@@ -1281,27 +1322,6 @@
       if (img) {
         img.src = item.image || 'assets/promo/mecha_strike_promo.jpg';
       }
-    }
-
-    // Modal Helper
-    function showWfModal(title, contentHtml, extraCls) {
-      const root = $('overlayRoot') || (typeof document !== 'undefined' ? document.body : null);
-      if (!root || typeof document.createElement !== 'function') return null;
-      const modalEl = document.createElement('div');
-      modalEl.className = 'wf-modal-overlay' + (extraCls ? (' ' + extraCls) : '');
-      const headerHtml = title ? (
-        '<div class="wf-modal-header">' +
-          '<div class="wf-modal-title">' + V().esc(title) + '</div>' +
-          '<button class="wf-modal-close" id="btnModalClose">✕</button>' +
-        '</div>'
-      ) : '';
-      modalEl.innerHTML = 
-        '<div class="wf-modal-box">' +
-          headerHtml +
-          '<div class="wf-modal-content">' + contentHtml + '</div>' +
-        '</div>';
-      root.appendChild(modalEl);
-      return modalEl;
     }
 
     function openProfileModal(initialTab = 'info') {
