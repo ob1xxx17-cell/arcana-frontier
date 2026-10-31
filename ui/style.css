@@ -8588,3 +8588,183 @@ button.gold:hover:not(:disabled) {
     line-height: 1.1 !important;
   }
 }
+
+/* ================== ระบบหน้าล็อกอิน & หน้าเลือกเด็คเริ่มต้น ================== */
+#authScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 8500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 65%, #030712 100%);
+  padding: 16px;
+  overflow-y: auto;
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+#authScreen.hidden {
+  display: none !important;
+}
+.auth-box {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border: 3.5px solid #1e293b;
+  border-radius: 16px;
+  box-shadow: 6px 8px 0 #0f172a;
+  padding: 24px;
+  text-align: center;
+  box-sizing: border-box;
+  animation: authPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes authPopIn {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.auth-title-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #fef08a 0%, #facc15 100%);
+  border: 2.5px solid #1e293b;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: #1e293b;
+  margin-bottom: 6px;
+  box-shadow: 2.5px 3.5px 0 #1e293b;
+  letter-spacing: 1px;
+}
+.auth-subtitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 18px;
+}
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 10px;
+}
+.auth-tab-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid #1e293b;
+  font-weight: 900;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: #f1f5f9;
+  color: #475569;
+  transition: all 0.15s;
+}
+.auth-tab-btn.active {
+  background: #fef08a;
+  color: #1e293b;
+  box-shadow: 2px 3px 0 #1e293b;
+}
+.auth-field-group {
+  text-align: left;
+  margin-bottom: 12px;
+}
+.auth-field-label {
+  display: block;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: #334155;
+  margin-bottom: 4px;
+}
+.auth-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #1e293b;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-sizing: border-box;
+  outline: none;
+  background: #f8fafc;
+}
+.auth-input:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+}
+.auth-submit-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 2.5px solid #1e293b;
+  background: linear-gradient(135deg, #fde047 0%, #eab308 100%);
+  color: #1e293b;
+  font-weight: 900;
+  font-size: 1.05rem;
+  cursor: pointer;
+  box-shadow: 2.5px 3.5px 0 #1e293b;
+  margin-top: 6px;
+  transition: transform 0.1s;
+}
+.auth-submit-btn:active {
+  transform: scale(0.97);
+}
+.auth-guest-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.auth-guest-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* Starter Deck Choice Styles */
+.starter-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+@media(max-width: 600px) {
+  .starter-deck-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.starter-deck-card {
+  border: 2.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.starter-deck-card:hover, .starter-deck-card.selected {
+  border-color: #eab308;
+  background: #fefce8;
+  box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.4);
+  transform: translateY(-2px);
+}
+.starter-deck-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #fef08a;
+  border: 1.5px solid #1e293b;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}

@@ -656,7 +656,7 @@
     render(); schedule();
   }
 
-  // ---------------- ระบบบัญชีผู้เล่น (Account / ID / Login / Transfer PIN) ----------------
+  // ---------------- ระบบบัญชีผู้เล่น (Account / ID / Login / Register / Starter Deck) ----------------
   const Account = {
     CURRENT_KEY: 'af_current_account',
     ACCOUNTS_KEY: 'af_saved_accounts',
@@ -672,34 +672,16 @@
         }
       } catch (_) {}
 
-      if (!this.current || !this.current.id) {
-        this.current = this.createAccount('ผู้ท้าชิงนิรนาม', 340, 5);
-        this.save();
+      if (this.current) {
+        CG.ui.curr20 = this.current.curr20 !== undefined ? this.current.curr20 : 100;
+        CG.ui.curr100 = this.current.curr100 !== undefined ? this.current.curr100 : 1;
+        CG.ui.mailClaimed = !!this.current.mailClaimed;
       }
-
-      CG.ui.curr20 = this.current.curr20 !== undefined ? this.current.curr20 : 340;
-      CG.ui.curr100 = this.current.curr100 !== undefined ? this.current.curr100 : 5;
-      CG.ui.mailClaimed = !!this.current.mailClaimed;
       return this.current;
     },
 
-    createAccount(nickname, curr20 = 340, curr100 = 5) {
-      const randomNum = Math.floor(10000 + Math.random() * 90000);
-      const id = 'AF-' + randomNum;
-      const passcode = String(Math.floor(100000 + Math.random() * 900000));
-      return {
-        id,
-        nickname: nickname || 'ผู้ท้าชิงนิรนาม',
-        passcode,
-        level: 14,
-        rank: '🏆 Gold III',
-        curr20,
-        curr100,
-        mailClaimed: false,
-        stats: { wins: 34, losses: 16, maxStreak: 7, maxDmg: 4200 },
-        ownedCards: ['aquila', 'dino', 'mecha_strike'],
-        createdAt: Date.now()
-      };
+    isLoggedIn() {
+      return !!(this.current && this.current.id);
     },
 
     save() {
@@ -718,7 +700,7 @@
           let all = [];
           const rawAll = localStorage.getItem(this.ACCOUNTS_KEY);
           if (rawAll) all = JSON.parse(rawAll);
-          const idx = all.findIndex(a => a.id === this.current.id);
+          const idx = all.findIndex(a => a.id === this.current.id || (a.email && this.current.email && a.email.toLowerCase() === this.current.email.toLowerCase()));
           if (idx >= 0) all[idx] = this.current;
           else all.push(this.current);
           localStorage.setItem(this.ACCOUNTS_KEY, JSON.stringify(all));
@@ -732,10 +714,13 @@
       this.save();
     },
 
-    login(id, passcode) {
-      id = (id || '').trim().toUpperCase();
-      passcode = (passcode || '').trim();
-      if (!id) return { success: false, message: 'กรุณากรอก Account ID (เช่น AF-12345)' };
+    register(email, password, nickname) {
+      email = (email || '').trim();
+      password = (password || '').trim();
+      nickname = (nickname || '').trim();
+
+      if (!email) return { success: false, message: 'กรุณากรอกอีเมลหรือชื่อบัญชี' };
+      if (!password || password.length < 6) return { success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป' };
 
       try {
         if (typeof localStorage !== 'undefined') {
@@ -743,34 +728,78 @@
           const rawAll = localStorage.getItem(this.ACCOUNTS_KEY);
           if (rawAll) all = JSON.parse(rawAll);
 
-          let found = all.find(a => a.id.toUpperCase() === id);
-          if (found) {
-            if (found.passcode && passcode && found.passcode !== passcode) {
-              return { success: false, message: 'รหัส PIN ไม่ถูกต้อง!' };
-            }
-            this.current = found;
-          } else {
-            // New or restored ID
-            this.current = {
-              id,
-              nickname: 'ผู้ท้าชิง ' + id,
-              passcode: passcode || String(Math.floor(100000 + Math.random() * 900000)),
-              level: 14,
-              rank: '🏆 Gold III',
-              curr20: 340,
-              curr100: 5,
-              mailClaimed: false,
-              stats: { wins: 0, losses: 0, maxStreak: 0, maxDmg: 0 },
-              ownedCards: ['aquila', 'dino', 'mecha_strike'],
-              createdAt: Date.now()
-            };
+          const exists = all.some(a => (a.email && a.email.toLowerCase() === email.toLowerCase()) || (a.id && a.id.toUpperCase() === email.toUpperCase()));
+          if (exists) {
+            return { success: false, message: 'อีเมลหรือชื่อบัญชีนี้มีอยู่ในระบบแล้ว กรุณาเข้าสู่ระบบ' };
           }
 
-          CG.ui.curr20 = this.current.curr20;
-          CG.ui.curr100 = this.current.curr100;
+          const randomNum = Math.floor(10000 + Math.random() * 90000);
+          const id = 'AF-' + randomNum;
+
+          this.current = {
+            id,
+            email,
+            password,
+            passcode: password,
+            nickname: nickname || ('ผู้ท้าชิง ' + id),
+            level: 1, // เริ่มต้น Level 1
+            rank: '🥉 Bronze I',
+            curr20: 100, // เริ่มต้นแบงก์ 20 จำนวน 100 ใบ
+            curr100: 1,  // เริ่มต้นแบงก์ 100 จำนวน 1 ใบ
+            starterDeckChosen: null,
+            unlockedDecks: [],
+            onboarded: false,
+            mailClaimed: false,
+            ownedCards: [],
+            stats: { wins: 0, losses: 0, maxStreak: 0, maxDmg: 0 },
+            createdAt: Date.now()
+          };
+
+          CG.ui.curr20 = 100;
+          CG.ui.curr100 = 1;
+          CG.ui.mailClaimed = false;
+          try { localStorage.setItem('cg_owned_cards', JSON.stringify([])); } catch (_) {}
+          this.save();
+          return { success: true, account: this.current };
+        }
+      } catch (err) {
+        return { success: false, message: err.message };
+      }
+      return { success: false, message: 'ไม่สามารถสร้างบัญชีได้' };
+    },
+
+    login(emailOrId, password) {
+      emailOrId = (emailOrId || '').trim();
+      password = (password || '').trim();
+
+      if (!emailOrId) return { success: false, message: 'กรุณากรอกอีเมลหรือ Account ID' };
+      if (!password || password.length < 6) return { success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป' };
+
+      try {
+        if (typeof localStorage !== 'undefined') {
+          let all = [];
+          const rawAll = localStorage.getItem(this.ACCOUNTS_KEY);
+          if (rawAll) all = JSON.parse(rawAll);
+
+          const query = emailOrId.toLowerCase();
+          let found = all.find(a => (a.email && a.email.toLowerCase() === query) || (a.id && a.id.toLowerCase() === query));
+
+          if (!found) {
+            return { success: false, message: 'ไม่พบบัญชีนี้ในระบบ กรุณากด "สร้างไอดีใหม่"' };
+          }
+
+          const accPass = found.password || found.passcode;
+          if (accPass && accPass !== password) {
+            return { success: false, message: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
+          }
+
+          this.current = found;
+          CG.ui.curr20 = this.current.curr20 !== undefined ? this.current.curr20 : 100;
+          CG.ui.curr100 = this.current.curr100 !== undefined ? this.current.curr100 : 1;
           CG.ui.mailClaimed = !!this.current.mailClaimed;
+
           if (this.current.ownedCards && this.current.ownedCards.length) {
-            localStorage.setItem('cg_owned_cards', JSON.stringify(this.current.ownedCards));
+            try { localStorage.setItem('cg_owned_cards', JSON.stringify(this.current.ownedCards)); } catch (_) {}
           }
           this.save();
           return { success: true, account: this.current };
@@ -778,16 +807,41 @@
       } catch (err) {
         return { success: false, message: err.message };
       }
-      return { success: false, message: 'ไม่สามารถโหลดบัญชีได้' };
+      return { success: false, message: 'ไม่สามารถเข้าสู่ระบบได้' };
     },
 
-    switchNewGuest() {
-      this.current = this.createAccount('ผู้ท้าชิงใหม่', 340, 5);
-      CG.ui.curr20 = this.current.curr20;
-      CG.ui.curr100 = this.current.curr100;
-      CG.ui.mailClaimed = false;
+    createGuest() {
+      const randomNum = Math.floor(10000 + Math.random() * 90000);
+      const id = 'AF-' + randomNum;
+      const pass = 'guest' + randomNum;
+      return this.register('guest_' + randomNum + '@arcana.game', pass, 'ผู้ท้าชิง ' + id);
+    },
+
+    chooseStarterDeck(deckKey) {
+      if (!this.current) return;
+      this.current.starterDeckChosen = deckKey;
+      this.current.unlockedDecks = [deckKey];
+      this.current.onboarded = true;
+
+      const d = CG.cards && CG.cards[deckKey];
+      const owned = new Set();
+      if (d) {
+        (d.main || []).forEach(c => owned.add(c.id));
+        (d.extra || []).forEach(c => owned.add(c.id));
+      }
+      this.current.ownedCards = Array.from(owned);
+      try {
+        localStorage.setItem('cg_owned_cards', JSON.stringify(this.current.ownedCards));
+      } catch (_) {}
       this.save();
-      return this.current;
+    },
+
+    logout() {
+      this.current = null;
+      try {
+        localStorage.removeItem(this.CURRENT_KEY);
+      } catch (_) {}
+      showAuthScreen();
     },
 
     importBackup(jsonStr) {
@@ -795,8 +849,8 @@
         const data = JSON.parse(jsonStr);
         if (!data.id) return { success: false, message: 'ไม่พบ Account ID ในข้อมูลสำรอง' };
         this.current = data;
-        CG.ui.curr20 = data.curr20 !== undefined ? data.curr20 : 340;
-        CG.ui.curr100 = data.curr100 !== undefined ? data.curr100 : 5;
+        CG.ui.curr20 = data.curr20 !== undefined ? data.curr20 : 100;
+        CG.ui.curr100 = data.curr100 !== undefined ? data.curr100 : 1;
         CG.ui.mailClaimed = !!data.mailClaimed;
         if (data.ownedCards) {
           try { localStorage.setItem('cg_owned_cards', JSON.stringify(data.ownedCards)); } catch (_) {}
@@ -810,9 +864,279 @@
   };
   CG.account = Account;
 
+  // ---------------- หน้าเข้าสู่ระบบครั้งแรก (Auth Screen) ----------------
+  function showAuthScreen() {
+    if (typeof document === 'undefined') return;
+    const authEl = $('authScreen');
+    if (!authEl) return;
+
+    if ($('lobby')) $('lobby').classList.add('hidden');
+    if ($('game')) $('game').classList.add('hidden');
+    authEl.classList.remove('hidden');
+
+    authEl.innerHTML = 
+      '<div class="auth-box">' +
+        '<div class="auth-title-badge">⚔️ ARCANA FRONTIER ⚔️</div>' +
+        '<div class="auth-subtitle">การ์ดเกมต่อสู้ข้ามมิติ • Online Card Battle</div>' +
+        '<div class="auth-tabs">' +
+          '<button id="tabAuthLogin" class="auth-tab-btn active">🔐 เข้าสู่ระบบ (Login)</button>' +
+          '<button id="tabAuthRegister" class="auth-tab-btn">✨ สร้างไอดีใหม่ (Register)</button>' +
+        '</div>' +
+
+        // FORM LOGIN
+        '<div id="formAuthLogin">' +
+          '<div class="auth-field-group">' +
+            '<label class="auth-field-label">อีเมล หรือ Account ID:</label>' +
+            '<input type="text" id="inpAuthLoginEmail" class="auth-input" placeholder="เช่น player@gmail.com หรือ AF-12345" />' +
+          '</div>' +
+          '<div class="auth-field-group">' +
+            '<label class="auth-field-label">รหัสผ่าน (6 ตัวอักษรขึ้นไป):</label>' +
+            '<input type="password" id="inpAuthLoginPass" class="auth-input" placeholder="รหัสผ่านของคุณ" />' +
+          '</div>' +
+          '<button id="btnDoAuthLogin" class="auth-submit-btn">🔓 เข้าสู่ระบบ (Login)</button>' +
+          '<div style="margin:14px 0 4px;font-size:0.75rem;color:#94a3b8">หรือทดลองเล่นทันที</div>' +
+          '<button id="btnDoAuthGuest" class="auth-guest-btn">👤 เข้าเล่นแบบ Guest ทันที</button>' +
+        '</div>' +
+
+        // FORM REGISTER
+        '<div id="formAuthRegister" style="display:none">' +
+          '<div class="auth-field-group">' +
+            '<label class="auth-field-label">ชื่อผู้เล่น (Nickname):</label>' +
+            '<input type="text" id="inpAuthRegNick" class="auth-input" maxlength="14" placeholder="เช่น จอมเวทโอเมก้า" />' +
+          '</div>' +
+          '<div class="auth-field-group">' +
+            '<label class="auth-field-label">อีเมลของคุณ:</label>' +
+            '<input type="email" id="inpAuthRegEmail" class="auth-input" placeholder="เช่น player@gmail.com" />' +
+          '</div>' +
+          '<div class="auth-field-group">' +
+            '<label class="auth-field-label">ตั้งรหัสผ่าน (อย่างน้อย 6 ตัวอักษร):</label>' +
+            '<input type="password" id="inpAuthRegPass" class="auth-input" placeholder="รหัสผ่าน 6 ตัวขึ้นไป" />' +
+          '</div>' +
+          '<div class="auth-field-group">' +
+            '<label class="auth-field-label">ยืนยันรหัสผ่านอีกครั้ง:</label>' +
+            '<input type="password" id="inpAuthRegPass2" class="auth-input" placeholder="กรอกรหัสผ่านซ้ำอีกครั้ง" />' +
+          '</div>' +
+          '<button id="btnDoAuthRegister" class="auth-submit-btn">✨ สร้างบัญชีใหม่และเริ่มเล่น (Register)</button>' +
+        '</div>' +
+      '</div>';
+
+    authEl.onclick = (e) => {
+      if (e.target.closest('#tabAuthLogin')) {
+        authEl.querySelector('#formAuthLogin').style.display = 'block';
+        authEl.querySelector('#formAuthRegister').style.display = 'none';
+        authEl.querySelector('#tabAuthLogin').classList.add('active');
+        authEl.querySelector('#tabAuthRegister').classList.remove('active');
+        AudioFX.play('click');
+        return;
+      }
+      if (e.target.closest('#tabAuthRegister')) {
+        authEl.querySelector('#formAuthLogin').style.display = 'none';
+        authEl.querySelector('#formAuthRegister').style.display = 'block';
+        authEl.querySelector('#tabAuthLogin').classList.remove('active');
+        authEl.querySelector('#tabAuthRegister').classList.add('active');
+        AudioFX.play('click');
+        return;
+      }
+      if (e.target.closest('#btnDoAuthLogin')) {
+        const email = (authEl.querySelector('#inpAuthLoginEmail').value || '').trim();
+        const pass = (authEl.querySelector('#inpAuthLoginPass').value || '').trim();
+        const res = Account.login(email, pass);
+        if (res.success) {
+          toast('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
+          AudioFX.play('chime');
+          authEl.classList.add('hidden');
+          if (!res.account.onboarded) {
+            showOnboardingModal();
+          } else {
+            lobby();
+          }
+        } else {
+          toast('⚠ ' + res.message);
+          AudioFX.play('cancel');
+        }
+        return;
+      }
+      if (e.target.closest('#btnDoAuthRegister')) {
+        const nick = (authEl.querySelector('#inpAuthRegNick').value || '').trim();
+        const email = (authEl.querySelector('#inpAuthRegEmail').value || '').trim();
+        const pass = (authEl.querySelector('#inpAuthRegPass').value || '').trim();
+        const pass2 = (authEl.querySelector('#inpAuthRegPass2').value || '').trim();
+
+        if (!email) return toast('⚠ กรุณากรอกอีเมล');
+        if (!pass || pass.length < 6) return toast('⚠ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป');
+        if (pass !== pass2) return toast('⚠ รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+
+        const res = Account.register(email, pass, nick);
+        if (res.success) {
+          toast('🎉 สร้างบัญชีใหม่สำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
+          AudioFX.play('chime');
+          authEl.classList.add('hidden');
+          showOnboardingModal();
+        } else {
+          toast('⚠ ' + res.message);
+          AudioFX.play('cancel');
+        }
+        return;
+      }
+      if (e.target.closest('#btnDoAuthGuest')) {
+        const res = Account.createGuest();
+        if (res.success) {
+          toast('👤 สร้างไอดี Guest สำเร็จ! รหัสประจำตัว: ' + res.account.id);
+          AudioFX.play('chime');
+          authEl.classList.add('hidden');
+          showOnboardingModal();
+        }
+        return;
+      }
+    };
+  }
+
+  // ---------------- ลำดับการต้อนรับ: สอนเล่น & เลือกเด็คเริ่มต้น ----------------
+  function showOnboardingModal() {
+    if (typeof document === 'undefined') return;
+
+    // STEP 1: คำถามถามว่าจะเล่นโหมดสอนเล่นหรือไม่?
+    const step1Html = 
+      '<div style="text-align:center;padding:10px">' +
+        '<div style="font-size:3rem;margin-bottom:8px">🎓</div>' +
+        '<h3 style="margin:0 0 8px;font-size:1.35rem;font-weight:900;color:#1e293b">ยินดีต้อนรับสู่อาร์คานา ฟรอนเทียร์!</h3>' +
+        '<p style="font-size:0.95rem;color:#475569;line-height:1.5;margin-bottom:20px">' +
+          'คุณต้องการเข้าร่วม <strong>โหมดสอนเล่น (Tutorial)</strong> เพื่อเรียนรู้กติกาการดวลการ์ดก่อนหรือไม่?' +
+        '</p>' +
+        '<div style="display:flex;flex-direction:column;gap:10px">' +
+          '<button id="btnChooseTutorial" class="gold" style="padding:12px;font-size:1rem;font-weight:900;border:2.5px solid #2b1f1d">' +
+            '🎓 เข้าร่วมโหมดฝึกสอน (Tutorial)' +
+          '</button>' +
+          '<button id="btnSkipTutorial" style="background:#f1f5f9;border:2px solid #2b1f1d;padding:12px;font-size:1rem;font-weight:900;border-radius:8px;cursor:pointer">' +
+            '⚔️ เล่นเกมเลย (ไม่ต้องสอน / ข้ามการฝึกสอน)' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    const modalEl = showWfModal('🎮 ยินดีต้อนรับนักดวลการ์ดหน้าใหม่', step1Html);
+    if (!modalEl) return;
+
+    modalEl.onclick = (e) => {
+      if (e.target.closest('#btnChooseTutorial')) {
+        toast('🚧 โหมดฝึกสอนกำลังพัฒนา (เร็วๆ นี้!) กำลังนำคุณไปเลือกเด็คเริ่มต้น...');
+        AudioFX.play('click');
+        modalEl.remove();
+        showStarterDeckSelectionModal();
+        return;
+      }
+      if (e.target.closest('#btnSkipTutorial')) {
+        toast('⚔️ ยอดเยี่ยม! ไปเลือกเด็คเริ่มต้นของคุณกันเลย');
+        AudioFX.play('click');
+        modalEl.remove();
+        showStarterDeckSelectionModal();
+        return;
+      }
+    };
+  }
+
+  function showStarterDeckSelectionModal() {
+    let selectedDeck = 'dinosaur';
+
+    const starterOptions = [
+      {
+        key: 'dinosaur',
+        name: '🦖 ไดโนเสาร์จอมพลัง (Dinosaur)',
+        icon: '🦖',
+        desc: 'เน้นพลังโจมตีสูง บุกทำลายคู่แข่ง อัญเชิญราชันย์ไทแรนโนซอรัส',
+        ace: 'ไทแรนโนซอรัส จอมราชันย์ (ATK 2800)'
+      },
+      {
+        key: 'aquila',
+        name: '🦅 กองทัพโรมันอควิลา (Roman Aquila)',
+        icon: '🦅',
+        desc: 'รวมพลกองทัพกล้า สเปลสนับสนุนยุทธวิธี เคลื่อนทัพรวดเร็วทรงพลัง',
+        ace: 'จักรพรรดิออเรเลียน (ATK 2600)'
+      },
+      {
+        key: 'mecha_strike',
+        name: '🤖 เมก้าสไตรก์ (Mecha Strike)',
+        icon: '🤖',
+        desc: 'หุ่นยนต์ประกอบร่าง 5 แกนหลัก รวมร่างจุติ Apex คอสมิก โอเมก้า',
+        ace: 'คอสมิก โอเมก้า (ATK 2700)'
+      }
+    ];
+
+    const cardsHtml = starterOptions.map(opt => `
+      <div class="starter-deck-card ${opt.key === selectedDeck ? 'selected' : ''}" data-starter="${opt.key}">
+        <div class="starter-deck-badge">${opt.key === selectedDeck ? '✓ เลือกแล้ว' : 'แตะเพื่อเลือก'}</div>
+        <div style="font-size:2.2rem;margin-bottom:4px">${opt.icon}</div>
+        <div style="font-weight:900;font-size:1.05rem;color:#1e293b;margin-bottom:4px">${V().esc(opt.name)}</div>
+        <div style="font-size:0.8rem;color:#475569;line-height:1.4;margin-bottom:8px">${V().esc(opt.desc)}</div>
+        <div style="font-size:0.75rem;font-weight:800;color:#b45309;background:#fef3c7;padding:3px 6px;border-radius:4px">👑 เอซ: ${V().esc(opt.ace)}</div>
+      </div>
+    `).join('');
+
+    const html = 
+      '<div style="text-align:center;margin-bottom:8px">' +
+        '<h3 style="margin:0 0 4px;font-size:1.25rem;font-weight:900;color:#1e293b">🃏 เลือกเด็คเริ่มต้นของคุณ (เลือกได้ 1 เด็คเท่านั้น)</h3>' +
+        '<div style="font-size:0.85rem;color:#64748b;line-height:1.4">' +
+          'ทุกคนจะเริ่มต้นด้วย <strong>Level 1</strong>, ได้รับ <strong>100 แบงก์ 20</strong>, <strong>1 แบงก์ 100</strong> และใช้ได้เฉพาะเด็คนี้ก่อน<br>' +
+          'ส่วนเด็คอื่นๆ สามารถสะสมและปลดล็อกได้จากภารกิจหรือการสุ่มซองการ์ดในภายหลัง' +
+        '</div>' +
+      '</div>' +
+      '<div class="starter-deck-grid" id="starterDeckGrid">' +
+        cardsHtml +
+      '</div>' +
+      '<button id="btnConfirmStarterDeck" class="gold" style="width:100%;padding:12px;font-weight:900;font-size:1.05rem;border:2.5px solid #2b1f1d">' +
+        '✓ ยืนยันเลือกเด็คนี้และเข้าสู่เกม' +
+      '</button>';
+
+    const modalEl = showWfModal('🎁 เลือกเด็คเริ่มต้นของคุณ', html);
+    if (!modalEl) return;
+
+    modalEl.onclick = (e) => {
+      const card = e.target.closest('[data-starter]');
+      if (card) {
+        selectedDeck = card.dataset.starter;
+        modalEl.querySelectorAll('.starter-deck-card').forEach(el => {
+          const isSel = el.dataset.starter === selectedDeck;
+          el.classList.toggle('selected', isSel);
+          const badge = el.querySelector('.starter-deck-badge');
+          if (badge) badge.textContent = isSel ? '✓ เลือกแล้ว' : 'แตะเพื่อเลือก';
+        });
+        AudioFX.play('click');
+        return;
+      }
+      if (e.target.closest('#btnConfirmStarterDeck')) {
+        Account.chooseStarterDeck(selectedDeck);
+        toast('🎉 ยินดีด้วย! คุณได้รับเด็คเริ่มต้นเรียบร้อยแล้ว ยินดีต้อนรับสู่ Arcana Frontier!');
+        AudioFX.play('chime');
+        modalEl.remove();
+        lobby();
+        return;
+      }
+    };
+  }
+
+  function boot() {
+    Account.init();
+    if (!Account.isLoggedIn()) {
+      showAuthScreen();
+    } else if (!Account.current.onboarded) {
+      showOnboardingModal();
+    } else {
+      lobby();
+    }
+  }
+  CG.account = Account;
+
   // ---------------- ล็อบบี้ ----------------
   function lobby() {
     Account.init();
+    if (!Account.isLoggedIn()) {
+      showAuthScreen();
+      return;
+    }
+    if (!Account.current.onboarded) {
+      showOnboardingModal();
+      return;
+    }
+
     if (mode === 'online' && CG.network) {
       if (state && !state.ended) {
         CG.network.surrender();
@@ -829,10 +1153,13 @@
     CG.ui.inspectPendingCard = null;
     CG.ui.timers.p0 = 0; CG.ui.timers.p1 = 0; CG.ui.timers.lastTick = null;
     botBusy = false; botBannerText = null; botBannerFade = false; cardHl = {}; ghosts = {};
+    if ($('authScreen')) $('authScreen').classList.add('hidden');
     $('game').classList.add('hidden'); $('lobby').classList.remove('hidden'); $('overlayRoot').innerHTML = '';
     if (CG.deckBuilder && CG.deckBuilder.syncToCGCards) CG.deckBuilder.syncToCGCards();
     const keys = Object.keys(CG.cards || {}); const a = S().app;
-    if (!deckA || !CG.cards[deckA]) deckA = keys[0]; if (!deckB || !CG.cards[deckB]) deckB = keys[1] || keys[0];
+    const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
+    if (!deckA || !unlocked.includes(deckA)) deckA = unlocked[0];
+    if (!deckB || !CG.cards[deckB]) deckB = keys.find(k => k !== deckA) || keys[0];
 
     const curA = CG.cards[deckA] || {};
     const aceA = getDeckAceDef(deckA);
@@ -1035,6 +1362,7 @@
             '<div style="font-size:0.8rem;margin-bottom:2px;display:flex;justify-content:space-between"><span>🦖 อภิมหาไดโนเสาร์</span><span style="font-weight:700">68% (34 นัด)</span></div>' +
             '<div style="font-size:0.8rem;display:flex;justify-content:space-between"><span>🦅 กองทัพโรมันอควิลา</span><span style="font-weight:700">32% (16 นัด)</span></div>' +
           '</div>' +
+          '<button id="btnProfileLogout" style="width:100%;margin-top:8px;background:#fee2e2;border:2px solid #b91c1c;color:#b91c1c;padding:10px;border-radius:8px;font-weight:900;font-size:0.9rem;cursor:pointer">🚪 ออกจากระบบ (Logout)</button>' +
         '</div>' +
 
         // SECTION 2: LOGIN & RESTORE ACCOUNT
@@ -1175,6 +1503,12 @@
             } else {
               toast('⚠ ' + res.message);
             }
+            return;
+          }
+          if (e.target.closest('#btnProfileLogout')) {
+            m.remove();
+            Account.logout();
+            toast('🚪 ออกจากระบบเรียบร้อยแล้ว');
             return;
           }
           if (e.target.closest('#btnModalClose') || e.target === m) m.remove();
@@ -1736,9 +2070,11 @@
 
     function openBotModal() {
       const keys = Object.keys(CG.cards || {});
+      const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
       const deckOpts = keys.map(k => {
         const d = CG.cards[k];
-        return '<option value="' + k + '" ' + (deckA === k ? 'selected' : '') + '>' + V().esc(d.name) + '</option>';
+        const isUnlocked = unlocked.includes(k);
+        return '<option value="' + k + '" ' + (deckA === k ? 'selected' : '') + (!isUnlocked ? ' disabled style="color:#94a3b8"' : '') + '>' + (isUnlocked ? '👑 ' : '🔒 [ล็อก] ') + V().esc(d.name) + '</option>';
       }).join('');
 
       const html = 
@@ -1791,9 +2127,11 @@
 
     function openPvpModal() {
       const keys = Object.keys(CG.cards || {});
+      const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
       const deckOpts = keys.map(k => {
         const d = CG.cards[k];
-        return '<option value="' + k + '" ' + (deckA === k ? 'selected' : '') + '>' + V().esc(d.name) + '</option>';
+        const isUnlocked = unlocked.includes(k);
+        return '<option value="' + k + '" ' + (deckA === k ? 'selected' : '') + (!isUnlocked ? ' disabled style="color:#94a3b8"' : '') + '>' + (isUnlocked ? '👑 ' : '🔒 [ล็อก] ') + V().esc(d.name) + '</option>';
       }).join('');
 
       let savedName = (Account.current && Account.current.nickname) ? Account.current.nickname : ('ผู้ท้าชิง ' + Math.floor(100 + Math.random() * 900));
@@ -4595,6 +4933,6 @@
   if (typeof document !== 'undefined') {
     initDragAndDrop();
     setupNetworkHandlers();
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lobby); else lobby();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   }
 })();
