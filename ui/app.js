@@ -977,16 +977,17 @@
       return modalEl;
     }
 
-    function openProfileModal() {
+    function openProfileModal(initialTab = 'info') {
       const acc = Account.current;
+      const isLogin = (initialTab === 'login');
       const html = 
         '<div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:2px solid #2b1f1d;padding-bottom:8px">' +
-          '<button id="tabProfileInfo" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:#fef08a;box-shadow:1.5px 2px 0 #2b1f1d">👤 ข้อมูลผู้เล่น & สถิติ</button>' +
-          '<button id="tabProfileLogin" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:#e2e8f0;box-shadow:1.5px 2px 0 #2b1f1d">🔐 เข้าสู่ระบบ / กู้คืนไอดี</button>' +
+          '<button id="tabProfileInfo" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:' + (isLogin ? '#e2e8f0' : '#fef08a') + ';box-shadow:1.5px 2px 0 #2b1f1d">👤 ข้อมูลผู้เล่น & สถิติ</button>' +
+          '<button id="tabProfileLogin" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:' + (isLogin ? '#fef08a' : '#e2e8f0') + ';box-shadow:1.5px 2px 0 #2b1f1d">🔐 เข้าสู่ระบบ / กู้คืนไอดี</button>' +
         '</div>' +
 
         // SECTION 1: PROFILE INFO & STATS
-        '<div id="secProfileInfo">' +
+        '<div id="secProfileInfo" style="' + (isLogin ? 'display:none' : 'display:block') + '">' +
           '<div style="text-align:center;margin-bottom:14px">' +
             '<div style="width:68px;height:68px;border-radius:50%;background:#fef08a;border:3px solid #2b1f1d;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 6px">👤</div>' +
             '<div style="display:flex;align-items:center;justify-content:center;gap:6px">' +
@@ -1037,7 +1038,7 @@
         '</div>' +
 
         // SECTION 2: LOGIN & RESTORE ACCOUNT
-        '<div id="secProfileLogin" style="display:none">' +
+        '<div id="secProfileLogin" style="' + (isLogin ? 'display:block' : 'display:none') + '">' +
           '<div style="background:#fff;border:2.5px solid #2b1f1d;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:2px 3px 0 #2b1f1d">' +
             '<div style="font-weight:900;font-size:1.05rem;color:#1e293b;margin-bottom:4px">🔐 เข้าสู่ระบบด้วยไอดีเดิม (Restore Account)</div>' +
             '<div style="font-size:0.78rem;color:#64748b;margin-bottom:10px">กรอก Account ID และ PIN 6 หลักที่คุณบันทึกไว้ เพื่อดึงข้อมูลเดิมกลับมา:</div>' +
@@ -2223,15 +2224,21 @@
         // TOP ROW: Profile on left, Action buttons & Currencies on right
         '<div class="wf-top-row">' +
           // PROFILE BOX (บนซ้าย)
-          '<div class="wf-profile-box" id="btnProfile" title="แตะเพื่อดูสถิติและโปรไฟล์">' +
-            '<div class="wf-avatar-circle">' +
-              '<span>👤</span>' +
-              '<small>Lv.14</small>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<div class="wf-profile-box" id="btnProfile" title="แตะเพื่อดูสถิติและโปรไฟล์">' +
+              '<div class="wf-avatar-circle">' +
+                '<span>👤</span>' +
+                '<small>Lv.14</small>' +
+              '</div>' +
+              '<div class="wf-profile-meta">' +
+                '<div class="wf-profile-name">' + V().esc((Account.current && Account.current.nickname) || 'ผู้ท้าชิงนิรนาม') + '</div>' +
+                '<div class="wf-profile-id">ID: ' + V().esc((Account.current && Account.current.id) || 'AF-88294') + '</div>' +
+              '</div>' +
             '</div>' +
-            '<div class="wf-profile-meta">' +
-              '<div class="wf-profile-name">' + V().esc((Account.current && Account.current.nickname) || 'ผู้ท้าชิงนิรนาม') + '</div>' +
-              '<div class="wf-profile-id">ID: ' + V().esc((Account.current && Account.current.id) || 'AF-88294') + '</div>' +
-            '</div>' +
+            '<button class="wf-top-btn wf-btn-login" id="btnTopLogin" title="เข้าสู่ระบบด้วยไอดีเดิม หรือสลับบัญชี">' +
+              '<span>🔐</span>' +
+              '<span>เข้าสู่ระบบ</span>' +
+            '</button>' +
           '</div>' +
 
           // TOP ACTIONS & CURRENCIES (บนขวา)
@@ -2354,7 +2361,8 @@
         if (en) AudioFX.play('chime');
         return;
       }
-      if (e.target.closest('#btnProfile')) { AudioFX.play('click'); openProfileModal(); return; }
+      if (e.target.closest('#btnTopLogin')) { AudioFX.play('click'); openProfileModal('login'); return; }
+      if (e.target.closest('#btnProfile')) { AudioFX.play('click'); openProfileModal('info'); return; }
       if (e.target.closest('#btnShop')) { openShopModal(shopPacks[shopPackIdx].key); return; }
       if (e.target.closest('#btnNavDeck')) {
         if (CG.ui.deckBuilder) CG.ui.deckBuilder.open(deckA, () => lobby());

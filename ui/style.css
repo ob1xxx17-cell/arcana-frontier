@@ -5245,6 +5245,17 @@ button.gold:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 3.5px 5px 0 #1a1510;
 }
+.wf-btn-login {
+  background: #fef08a !important;
+  border-color: #2b1f1d !important;
+  color: #1e293b !important;
+  box-shadow: 2px 3px 0 #2b1f1d !important;
+  font-weight: 900 !important;
+}
+.wf-btn-login:hover {
+  background: #fde047 !important;
+  transform: translateY(-2px);
+}
 .wf-btn-friend {
   border-color: #15803d;
   color: #15803d;
