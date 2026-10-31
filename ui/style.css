@@ -8010,25 +8010,50 @@ button.gold:hover:not(:disabled) {
     --hand-card-w: calc(var(--hand-card-h) * 5 / 7) !important;
   }
 
-  /* 1. LOBBY COMPACT (ล็อบบี้แนวนอนมือถือ พอดีจอ ไม่ล้น ไม่ตกขอบ) */
-  #lobby, .grimoire-lobby {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    padding: 2px 8px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
+  /* 1. LOBBY COMPACT (ล็อบบี้แนวนอนมือถือ ใช้ position: fixed ขึงพอดีจอ 100% ตัดปัญหา URL bar ล้น) */
+  #lobby {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
     overflow: hidden !important;
+    display: block !important;
+  }
+  .grimoire-lobby {
+    position: absolute !important;
+    inset: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    display: block !important;
   }
   .wf-lobby-stage {
-    height: 100% !important;
-    max-height: 100% !important;
+    position: absolute !important;
+    inset: 3px 6px !important;
+    top: 3px !important;
+    bottom: 3px !important;
+    left: 6px !important;
+    right: 6px !important;
+    width: auto !important;
+    height: auto !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
     overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   /* TOP ROW: ย่อโปรไฟล์และเหรียญ */
@@ -8124,15 +8149,16 @@ button.gold:hover:not(:disabled) {
     flex: 1 !important;
     min-height: 0 !important;
     position: relative !important;
+    overflow: hidden !important;
   }
   .wf-pinned-poster {
-    width: clamp(100px, 15vw, 130px) !important;
+    width: clamp(90px, 14vw, 115px) !important;
     margin-top: 0 !important;
     transform: rotate(-1deg) !important;
   }
   .wf-pin-head {
-    font-size: 1rem !important;
-    top: -10px !important;
+    font-size: 0.9rem !important;
+    top: -8px !important;
   }
   .wf-poster-frame {
     padding: 2px 2px 4px 2px !important;
@@ -8140,44 +8166,45 @@ button.gold:hover:not(:disabled) {
     box-shadow: 2px 3px 0 #2b1f1d !important;
   }
   .wf-poster-badge {
-    font-size: 0.6rem !important;
+    font-size: 0.58rem !important;
     margin-top: 2px !important;
     white-space: nowrap !important;
   }
   .wf-shop-banner {
-    width: clamp(180px, 26vw, 230px) !important;
-    height: clamp(44px, 13vh, 56px) !important;
+    width: clamp(170px, 25vw, 220px) !important;
+    height: clamp(38px, 11vh, 48px) !important;
     border-width: 2px !important;
-    border-top: 4px solid #e11d48 !important;
-    border-radius: 10px !important;
-    padding: 0 6px !important;
-    box-shadow: 0 3px 0 #1a1510 !important;
+    border-top: 3px solid #e11d48 !important;
+    border-radius: 8px !important;
+    padding: 0 5px !important;
+    box-shadow: 0 2px 0 #1a1510 !important;
   }
   .wf-shop-arrow {
-    width: 20px !important;
-    height: 24px !important;
-    font-size: 0.75rem !important;
-    border-radius: 5px !important;
-    border-width: 1.5px !important;
+    width: 18px !important;
+    height: 22px !important;
+    font-size: 0.7rem !important;
+    border-radius: 4px !important;
+    border-width: 1px !important;
   }
   .wf-shop-title {
-    font-size: 0.7rem !important;
+    font-size: 0.65rem !important;
     font-weight: 900 !important;
   }
   .wf-shop-subtitle {
-    font-size: 0.55rem !important;
+    font-size: 0.52rem !important;
   }
 
-  /* BOTTOM ROW: เมนูปุ่มด้านล่าง 4 ปุ่ม + เล่นกับบอท + เริ่มเกมออนไลน์ */
+  /* BOTTOM ROW: เมนูปุ่มด้านล่าง 4 ปุ่ม + เล่นกับบอท + เริ่มเกมออนไลน์ ตรึงล่างสุดไม่หลุดขอบ */
   .wf-bottom-row {
     padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 0 2px 0 !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: flex-end !important;
     width: 100% !important;
     gap: 4px !important;
     flex-shrink: 0 !important;
+    z-index: 20 !important;
   }
   .wf-nav-horizontal {
     gap: 3px !important;
@@ -8186,7 +8213,7 @@ button.gold:hover:not(:disabled) {
   }
   .wf-nav-btn {
     width: clamp(52px, 8vw, 64px) !important;
-    height: clamp(26px, 8.5vh, 32px) !important;
+    height: clamp(26px, 8vh, 32px) !important;
     font-size: 0.6rem !important;
     padding: 0 2px !important;
     border-radius: 6px !important;
@@ -8210,7 +8237,7 @@ button.gold:hover:not(:disabled) {
   }
   .wf-play-group .wf-btn-bot {
     width: clamp(72px, 11vw, 86px) !important;
-    height: clamp(26px, 8.5vh, 32px) !important;
+    height: clamp(26px, 8vh, 32px) !important;
     font-size: 0.64rem !important;
     border-radius: 6px !important;
     padding: 0 3px !important;
@@ -8227,7 +8254,7 @@ button.gold:hover:not(:disabled) {
   }
   .wf-start-hero-btn {
     width: clamp(105px, 15vw, 130px) !important;
-    height: clamp(28px, 9.5vh, 36px) !important;
+    height: clamp(28px, 9vh, 36px) !important;
     padding: 1px 4px !important;
     border-radius: 8px !important;
     border-width: 2px !important;
@@ -8248,20 +8275,29 @@ button.gold:hover:not(:disabled) {
 
   /* 2. BOARD & DUEL ARENA COMPACT (สนามประลองแนวนอนมือถือ) */
   #game {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     overflow: hidden !important;
   }
   #game .main {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
   }
   #game .board {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    flex: 1 !important;
     padding: 0 2px calc(var(--hand-card-h) + 2px) 2px !important;
     box-sizing: border-box !important;
     display: flex !important;
