@@ -10,7 +10,7 @@
    * @param {Object} st - สถานะเกมปัจจุบัน (ห้ามแก้ไข)
    * @param {number} idx - ผู้เล่นที่ต้องลงมือ (0 หรือ 1)
    * @param {Array} legal - รายการ action ที่ทำได้ตามกฎ (จาก E.getLegalActions)
-   * @param {Object} [options] - ตัวเลือก เช่น { level: 'easy' | 'normal' }
+   * @param {Object} [options] - ตัวเลือก เช่น { level: 'easy' | 'normal' | 'hard' }
    * @returns {Object} action ที่บอทเลือก
    */
   function choose(st, idx, legal, options) {
@@ -19,6 +19,8 @@
     const level = options.level || 'easy';
 
     switch (level) {
+      case 'hard':
+        return chooseHard(st, idx, legal);
       case 'normal':
         return chooseNormal(st, idx, legal);
       case 'easy':
@@ -213,6 +215,10 @@
     if (st.pending && st.pending.resume) {
       const pd = st.pending;
       const respond = (choice) => ({ type: 'respond', player: idx, choice });
+
+      if (pd.validCombos && pd.validCombos.length > 0) {
+        return respond(pd.validCombos[0]);
+      }
 
       if (pd.kind === 'chooseOption' || pd.kind === 'yesNo') {
         return respond([0]);
@@ -630,6 +636,425 @@
     if (setSpells.length > 0) return setSpells[0];
 
     // 6. ไม่จบเทิร์นก่อนใช้การกระทำที่ได้ประโยชน์ในเมน 1 -> advancePhase ไปต่อสู้
+    return by('advancePhase')[0] || by('endTurn')[0] || legal[0];
+  }
+
+  // ---------------- ระดับ hard: ปรมาจารย์ AI คอมโบการ์ดและคำนวณขั้นสูง ----------------
+  function chooseHard(st, idx, legal) {
+    const by = (t) => legal.filter(x => x.type === t);
+    const E_ = E();
+    const me = st.players[idx], op = st.players[1 - idx];
+    const cardLv = (a) => a.handIdx !== undefined ? (E_.cardOf(me.hand[a.handIdx]) || {}) : {};
+
+    // 1. SMART MULLIGAN (การสลับมือเริ่มต้นแบบโปร)
+    if (st.phase === 'mulligan') {
+      const hand = me.hand || [];
+      const lv1Monsters = hand.filter(c => {
+        const def = E_.cardOf(c);
+        return def && def.type === 'monster' && def.level === 1;
+      });
+      const searchers = hand.filter(c => {
+        const def = E_.cardOf(c);
+        return def && def.effects && def.effects.some(e => e.do && e.do.some(d => d.op === 'search' || d.op === 'draw'));
+      });
+      if (lv1Monsters.length === 0 && searchers.length === 0) {
+        const unplayableIndices = [];
+        hand.forEach((c, i) => {
+          const def = E_.cardOf(c);
+          if (def && (def.level > 1 || def.group === 'counter')) {
+            unplayableIndices.push(i);
+          }
+        });
+        if (unplayableIndices.length > 0) {
+          const mulSel = by('mulligan').find(x => Array.isArray(x.indices));
+          if (mulSel) return { type: 'mulligan', player: idx, indices: unplayableIndices };
+          const mulAll = by('mulligan').find(x => !x.indices);
+          if (mulAll) return mulAll;
+        }
+      }
+      return by('pass')[0] || legal[0];
+    }
+
+    // 2. CHAIN WINDOW (การตอบโต้สวนกลับระดับเซียน)
+    if (st.pending && st.pending.kind === 'chainWindow') {
+      const passAct = by('passPriority')[0] || by('pass')[0] || legal[0];
+      const respActs = by('activateResponse');
+      if (respActs.length === 0) return passAct;
+
+      let shouldRespond = false;
+      const topLink = st.chain && st.chain.length > 0 ? st.chain[st.chain.length - 1] : null;
+      if (topLink && topLink.controller !== idx) {
+        const topDef = E_.findCard ? E_.findCard(topLink.cardId) : null;
+        if (topDef && topDef.effects) {
+          const eff = topDef.effects.find(e => e.id === topLink.effectId) || topDef.effects[0];
+          if (eff && eff.do) {
+            const isThreat = eff.do.some(d => ['destroy', 'sendToGrave', 'banish', 'returnToHand', 'damage', 'negate', 'specialSummon'].includes(d.op));
+            if (isThreat) shouldRespond = true;
+          }
+        }
+        if (topLink.targets && topLink.targets.some(uid => me.monsters.some(m => m && m.uid === uid))) {
+          shouldRespond = true;
+        }
+      }
+
+      const lastAtk = st.log && st.log.slice().reverse().find(e => e.type === 'attackDeclared');
+      if (lastAtk && lastAtk.player !== idx) {
+        const attacker = op.monsters[lastAtk.from];
+        const atkVal = attacker ? E_.atk(attacker) : 0;
+        if (lastAtk.to === null) {
+          shouldRespond = true;
+        } else {
+          const defender = me.monsters[lastAtk.to];
+          const defStat = defender ? (defender.position === 'atk' ? E_.atk(defender) : E_.def(defender)) : 0;
+          if (atkVal >= defStat) shouldRespond = true;
+        }
+      }
+
+      if (shouldRespond) {
+        const counterTrap = respActs.find(a => {
+          const c = a.handIdx !== undefined ? me.hand[a.handIdx] : (a.spellSlot !== undefined ? me.spells[a.spellSlot] : null);
+          const def = c ? E_.cardOf(c) : null;
+          return def && def.group === 'counter';
+        });
+        if (counterTrap) return counterTrap;
+        return respActs[0];
+      }
+      return passAct;
+    }
+
+    // 3. PENDING WITH RESUME (การเลือกตัวเลือกที่คุ้มค่าที่สุด)
+    if (st.pending && st.pending.resume) {
+      const pd = st.pending;
+      const respond = (choice) => ({ type: 'respond', player: idx, choice });
+
+      if (pd.validCombos && pd.validCombos.length > 0) {
+        return respond(pd.validCombos[0]);
+      }
+      if (pd.kind === 'chooseOption' || pd.kind === 'yesNo') return respond([0]);
+      if (pd.kind === 'chooseSlot') {
+        const bestSlot = pd.options.findIndex(o => (o.slot === 2 || o.index === 2));
+        return respond([bestSlot >= 0 ? bestSlot : 0]);
+      }
+
+      const opts = pd.options || [];
+      const count = pd.min;
+      if (opts.length <= count) {
+        const all = [];
+        for (let i = 0; i < opts.length; i++) all.push(i);
+        return respond(all);
+      }
+
+      const oppIndices = [], selfIndices = [];
+      for (let i = 0; i < opts.length; i++) {
+        if (opts[i].side === 'opp') oppIndices.push(i);
+        else selfIndices.push(i);
+      }
+
+      const prompt = (pd.prompt || '').toUpperCase();
+      const isDestroy = prompt.includes('DESTROY') || prompt.includes('TARGET');
+      const isSelf = prompt.includes('TRIBUTE') || prompt.includes('COST') || prompt.includes('SEND') || prompt.includes('MATERIAL');
+      const isSearch = prompt.includes('SEARCH') || prompt.includes('SUMMON') || prompt.includes('CARDS') || prompt.includes('EXTRA');
+      const isFusion = prompt.includes('FUSION');
+
+      let selected = [];
+
+      if (isDestroy && oppIndices.length >= count) {
+        const sorted = oppIndices.slice().sort((a, b) => {
+          const da = E_.findCard ? E_.findCard(opts[a].cardId) : null;
+          const db = E_.findCard ? E_.findCard(opts[b].cardId) : null;
+          return ((db && db.atk) || 0) - ((da && da.atk) || 0);
+        });
+        selected = sorted.slice(0, count);
+      } else if (isFusion && selfIndices.length >= count) {
+        const sorted = selfIndices.slice().sort((a, b) => {
+          const zoneA = opts[a].zone === 'hand' ? 0 : 1;
+          const zoneB = opts[b].zone === 'hand' ? 0 : 1;
+          if (zoneA !== zoneB) return zoneA - zoneB;
+          const da = E_.findCard ? E_.findCard(opts[a].cardId) : null;
+          const db = E_.findCard ? E_.findCard(opts[b].cardId) : null;
+          return ((da && da.atk) || 0) - ((db && db.atk) || 0);
+        });
+        selected = sorted.slice(0, count);
+      } else if (isSelf && selfIndices.length >= count) {
+        const sorted = selfIndices.slice().sort((a, b) => {
+          const isEggA = opts[a].cardId === 'dino_egg' ? -1 : 0;
+          const isEggB = opts[b].cardId === 'dino_egg' ? -1 : 0;
+          if (isEggA !== isEggB) return isEggA - isEggB;
+          const da = E_.findCard ? E_.findCard(opts[a].cardId) : null;
+          const db = E_.findCard ? E_.findCard(opts[b].cardId) : null;
+          return ((da && da.atk) || 0) - ((db && db.atk) || 0);
+        });
+        selected = sorted.slice(0, count);
+      } else if (isSearch) {
+        const sorted = opts.map((_, i) => i).sort((a, b) => {
+          const da = E_.findCard ? E_.findCard(opts[a].cardId) : null;
+          const db = E_.findCard ? E_.findCard(opts[b].cardId) : null;
+          return ((db && db.atk) || 0) - ((da && da.atk) || 0);
+        });
+        selected = sorted.slice(0, count);
+      }
+
+      if (selected.length < count) {
+        selected = [];
+        for (let i = 0; i < count && i < opts.length; i++) selected.push(i);
+      }
+
+      return respond(selected.sort((a, b) => a - b));
+    }
+
+    if (st.pending) {
+      return by('respond')[0] || legal[0];
+    }
+
+    // 4. BATTLE PHASE (ยอดนักคำนวณ Lethal และ Trade ที่คุ้มค่าที่สุด)
+    if (st.phase === 'battle') {
+      const attacks = by('attack');
+      if (attacks.length > 0) {
+        let totalAttackPower = 0;
+        for (let s = 0; s < me.monsters.length; s++) {
+          const m = me.monsters[s];
+          if (m && !m.faceDown && m.position === 'atk' && (!m.flags || (m.flags.canAttack !== false && !m.flags.attackedThisTurn))) {
+            totalAttackPower += E_.atk(m);
+          }
+        }
+        const opMonsters = op.monsters.filter(m => m !== null);
+        const hasDirectAttack = attacks.some(x => x.to === null);
+
+        if (opMonsters.length === 0 && hasDirectAttack && totalAttackPower >= op.lp) {
+          const dirAtk = attacks.filter(x => x.to === null).sort((a, b) => {
+            const mA = me.monsters[a.from], mB = me.monsters[b.from];
+            return (mB ? E_.atk(mB) : 0) - (mA ? E_.atk(mA) : 0);
+          })[0];
+          if (dirAtk) return dirAtk;
+        }
+
+        const favorableAttacks = [];
+        for (const act of attacks) {
+          const m = me.monsters[act.from];
+          const myAtk = m ? E_.atk(m) : 0;
+          if (act.to === null) {
+            favorableAttacks.push({ act, score: 200000 + myAtk });
+          } else {
+            const t = op.monsters[act.to];
+            if (!t) continue;
+            const tAtk = E_.atk(t);
+            const tDef = E_.def(t);
+            if (t.faceDown) {
+              if (myAtk > tDef || myAtk >= 800) {
+                favorableAttacks.push({ act, score: 10000 + tAtk });
+              }
+            } else if (t.position === 'atk') {
+              if (myAtk > tAtk) {
+                const dmg = myAtk - tAtk;
+                const lethalBonus = dmg >= op.lp ? 1000000 : 0;
+                favorableAttacks.push({ act, score: lethalBonus + 50000 + tAtk * 10 + dmg });
+              }
+            } else if (t.position === 'def') {
+              if (myAtk > tDef) {
+                favorableAttacks.push({ act, score: 20000 + tAtk * 10 });
+              }
+            }
+          }
+        }
+
+        if (favorableAttacks.length > 0) {
+          favorableAttacks.sort((a, b) => b.score - a.score);
+          return favorableAttacks[0].act;
+        }
+      }
+
+      return by('advancePhase')[0] || by('endTurn')[0] || legal[0];
+    }
+
+    // 5. MAIN PHASE 2 (การเตรียมตั้งรับและหมอบกับดัก)
+    if (st.phase === 'main2') {
+      const setSpells = by('setSpell').filter(a => {
+        const def = E_.cardOf(me.hand[a.handIdx]);
+        return def && (def.group === 'set' || def.group === 'counter');
+      });
+      if (setSpells.length > 0) return setSpells[0];
+
+      const maxOppAtk = Math.max(0, ...op.monsters.filter(o => o && !o.faceDown).map(o => E_.atk(o)));
+      const changePositions = by('changePosition');
+      if (changePositions.length > 0 && maxOppAtk > 0) {
+        const toDef = changePositions.find(act => {
+          const m = me.monsters[act.slot];
+          return m && m.position === 'atk' && !m.faceDown && E_.atk(m) < maxOppAtk;
+        });
+        if (toDef) return toDef;
+      }
+
+      return by('endTurn')[0] || by('advancePhase')[0] || legal[0];
+    }
+
+    // 6. MAIN PHASE 1 (สุดยอดคอมโบการ์ดระดับปรมาจารย์)
+    const actSpells = by('activateSpell');
+    const actEffects = by('activateEffect');
+
+    // 6.1 Card Advantage First: ร่ายเวทจั่วและค้นหาก่อนเสมอเพื่อขยายตัวเลือกในมือ!
+    const searchDrawSpells = actSpells.filter(a => {
+      const def = a.handIdx !== undefined ? E_.cardOf(me.hand[a.handIdx]) : (a.spellSlot !== undefined ? E_.cardOf(me.spells[a.spellSlot]) : null);
+      if (!def || !def.effects || !def.effects.length) return false;
+      const eff = def.effects[0];
+      return eff.do && eff.do.some(d => d.op === 'draw' || d.op === 'search' || d.op === 'addMana');
+    });
+    if (searchDrawSpells.length > 0) return searchDrawSpells[0];
+
+    // 6.2 Free Ignitions & Special Summons (ไม่กินโควตาลงปกติ เช่น mecha_dolphin, aq_consul)
+    const specialIgnitions = actEffects.filter(act => {
+      const m = act.slot !== undefined ? me.monsters[act.slot] : me.hand[act.handIdx];
+      const def = m ? E_.cardOf(m) : null;
+      if (!def || !def.effects) return false;
+      const eff = def.effects.find(e => e.id === act.effectId) || def.effects[0];
+      if (!eff) return false;
+      return eff.do && eff.do.some(d => d.op === 'specialSummon');
+    });
+    if (specialIgnitions.length > 0) return specialIgnitions[0];
+
+    // 6.3 Aura / Field Spells: กางสนามและเอฟเฟกต์ต่อเนื่อง
+    const auraSpells = actSpells.filter(a => {
+      const def = a.handIdx !== undefined ? E_.cardOf(me.hand[a.handIdx]) : (a.spellSlot !== undefined ? E_.cardOf(me.spells[a.spellSlot]) : null);
+      if (!def || !def.effects || !def.effects.length) return false;
+      const eff = def.effects[0];
+      return def.field || eff.trigger === 'continuous' || (eff.do && eff.do.some(d => d.aura));
+    });
+    if (auraSpells.length > 0) return auraSpells[0];
+
+    // 6.4 Targeted Removal: ถ้าศัตรูมีมอนสเตอร์อันตราย ร่ายเวททำลายก่อน
+    const destroySpells = actSpells.filter(a => {
+      const def = a.handIdx !== undefined ? E_.cardOf(me.hand[a.handIdx]) : (a.spellSlot !== undefined ? E_.cardOf(me.spells[a.spellSlot]) : null);
+      if (!def || !def.effects || !def.effects.length) return false;
+      const eff = def.effects[0];
+      const isDestroy = eff.do && eff.do.some(d => d.op === 'destroy' && d.target && (d.target.side === 'opp' || d.target === 'opp'));
+      if (!isDestroy) return false;
+      return op.monsters.filter(m => m !== null).length > 0;
+    });
+    if (destroySpells.length > 0) return destroySpells[0];
+
+    // 6.5 Fusion Summon & Extra Deck Bosses (รวมร่างเรียกตัวบอส mecha_resonance, dino_fusion)
+    const fusionSpells = actSpells.filter(a => {
+      const def = a.handIdx !== undefined ? E_.cardOf(me.hand[a.handIdx]) : (a.spellSlot !== undefined ? E_.cardOf(me.spells[a.spellSlot]) : null);
+      if (!def || !def.effects || !def.effects.length) return false;
+      const eff = def.effects[0];
+      return eff.do && eff.do.some(d => d.op === 'fusionSummon');
+    });
+    if (fusionSpells.length > 0) return fusionSpells[0];
+
+    // 6.6 Overlay Summon / Extra Summon (Grade 4 / Hastatus to Centurion/Legatus)
+    const overlays = by('overlay').filter(act => {
+      const target = me.monsters[act.targetSlot];
+      if (!target) return false;
+      const oldAtk = E_.atk(target);
+      const handCard = me.hand[act.handIdx];
+      const def = E_.cardOf(handCard);
+      const eff = def && def.effects && def.effects.find(e => e.trigger === 'overlay');
+      const newAtk = (eff && eff.result && eff.result.atk) || (def && def.atk) || 2000;
+      return newAtk > oldAtk;
+    });
+    if (overlays.length > 0) return overlays[0];
+
+    const extraSummons = by('extraSummon').filter(act => {
+      const target = me.monsters[act.targetSlot];
+      if (!target) return false;
+      const oldAtk = E_.atk(target);
+      const exCard = me.extra[act.extraIdx];
+      const def = E_.cardOf(exCard);
+      const newAtk = (def && def.atk) || 0;
+      return newAtk > oldAtk;
+    });
+    if (extraSummons.length > 0) return extraSummons[0];
+
+    // 6.7 Tribute Summon: ถ้ามีมอนสเตอร์สังเวยเรียกบอส
+    const maxOppAtk = Math.max(0, ...op.monsters.filter(o => o && !o.faceDown).map(o => E_.atk(o)));
+    const validTributes = by('tributeSummon').filter(act => {
+      const def = cardLv(act);
+      const newAtk = def.atk || 0;
+      const maxMatAtk = Math.max(...act.materials.map(s => me.monsters[s] ? E_.atk(me.monsters[s]) : 0));
+      return (newAtk - maxMatAtk) >= 300 && act.materials.length <= 2;
+    }).sort((a, b) => {
+      const atkDiff = (cardLv(b).atk || 0) - (cardLv(a).atk || 0);
+      if (atkDiff !== 0) return atkDiff;
+      const matA = a.materials.reduce((sum, s) => sum + (me.monsters[s] ? E_.atk(me.monsters[s]) : 0), 0);
+      const matB = b.materials.reduce((sum, s) => sum + (me.monsters[s] ? E_.atk(me.monsters[s]) : 0), 0);
+      return matA - matB;
+    });
+
+    // 6.8 Normal Summon / Set Summon
+    const normals = by('normalSummon');
+    const sets = by('setMonster');
+
+    let bestLv1 = null;
+    if (normals.length > 0 || sets.length > 0) {
+      const lv1Hands = [];
+      const seenHands = new Set();
+      [...normals, ...sets].forEach(act => {
+        if (!seenHands.has(act.handIdx)) {
+          seenHands.add(act.handIdx);
+          lv1Hands.push(act.handIdx);
+        }
+      });
+
+      lv1Hands.sort((hA, hB) => (E_.cardOf(me.hand[hB])?.atk || 0) - (E_.cardOf(me.hand[hA])?.atk || 0));
+
+      if (lv1Hands.length > 0) {
+        const bestHandIdx = lv1Hands[0];
+        const cardDef = E_.cardOf(me.hand[bestHandIdx]) || {};
+        const cardAtk = cardDef.atk || 0;
+
+        if (cardAtk < maxOppAtk) {
+          const setActs = sets.filter(x => x.handIdx === bestHandIdx).sort((x, y) => Math.abs(x.slot - 2) - Math.abs(y.slot - 2));
+          bestLv1 = setActs[0] || normals.find(x => x.handIdx === bestHandIdx);
+        } else {
+          const normActs = normals.filter(x => x.handIdx === bestHandIdx).sort((x, y) => Math.abs(x.slot - 2) - Math.abs(y.slot - 2));
+          bestLv1 = normActs[0] || sets.find(x => x.handIdx === bestHandIdx);
+        }
+      }
+    }
+
+    if (validTributes.length > 0 && bestLv1) {
+      const tribAtk = cardLv(validTributes[0]).atk || 0;
+      const lv1Atk = E_.cardOf(me.hand[bestLv1.handIdx])?.atk || 0;
+      if (tribAtk >= lv1Atk) return validTributes[0];
+      return bestLv1;
+    } else if (validTributes.length > 0) {
+      return validTributes[0];
+    } else if (bestLv1) {
+      return bestLv1;
+    }
+
+    // 6.9 Flip Summon
+    const fl = by('flipSummon');
+    if (fl.length > 0) {
+      const safeFlip = fl.find(act => {
+        const m = me.monsters[act.slot];
+        return m && (E_.atk(m) >= maxOppAtk || maxOppAtk === 0);
+      });
+      if (safeFlip) return safeFlip;
+    }
+
+    // 6.10 Remaining Monster Ignitions / Buffs
+    if (actEffects.length > 0) {
+      const goodEff = actEffects.find(act => {
+        const m = act.slot !== undefined ? me.monsters[act.slot] : me.hand[act.handIdx];
+        const def = m ? E_.cardOf(m) : null;
+        if (!def || !def.effects) return false;
+        const eff = def.effects.find(e => e.id === act.effectId);
+        if (!eff) return false;
+        const targetsOpp = eff.do && eff.do.some(d => d.target && (d.target.side === 'opp' || d.target === 'opp'));
+        if (targetsOpp && op.monsters.filter(x => x !== null).length === 0) return false;
+        return true;
+      });
+      if (goodEff) return goodEff;
+    }
+
+    // 6.11 Set Spells (หมอบสเปล/กับดัก)
+    const setSpells = by('setSpell').filter(a => {
+      const def = E_.cardOf(me.hand[a.handIdx]);
+      return def && (def.group === 'set' || def.group === 'counter');
+    });
+    if (setSpells.length > 0) return setSpells[0];
+
+    // 6.12 Advance Phase to Battle
     return by('advancePhase')[0] || by('endTurn')[0] || legal[0];
   }
 

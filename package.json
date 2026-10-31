@@ -1,0 +1,14 @@
+{
+  "name": "arcana-frontier-online",
+  "version": "1.0.0",
+  "description": "Arcana Frontier - Card Game Online PVP",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node tests/run.js"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5",
+    "ws": "^8.22.0"
+  }
+}

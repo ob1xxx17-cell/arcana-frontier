@@ -33,19 +33,20 @@
       overlay: 'Eclipse (เอ็กลิปส์)', extraSummon: 'อัญเชิญ Astral Gate', pickOverlayTarget: 'เลือก Entity ที่จะทำ Eclipse (วางทับ)', pickExtraSlot: 'เลือกช่องที่จะลง Astral Gate',
       pickSlot: 'เลือกช่อง Entity ที่จะลง', pickMats: 'เลือก Entity ของคุณที่จะเสียสละ แล้วกด "ยืนยันวัสดุ"', confirmMats: 'ยืนยันวัสดุ',
       pickTarget: 'เลือกเป้าหมายที่จะโจมตี',
-      activateSpell: 'ใช้ Distortion (ดิสทอร์ชัน)', setSpell: 'หมอบ Distortion (ดิสทอร์ชัน)', activateEffect: 'ใช้เอฟเฟกต์', activateSpellSlot: 'เปิดใช้ Distortion (ดิสทอร์ชัน)', pickSpellSlot: 'เลือกช่อง Distortion ที่จะวางคว่ำ',
+      activateSpell: 'ใช้ Distortion (ดิสทอร์ชัน)', activateField: 'ร่ายเวทสนาม (Field Distortion)', setSpell: 'หมอบ Distortion (ดิสทอร์ชัน)', activateEffect: 'ใช้เอฟเฟกต์', activateSpellSlot: 'เปิดใช้ Distortion (ดิสทอร์ชัน)', pickSpellSlot: 'เลือกช่อง Distortion ที่จะวางคว่ำ',
       botPlaying: 'บอทกำลังเล่น…',
       speed: {
-        title: 'ความเร็วบอท',
-        slow: '🐢 ช้า (1.5s)',
-        normal: '⏱ ปกติ (0.8s)',
-        fast: '⚡ เร็ว (0.25s)',
+        title: 'ความเร็วแอนิเมชันและบอท',
+        slow: '🐢 สโลว์โมชัน (ใจเย็น)',
+        normal: '⏱ ปกติ (ชัดเจน สบายตา)',
+        fast: '⚡ รวดเร็ว',
         label: 'ความเร็ว'
       },
       difficulty: {
         title: 'ความยากบอท',
         easy: '🌱 ง่าย',
         normal: '⚔️ ปกติ',
+        hard: '🔥 ปรมาจารย์ (Hard)',
         label: 'ความยาก'
       },
       banner: {
@@ -96,7 +97,11 @@
       ATTACK_IN_PROGRESS: 'กำลังอยู่ระหว่างการโจมตี', GRADE4_LIMIT: 'เทิร์นนี้เรียก Apex ไปแล้ว',
       MULLIGAN_USED: 'Mulligan ได้ครั้งเดียว', INVALID_CHOICE: 'ตัวเลือกไม่ถูกต้อง', PENDING_UNRESOLVED: 'ต้องตอบคำถามที่ค้างอยู่ก่อน',
       NO_PENDING: 'ไม่มีคำถามให้ตอบ', NO_WINDOW: 'ตอนนี้ไม่มีหน้าต่างตอบโต้', NOT_IMPLEMENTED: 'ยังไม่เปิดใช้ (เอฟเฟกต์/Distortion รอขั้น 4-6)',
-      NOT_IN_ZONE: 'การ์ดไม่ได้อยู่ในโซนที่ต้องการ', UNKNOWN_ACTION: 'คำสั่งไม่รู้จัก', INVALID_PLAYER: 'ผู้เล่นไม่ถูกต้อง', WRONG_STATE: 'สถานะไม่ถูกต้อง'
+      NOT_IN_ZONE: 'การ์ดไม่ได้อยู่ในโซนที่ต้องการ', UNKNOWN_ACTION: 'คำสั่งไม่รู้จัก', INVALID_PLAYER: 'ผู้เล่นไม่ถูกต้อง', WRONG_STATE: 'สถานะไม่ถูกต้อง',
+      CONDITION_FAILED: 'เงื่อนไขการใช้ไม่ครบถ้วน (ไม่มีเป้าหมายที่ถูกต้อง)', NO_TARGET_IN_GRAVE: 'ไม่มีการ์ดเป้าหมายในสุสาน',
+      CANNOT_SET_FIELD: 'เวทสนามต้องร่ายลงช่องสนามโดยตรง หมอบในช่องสเปลไม่ได้',
+      CANNOT_CHANGE_POSITION: 'มอนสเตอร์ตัวนี้ไม่สามารถเปลี่ยนท่าต่อสู้ได้ในตอนนี้ (ติดสถานะ)',
+      EFFECT_NEGATED: 'เอฟเฟกต์ของการ์ดใบนี้ถูกลบล้าง (ถูกใบ้/Silence)'
     },
     errorUnknown: 'คำสั่งถูกปฏิเสธ',
     prompts: {
@@ -107,6 +112,10 @@
       CHOOSE_TARGET: 'เลือกเป้าหมาย',
       CHOOSE_CARDS: 'เลือกการ์ด',
       CHOOSE_OPTION: 'เลือกตัวเลือก',
+      CHOOSE_FUSION_MONSTER: '🌀 เลือกมอนสเตอร์ Fusion ที่จะอัญเชิญ',
+      CHOOSE_FUSION_MATERIALS: '🌀 เลือกวัตถุดิบสำหรับฟิวชั่น',
+      CHOOSE_FUSION_SLOT: '🌀 เลือกช่องสำหรับวางมอนสเตอร์ฟิวชั่น',
+      CHOOSE_SLOT: '🌀 เลือกช่องสำหรับวางมอนสเตอร์',
       unknown: 'ต้องการให้คุณเลือก'
     },
     chain: {
@@ -126,7 +135,7 @@
       atkLabel: 'ATK',
       defLabel: 'DEF',
       lvLabel: 'Lv',
-      zoneLabel: { monster: 'สนาม', hand: 'มือ', grave: 'Abyss (อะบิส)', deck: 'Chronicle (โครนิเคิล)', extra: 'Astral Gate (แอสทรัลเกต)', removed: 'Exile (เอ็กไซล์)' },
+      zoneLabel: { monster: 'สนาม', hand: 'มือ', grave: 'Abyss (สุสาน)', deck: 'Chronicle (เด็ค)', extra: 'Astral Gate (Extra)', removed: 'Exile (นอกเกม)' },
       sideLabel: { self: 'ฝ่ายเรา', opp: 'ฝ่ายตรงข้าม' }
     },
     ev: {
@@ -137,7 +146,7 @@
       phaseChange: 'เฟส: {ph}', turnStart: '── เทิร์น {t}: {p} ──', gameEnd: 'จบเกม: {w} ({r})',
       chainAdd: 'ลิงก์ใหม่ใน Chain', chainResolve: 'แก้ผล Chain', rejected: 'ถูกปฏิเสธ: {code}'
     },
-    zone: { deck: 'Chronicle (โครนิเคิล)', hand: 'มือ', monster: 'สนาม', spell: 'Distortion (ดิสทอร์ชัน)', grave: 'Abyss (อะบิส)', removed: 'Exile (เอ็กไซล์)', extra: 'Astral Gate (แอสทรัลเกต)' },
+    zone: { deck: 'Chronicle (โครนิเคิล)', hand: 'มือ', monster: 'สนาม', spell: 'Distortion (ดิสทอร์ชัน)', field: 'ช่องสนาม', grave: 'Abyss (อะบิส)', removed: 'Exile (เอ็กไซล์)', extra: 'Astral Gate (แอสทรัลเกต)' },
     endReason: { lp: 'FP หมด', tiebreak: 'เกินเทิร์นที่กำหนดและ Chronicle หมด ตัดสินจากการ์ดบนสนาม', deckout: 'Chronicle หมด' }
   };
 })();

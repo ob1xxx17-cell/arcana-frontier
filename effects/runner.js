@@ -19,10 +19,18 @@
     for (const p of state.players) if (p.monsters.some(m => m && m.uid === s.uid)) return s.position === step.position;
     return false;
   });
-  // 6D: cause {cause:'battle'|'effect'} : สาเหตุการทำลายตรงกับที่ระบุ
+  // 6D: cause {cause:'battle'|'effect', how?:string, notHow?:string} : ตรวจสอบสาเหตุ/รูปแบบการเคลื่อนไหว
   FX.registerCondition('cause', function (state, step, ctx) {
+    if (!ctx) return false;
+    if (step.how !== undefined) {
+      return ctx.how === step.how;
+    }
+    if (step.notHow !== undefined) {
+      return ctx.how !== step.notHow;
+    }
     const exp = step.cause || step.is;
-    return ctx && ctx.cause === exp;
+    if (exp === undefined) return true;
+    return ctx.cause === exp || ctx.how === exp;
   });
   // freeMonsterSlot : ผู้ใช้เอฟเฟกต์ (ctx.player) มีช่องมอนสเตอร์ว่างอย่างน้อย 1 ช่อง (กันจ่ายมานาแล้วเรียกไม่ได้)
   FX.registerCondition('freeMonsterSlot', function (state, step, ctx) {
@@ -30,6 +38,16 @@
     const n = (state.config && state.config.monsterSlots) || p.monsters.length;
     for (let i = 0; i < n; i++) if (!p.monsters[i]) return true;
     return false;
+  });
+  // isMyTurn: ตรวจว่าขณะนี้เป็นเทิร์นของผู้เล่นเจ้าของการ์ดหรือไม่
+  FX.registerCondition('isMyTurn', function (state, step, ctx) {
+    return state.activeIdx === ctx.player;
+  });
+  // position condition: ตรวจสอบท่า (atk หรือ def) ของการ์ดต้นทางบนสนาม
+  FX.registerCondition('position', function (state, cond, ctx) {
+    if (!ctx || !ctx.source) return false;
+    const pos = cond.position || cond.is || 'def';
+    return ctx.source.position === pos && !ctx.source.faceDown;
   });
 
   // ---- 4E-2B: ตัวช่วยกลาง (ใช้ร่วมกับ primitives_*.js ผ่าน FX.* ตอนรัน ไม่เรียกตอนโหลด) ----
@@ -40,8 +58,20 @@
     if (ctx && E.isImmuneTo && E.isImmuneTo(inst, ctx)) return false;
     if (!f) return true;
     const def = E.cardOf(inst) || {};
-    if (f.id && inst.cardId !== f.id && def.id !== f.id) return false;
-    if (f.cardId && inst.cardId !== f.cardId) return false;
+    if (f.id) {
+      if (Array.isArray(f.id)) {
+        if (!f.id.includes(inst.cardId) && !f.id.includes(def.id) && !f.id.includes(def.baseCardId)) return false;
+      } else if (inst.cardId !== f.id && def.id !== f.id && def.baseCardId !== f.id) {
+        return false;
+      }
+    }
+    if (f.cardId) {
+      if (Array.isArray(f.cardId)) {
+        if (!f.cardId.includes(inst.cardId) && !f.cardId.includes(def.baseCardId)) return false;
+      } else if (inst.cardId !== f.cardId && def.baseCardId !== f.cardId) {
+        return false;
+      }
+    }
     if (f.type && def.type !== f.type) return false;
     const lvl = inst.level !== undefined ? inst.level : def.level;
     if (f.level !== undefined && lvl !== f.level) return false;
@@ -125,6 +155,28 @@
     return total;
   };
 
+  // hasCard / hasInGrave : มีการ์ดในโซนที่กำหนดตรงตาม filter อย่างน้อย min ใบ (ค่าเริ่มต้น 1)
+  FX.registerCondition('hasCard', function (state, step, ctx) {
+    const min = step.min === undefined ? 1 : step.min;
+    const zone = step.zone || step.from || 'grave';
+    const cnt = FX.countCards(state, {
+      zone,
+      side: step.side || 'self',
+      filter: step.filter,
+      includeFaceDown: step.includeFaceDown
+    }, ctx);
+    return cnt >= min;
+  });
+  FX.registerCondition('hasInGrave', function (state, step, ctx) {
+    const min = step.min === undefined ? 1 : step.min;
+    const cnt = FX.countCards(state, {
+      zone: 'grave',
+      side: step.side || 'self',
+      filter: step.filter
+    }, ctx);
+    return cnt >= min;
+  });
+
   // 4E-2C-1: คำนวณค่าตัวเลข (รองรับทั้งตัวเลขตรง ๆ และค่าตามสัดส่วน เช่น +X ต่อการ์ดหนึ่งใบ)
   FX.resolveValue = function (state, step, ctx, defaultVal) {
     if (!step) return defaultVal || 0;
@@ -137,6 +189,27 @@
       const raw = ctx && ctx.lastResult ? (ctx.lastResult[field] !== undefined ? ctx.lastResult[field] : 0) : 0;
       const mult = spec.multiplier !== undefined ? spec.multiplier : 1;
       return Math.floor(raw * mult);
+    }
+    if (spec.fromVictim || step.fromVictim) {
+      const mode = spec.fromVictim || step.fromVictim;
+      let victim = null;
+      if (ctx && ctx.victimUid) {
+        for (const p of state.players) {
+          for (const z of ['monsters', 'grave', 'extra', 'removed']) {
+            for (const c of p[z]) {
+              if (c && c.uid === ctx.victimUid) { victim = c; break; }
+            }
+            if (victim) break;
+          }
+          if (victim) break;
+        }
+      }
+      if (victim) {
+        const E = CG.engine;
+        const vAtk = (E && E.atk) ? E.atk(victim) : (victim.atk || victim.baseAtk || 0);
+        const mult = spec.multiplier !== undefined ? spec.multiplier : (mode === 'halfAtk' ? 0.5 : 1);
+        return Math.floor(vAtk * mult);
+      }
     }
     const countSpec = spec.perCard || spec.countCards || (spec.filter || spec.zone ? spec : null);
     if (countSpec) {
@@ -155,11 +228,16 @@
     const m = state.players[s.controller].monsters[leaderSlotOf(state)];
     return !!m && m.uid === s.uid;
   });
-  // controls {side?:'self'|'opp', filter, min?:1} : ฝั่งนั้นมีมอนสเตอร์หงายที่ตรงตัวกรองอย่างน้อย min ตัว
+  FX.registerCondition('emptyLeaderSlot', function (state, step, ctx) {
+    const p = state.players[ctx.player];
+    return !p.monsters[leaderSlotOf(state)];
+  });
+  // controls {side?:'self'|'opp', filter, min?:1, count?:1} : ฝั่งนั้นมีมอนสเตอร์หงายที่ตรงตัวกรองอย่างน้อย min/count ตัว
   FX.registerCondition('controls', function (state, step, ctx) {
     const idx = step.side === 'opp' ? 1 - ctx.player : ctx.player;
     const mons = state.players[idx].monsters.filter(m => m && !m.faceDown);
-    return countMatching(mons, step.filter, ctx) >= (step.min === undefined ? 1 : step.min);
+    const need = step.count !== undefined ? step.count : (step.min === undefined ? 1 : step.min);
+    return countMatching(mons, step.filter, ctx) >= need;
   });
   // hasUnder {filter?, min?:1} : ต้นทางมีตัวซ้อนใต้การ์ด (inst.under) ที่ตรงตัวกรองอย่างน้อย min ใบ
   FX.registerCondition('hasUnder', function (state, step, ctx) {
@@ -230,7 +308,17 @@
     const E = CG.engine;
     if (!(base > 0) || !ctx.source) return null;
     const sdef = E.cardOf(ctx.source);
-    if (!sdef || sdef.type === 'spell') return null;
+    if (!sdef) return null;
+    const p = state.players[ctx.player];
+    if (p && p.flags && p.flags.turnCostReduction && p.flags.turnCostReduction.turn === state.turn) {
+      const red = p.flags.turnCostReduction;
+      const tags = [].concat((sdef && sdef.tags) || []);
+      if (!red.tag || tags.includes(red.tag)) {
+        const amount = Math.min(red.amount || 1, base);
+        return { amount, holder: null, effect: null, consume() {} };
+      }
+    }
+    if (sdef.type === 'spell') return null;
     for (const holder of FX.fieldInsts(state)) {
       if (holder.controller !== ctx.player) continue;
       const hdef = E.cardOf(holder);
@@ -289,12 +377,20 @@
       }
       if (red) {
         red.consume();   // ใช้โควตาลดมานาเมื่อประกาศผ่านแล้วเท่านั้น
-        events.push({ type: 'costReduced', uid: red.holder.uid, cardId: red.holder.cardId, effectId: red.effect.id, amount: red.amount });
+        events.push({
+          type: 'costReduced',
+          uid: red.holder ? red.holder.uid : null,
+          cardId: red.holder ? red.holder.cardId : 'turnCostReduction',
+          effectId: red.effect ? red.effect.id : 'turnCostReduction',
+          amount: red.amount
+        });
       }
       if (lim) bucket[key] = (bucket[key] || 0) + 1;   // นับตอนประกาศ (เหมือน cost ไม่คืน)
     }
 
     const startIndex = ctx._resumeStepIndex !== undefined ? ctx._resumeStepIndex : 0;
+    const prevResolving = state._isResolvingEffect;
+    state._isResolvingEffect = true;
     for (let i = startIndex; i < steps.length; i++) {
       const s = steps[i];
       if ((s.requireSuccess || s.ifSuccess) && ctx.lastResult && !ctx.lastResult.ok) continue;
@@ -309,6 +405,15 @@
       delete ctx._stepChoice;
       if (state.ended) break;
     }
+    state._isResolvingEffect = prevResolving;
+
+    // ถ้าแก้ผลเอฟเฟกต์เสร็จสมบูรณ์และไม่มี pending ให้เปิดหน้าต่างที่เลื่อนไว้ (เช่น monsterDestroyed)
+    const E = CG.engine;
+    if (!state.pending && state._deferredWindows && state._deferredWindows.length > 0 && E && E.openWindow) {
+      const nextWin = state._deferredWindows.shift();
+      E.openWindow(state, events, nextWin);
+    }
+
     return { ok: true };
   };
 
@@ -359,6 +464,22 @@
     if (red) cost -= red.amount;
     const p = state.players[ctx.player];
     if (cost > 0 && p.mana < cost) return false;
+
+    // ตรวจสอบความถูกต้องของเป้าหมายในสุสาน (กันใช้การ์ดฟรีโดยไม่มีเป้าหมายในสุสาน)
+    if (p && effect.do) {
+      for (const step of effect.do) {
+        const fromGraveOnly = step.from === 'grave' || (Array.isArray(step.from) && step.from.length === 1 && step.from[0] === 'grave');
+        if (fromGraveOnly) {
+          const poolCount = FX.countCards(state, { zone: 'grave', side: step.side || 'self', filter: step.filter }, ctx);
+          if (poolCount < (step.minCount || step.count || 1)) return false;
+        }
+        if (step.target && step.target.zone === 'grave') {
+          const poolCount = FX.countCards(state, { zone: 'grave', side: step.target.side || 'self', filter: step.target.filter }, ctx);
+          if (poolCount < (step.target.minCount || step.target.count || 1)) return false;
+        }
+      }
+    }
+
     return true;
   };
 
@@ -381,7 +502,13 @@
     }
     if (red) {
       red.consume();
-      events.push({ type: 'costReduced', uid: red.holder.uid, cardId: red.holder.cardId, effectId: red.effect.id, amount: red.amount });
+      events.push({
+        type: 'costReduced',
+        uid: red.holder ? red.holder.uid : null,
+        cardId: red.holder ? red.holder.cardId : 'turnCostReduction',
+        effectId: red.effect ? red.effect.id : 'turnCostReduction',
+        amount: red.amount
+      });
     }
     if (lim) bucket[key] = (bucket[key] || 0) + 1;
     return { ok: true };
@@ -389,14 +516,48 @@
 
   FX.shouldAskPlayer = function (state, step, target, candidatesCount, wantCount, ctx) {
     if (state.config && state.config.autoChoose) return false;
-    const isPlayerChoose = (target && target.choose === 'player') || (step && step.choose === 'player');
-    if (!isPlayerChoose) return false;
+    if (target && (target.choose === 'auto' || target.choose === 'random')) return false;
+    if (step && (step.choose === 'auto' || step.choose === 'random')) return false;
+    if (target && target.zone === 'under') return false;
+    if (target && target.all) return false;
     if (ctx && ctx._stepChoice !== undefined) return false;
-    return candidatesCount > wantCount;
+    if (candidatesCount <= 0) return false;
+
+    const isInteractive = !!(state.config && state.config.interactiveChoice);
+    const isPlayerChoose = (target && target.choose === 'player') || (step && step.choose === 'player');
+    const isTargetOp = step && (
+      step.op === 'search' ||
+      step.op === 'choice' ||
+      (step.op === 'specialSummon' && !step.self && (step.from || []).length > 0) ||
+      step.op === 'discard' ||
+      step.op === 'destroy' ||
+      step.op === 'returnToHand' ||
+      step.op === 'returnToDeck' ||
+      step.op === 'returnToGrave' ||
+      step.op === 'banish' ||
+      step.op === 'sendToGrave' ||
+      step.op === 'takeControl' ||
+      step.op === 'modifyStat'
+    );
+
+    // ในโหมด interactive (เกม UI ของผู้เล่น): ให้ผู้เล่นเลือกทุกครั้งที่มีตัวเลือก (>= 1)
+    if (isInteractive) {
+      if (isPlayerChoose || isTargetOp) {
+        return candidatesCount >= 1;
+      }
+    }
+
+    // ในโหมด headless unit tests:
+    // สัญญา 5A-02: ถ้าตัวเลือกพอดีหรือน้อยกว่า ไม่เปิด pending เพื่อไม่ให้ขัดจังหวะการทดสอบ
+    // ถ้าตัวเลือกมากกว่าจำนวนที่ต้องการ (candidatesCount > wantCount) จึงเปิด pending (5A-03)
+    if (isPlayerChoose) return candidatesCount > wantCount;
+    if (step && (step.op === 'search' || step.op === 'choice')) return candidatesCount > wantCount;
+    if (step && step.op === 'specialSummon' && !step.self && (step.from || []).length > 0) return candidatesCount > wantCount;
+    return false;
   };
 
   FX.openPending = function (state, events, cfg) {
-    state.pending = {
+    state.pending = Object.assign({
       kind: cfg.kind || 'chooseTarget',
       player: cfg.player,
       prompt: cfg.prompt || 'CHOOSE_TARGET',
@@ -404,7 +565,7 @@
       min: cfg.min !== undefined ? cfg.min : 1,
       max: cfg.max !== undefined ? cfg.max : 1,
       resume: cfg.resume
-    };
+    }, cfg);
     events.push({
       type: 'pendingOpen',
       kind: state.pending.kind,

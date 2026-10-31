@@ -14,13 +14,28 @@
   function matchOverlayOnto(target, onto, ctx) {
     if (!target || !onto) return false;
     if (onto.level !== undefined && target.level !== onto.level) return false;
-    if (onto.cardId && target.cardId !== onto.cardId) return false;
-    if (onto.id && target.cardId !== onto.id) return false;
     const tDef = E.cardOf(target) || {};
+    if (onto.cardId) {
+      if (Array.isArray(onto.cardId)) {
+        if (!onto.cardId.includes(target.cardId) && !onto.cardId.includes(tDef.baseCardId)) return false;
+      } else if (target.cardId !== onto.cardId && tDef.baseCardId !== onto.cardId) {
+        return false;
+      }
+    }
+    if (onto.id) {
+      if (Array.isArray(onto.id)) {
+        if (!onto.id.includes(target.cardId) && !onto.id.includes(tDef.id) && !onto.id.includes(tDef.baseCardId)) return false;
+      } else if (target.cardId !== onto.id && tDef.id !== onto.id && tDef.baseCardId !== onto.id) {
+        return false;
+      }
+    }
     if (onto.type && tDef.type !== onto.type) return false;
     if (onto.tag) {
       const tags = [].concat(tDef.tags || tDef.tag || []);
       if (!tags.includes(onto.tag)) return false;
+    }
+    if (onto.inLeaderSlot) {
+      if (ctx && ctx.targetSlot !== undefined && ctx.targetSlot !== 2) return false;
     }
     if (CG.effects && CG.effects.matchFilter) {
       if (!CG.effects.matchFilter(target, onto, ctx)) return false;
@@ -85,14 +100,21 @@
     const target = p.monsters[targetSlot];
     if (!target) return;
 
-    // 1. นำเป้าหมายและ under เดิมทั้งหมดไปอยู่ใน under ของตัวบน (ตัวล่างสุดอยู่หน้า array)
-    const prevUnder = target.under || [];
-    let newUnder = prevUnder.concat([target]);
-    if (opt.fromHandCards && opt.fromHandCards.length) {
-      newUnder = newUnder.concat(opt.fromHandCards);
+    // 1. นำเป้าหมายและ under เดิมทั้งหมดไปอยู่ใน under ของตัวบน (หรือ Exile หาก opt.banishOnto = true)
+    if (opt.banishOnto) {
+      E.resetInstance(target);
+      p.removed.push(target);
+      events.push({ type: 'moveCard', uid: target.uid, from: 'monster', to: 'removed', player: pIdx, slot: targetSlot });
+      topCard.under = [];
+    } else {
+      const prevUnder = target.under || [];
+      let newUnder = prevUnder.concat([target]);
+      if (opt.fromHandCards && opt.fromHandCards.length) {
+        newUnder = newUnder.concat(opt.fromHandCards);
+      }
+      topCard.under = newUnder;
+      target.under = [];
     }
-    topCard.under = newUnder;
-    target.under = [];
 
     // 2. ปรับสเตตัสตาม result และล้างบัฟ/โมดิฟายเออร์เดิม
     if (result) {
@@ -257,7 +279,7 @@
       if (onto.under !== undefined && underCount !== onto.under) return 'INVALID_TARGET';
       if (onto.minUnder !== undefined && underCount < onto.minUnder) return 'INVALID_TARGET';
       if (onto.maxUnder !== undefined && underCount > onto.maxUnder) return 'INVALID_TARGET';
-      if (!matchOverlayOnto(target, onto, { source: card, player: a.player })) return 'INVALID_TARGET';
+      if (!matchOverlayOnto(target, onto, { source: card, player: a.player, targetSlot: a.targetSlot })) return 'INVALID_TARGET';
     }
 
     // fromHand check (e.g. aq_hastatus: 1 aq_spear from hand)
@@ -268,6 +290,15 @@
       neededFromHand = fhCount;
       const matchingHand = p.hand.filter(c => CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(c, fhFilter, { player: a.player, source: card }) : true);
       if (matchingHand.length < fhCount) return 'CONDITION_FAILED';
+    }
+
+    // condition check (e.g. controls >= 2 fusion monsters)
+    if (es.condition && Array.isArray(es.condition)) {
+      const ectx = { source: card, player: a.player, target };
+      for (const cond of es.condition) {
+        const fn = CG.effects && CG.effects.conditions && CG.effects.conditions[cond.op];
+        if (fn && !fn(state, cond, ectx)) return 'CONDITION_FAILED';
+      }
     }
 
     // cost check
@@ -284,11 +315,20 @@
           const z = (step.target && step.target.zone) || 'hand';
           const count = (step.target && step.target.count) || 1;
           const filter = (step.target && step.target.filter) || {};
-          const pool = Array.isArray(p[z]) ? p[z] : [];
+          const isField = (z === 'monster' || z === 'field');
+          const pool = isField ? p.monsters.filter((m, s) => m && s !== a.targetSlot) : (Array.isArray(p[z]) ? p[z] : []);
           const matched = pool.filter(c => CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(c, filter, { player: a.player, source: card }) : true);
           if (z === 'hand' && es.fromHand) {
             if (p.hand.length < count + neededFromHand) return 'CONDITION_FAILED';
           }
+          if (matched.length < count) return 'CONDITION_FAILED';
+        } else if (step.op === 'banish') {
+          const z = (step.target && step.target.zone) || 'grave';
+          const count = (step.target && step.target.count) || 1;
+          const filter = (step.target && step.target.filter) || {};
+          const isField = (z === 'monster' || z === 'field');
+          const pool = isField ? p.monsters.filter((m, s) => m && s !== a.targetSlot) : (Array.isArray(p[z]) ? p[z] : []);
+          const matched = pool.filter(c => CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(c, filter, { player: a.player, source: card }) : true);
           if (matched.length < count) return 'CONDITION_FAILED';
         }
       }
@@ -331,19 +371,45 @@
           const z = (step.target && step.target.zone) || 'hand';
           const count = (step.target && step.target.count) || 1;
           const filter = (step.target && step.target.filter) || {};
-          let chosenCard = null;
-          if (a.costHandIdx !== undefined && p[z][a.costHandIdx]) {
-            chosenCard = p[z][a.costHandIdx];
+          if (z === 'monster' || z === 'field') {
+            let sent = 0;
+            for (let s = 0; s < p.monsters.length; s++) {
+              if (sent >= count) break;
+              if (s === a.targetSlot) continue;
+              const m = p.monsters[s];
+              if (m && (CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(m, filter, { player: a.player, source: card }) : true)) {
+                E.leaveField(state, events, a.player, s, 'grave');
+                sent++;
+              }
+            }
           } else {
-            chosenCard = p[z].find(c => CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(c, filter, { player: a.player, source: card }) : true);
+            let chosenCard = null;
+            if (a.costHandIdx !== undefined && p[z][a.costHandIdx]) {
+              chosenCard = p[z][a.costHandIdx];
+            } else {
+              chosenCard = p[z].find(c => CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(c, filter, { player: a.player, source: card }) : true);
+            }
+            if (chosenCard) {
+              const idx = p[z].findIndex(x => x.uid === chosenCard.uid);
+              if (idx >= 0) p[z].splice(idx, 1);
+              E.resetInstance(chosenCard);
+              p.grave.push(chosenCard);
+              events.push({ type: 'moveCard', uid: chosenCard.uid, from: z, to: 'grave', player: a.player });
+              E.fire(state, events, 'onSentToGrave', { source: chosenCard });
+            }
           }
-          if (chosenCard) {
-            const idx = p[z].findIndex(x => x.uid === chosenCard.uid);
+        } else if (step.op === 'banish') {
+          const z = (step.target && step.target.zone) || 'grave';
+          const count = (step.target && step.target.count) || 1;
+          const filter = (step.target && step.target.filter) || {};
+          const matched = p[z].filter(c => CG.effects && CG.effects.matchFilter ? CG.effects.matchFilter(c, filter, { player: a.player, source: card }) : true);
+          const chosen = matched.slice(0, count);
+          for (const c of chosen) {
+            const idx = p[z].findIndex(x => x.uid === c.uid);
             if (idx >= 0) p[z].splice(idx, 1);
-            E.resetInstance(chosenCard);
-            p.grave.push(chosenCard);
-            events.push({ type: 'moveCard', uid: chosenCard.uid, from: z, to: 'grave', player: a.player });
-            E.fire(state, events, 'onSentToGrave', { source: chosenCard });
+            E.resetInstance(c);
+            p.removed.push(c);
+            events.push({ type: 'moveCard', uid: c.uid, from: z, to: 'removed', player: a.player });
           }
         }
       }
@@ -376,7 +442,8 @@
         extraIdx: a.extraIdx,
         targetSlot: a.targetSlot,
         targetUid: target.uid,
-        fromHandUids: fromHandUids
+        fromHandUids: fromHandUids,
+        banishOnto: !!es.banishOnto
       };
 
       state.chain = state.chain || [];
@@ -415,7 +482,7 @@
         }
       }
       if (def.type === 'grade4') p.flags.grade4SummonedThisTurn = true;
-      E.performOverlay(state, events, a.player, card, a.targetSlot, null, { fromZone: 'extra', how: 'extra', fromHandCards });
+      E.performOverlay(state, events, a.player, card, a.targetSlot, null, { fromZone: 'extra', how: 'extra', fromHandCards, banishOnto: !!es.banishOnto });
       return null;
     }
   };

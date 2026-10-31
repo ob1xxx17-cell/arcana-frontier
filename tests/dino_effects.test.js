@@ -134,5 +134,26 @@ module.exports = [
     for (const c of all.filter(c => !WITH_EFFECTS.includes(c.id))) assert.deepStrictEqual(c.effects, [], c.id);
     const TWO_EFFECTS = ['dino_tyrano_raptor', 'dino_trex', 'dino_small_raptor', 'dino_spino'];
     for (const id of WITH_EFFECTS) assert.strictEqual(cardDef(id).effects.length, TWO_EFFECTS.includes(id) ? 2 : 1, id);
+  } },
+
+  { name: 'DINO-13 ทีเร็กซ์ eat_king: ทำลายไดโนเรา เพิ่ม ATK ครึ่งหนึ่งถาวร ได้มานา +1 สำเร็จสมบูรณ์', run(assert) {
+    const s = game({
+      config: { autoChoose: false },
+      p0: {
+        monsters: { 0: 'dino_trex', 1: 'dino_small_raptor', 2: 'dino_egg' },
+        mana: 5
+      }
+    });
+    s.phase = 'main1';
+    const rAct = E().applyAction(s, { type: 'activateEffect', player: 0, slot: 0, effectId: 'eat_king' });
+    assert.strictEqual(rAct.ok, true, 'สั่งใช้ eat_king ได้');
+    assert.strictEqual(s.pending.kind, 'chooseTarget', 'เปิดหน้าต่างเลือกเป้าหมายที่จะกิน');
+
+    // เลือกตัวแรก (dino_small_raptor มี 600 ATK)
+    const rResp = E().applyAction(s, { type: 'respond', player: 0, choice: [0] });
+    assert.strictEqual(rResp.ok, true, 'เลือกเป้ากินสำเร็จ');
+    assert.strictEqual(s.players[0].monsters[1], null, 'แรปเตอร์เล็กถูกทำลายไปสุสาน');
+    assert.strictEqual(E().atk(s.players[0].monsters[0]), 2500, 'ทีเร็กซ์ได้ ATK +300 (ครึ่งหนึ่งของ 600) กลายเป็น 2500');
+    assert.strictEqual(s.players[0].mana, 3, 'มานาสุทธิ 5 - 3 + 1 = 3');
   } }
 ];

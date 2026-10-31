@@ -210,7 +210,7 @@ t('7A-3: options.level ที่ไม่รู้จักจะ fallback ก�
   const legal = E.getLegalActions(s, act0);
 
   const easyAction = CG.bot.choose(s, act0, legal, { level: 'easy' });
-  const unknown1 = CG.bot.choose(s, act0, legal, { level: 'hard' });
+  const unknown1 = CG.bot.choose(s, act0, legal, { level: 'unknown_mode' });
   const unknown2 = CG.bot.choose(s, act0, legal, { level: 'master_ai_9000' });
   const unknown3 = CG.bot.choose(s, act0, legal, { level: null });
   const unknown4 = CG.bot.choose(s, act0, legal, {});

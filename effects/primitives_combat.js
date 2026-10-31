@@ -19,7 +19,7 @@
       for (let s = 0; s < p.monsters.length; s++) if (p.monsters[s] && p.monsters[s].uid === uid) return { inst: p.monsters[s], zone: 'monster', owner: pi, slot: s };
       for (let s = 0; s < p.spells.length; s++) if (p.spells[s] && p.spells[s].uid === uid) return { inst: p.spells[s], zone: 'spell', owner: pi, slot: s };
       if (p.fieldSpell && p.fieldSpell.uid === uid) return { inst: p.fieldSpell, zone: 'field', owner: pi, slot: 0 };
-      for (const z of ['hand', 'deck', 'grave']) {
+      for (const z of ['hand', 'deck', 'grave', 'removed']) {
         const i = (p[z] || []).findIndex(c => c.uid === uid);
         if (i >= 0) return { inst: p[z][i], zone: z, owner: pi, slot: i };
       }
@@ -62,6 +62,7 @@
       p.spells.forEach((m, s) => { if (m) list.push({ inst: m, zone, owner: pi, slot: s }); });
       if (p.fieldSpell) list.push({ inst: p.fieldSpell, zone: 'field', owner: pi, slot: 0 });
     } else if (zone === 'hand' || zone === 'deck' || zone === 'grave') p[zone].forEach((m, i) => list.push({ inst: m, zone, owner: pi, slot: i }));
+    if (target.slot !== undefined) list = list.filter(l => l.slot === target.slot);
     list = FX.refine(list.filter(l => matches(l.inst, target.filter, ctx)), target, ctx, l => l.inst);
 
     const count = target.count === undefined ? list.length : target.count;
@@ -88,8 +89,8 @@
         player: ctx.player,
         prompt: prompt,
         options: options,
-        min: count,
-        max: count,
+        min: Math.min(count, list.length),
+        max: Math.min(count, list.length),
         resume: FX.makeResume(state, step, ctx)
       });
       return null;
@@ -101,13 +102,20 @@
   // preventDestruction: การ์ดที่มีเอฟเฟกต์ continuous ซึ่ง do มี op preventDestruction ; instead = ขั้นตอนที่ทำแทน (ถ้ามี)
   // 6D: ใช้ E.getDestructionPreventer ร่วมกัน รองรับ cause: battle | effect
   reg('preventDestruction', function () {});
+  reg('battleProtection', function () {}); // alias สำหรับความเข้ากันได้
+  reg('buff', function (state, events, step, ctx) {
+    if (FX.ops.modifyStat) return FX.ops.modifyStat(state, events, step, ctx);
+  });
+  reg('aura', function (state, events, step, ctx) {
+    if (FX.ops.modifyStat) return FX.ops.modifyStat(state, events, step, ctx);
+  });
 
   function preventer(state, inst, cause) {
     if (eng().getDestructionPreventer) return eng().getDestructionPreventer(state, inst, cause || 'effect');
     const def = eng().cardOf(inst) || {};
     for (const e of def.effects || []) {
       if (e.trigger !== 'continuous') continue;
-      const s = (e.do || []).find(x => x.op === 'preventDestruction');
+      const s = (e.do || []).find(x => x.op === 'preventDestruction' || x.op === 'battleProtection');
       if (!s) continue;
       const c = { source: inst, player: inst.controller, cause: cause || 'effect' };
       const conds = (s.condition || []).concat(e.condition || []);
@@ -306,5 +314,65 @@
       state.attack.negated = true;
       events.push({ type: 'attackNegated', attackerUid: state.attack.attackerUid, player: state.attack.player });
     }
+  });
+
+  // silence / negateEffect { target?: selector, duration?: 'endTurn'|'permanent' }
+  function doSilence(state, events, step, ctx) {
+    const locs = resolveTargets(state, step.target, ctx, 'monster', events, step);
+    if (!locs) return;
+    const duration = step.duration || 'endTurn';
+    let count = 0;
+    for (const loc of locs) {
+      if (loc.zone !== 'monster') continue;
+      const m = loc.inst;
+      m.negated = true;
+      m.silenced = true;
+      if (duration === 'endTurn') {
+        m.silencedTurn = state.turn;
+      }
+      events.push({ type: 'statusChange', uid: m.uid, status: 'silenced', duration });
+      count++;
+    }
+    ctx.lastResult = { op: 'silence', count, ok: count > 0 };
+  }
+  reg('silence', doSilence);
+  reg('negateEffect', doSilence);
+
+  // freeze { target?: selector, duration?: 'nextTurn'|'endTurn' } : แช่แข็งห้ามโจมตีและห้ามเปลี่ยนท่า
+  reg('freeze', function (state, events, step, ctx) {
+    const locs = resolveTargets(state, step.target, ctx, 'monster', events, step);
+    if (!locs) return;
+    const duration = step.duration || 'nextTurn';
+    let count = 0;
+    for (const loc of locs) {
+      if (loc.zone !== 'monster') continue;
+      const m = loc.inst;
+      m.frozen = true;
+      m.cannotAttack = true;
+      m.cannotChangePosition = true;
+      m.frozenUntilTurn = state.turn + (duration === 'endTurn' ? 0 : 1);
+      events.push({ type: 'statusChange', uid: m.uid, status: 'frozen', duration });
+      count++;
+    }
+    ctx.lastResult = { op: 'freeze', count, ok: count > 0 };
+  });
+
+  // grantPiercing { target?: 'self'|selector, duration?: 'endTurn'|'permanent' }
+  reg('grantPiercing', function (state, events, step, ctx) {
+    const locs = resolveTargets(state, step.target || 'self', ctx, 'monster', events, step);
+    if (!locs) return;
+    const duration = step.duration || 'endTurn';
+    let count = 0;
+    for (const loc of locs) {
+      if (loc.zone !== 'monster') continue;
+      const m = loc.inst;
+      m.piercing = true;
+      if (duration === 'endTurn') {
+        m.piercingTurn = state.turn;
+      }
+      events.push({ type: 'statusChange', uid: m.uid, status: 'piercing', duration });
+      count++;
+    }
+    ctx.lastResult = { op: 'grantPiercing', count, ok: count > 0 };
   });
 })();

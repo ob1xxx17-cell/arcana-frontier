@@ -51,20 +51,28 @@
     };
     events.push({ type: 'attackDeclared', from: a.from, to: a.to, player: a.player });
     E.fire(state, events, 'onAttackDeclared', { source: m, targetUid: state.attack.targetUid });
-    if (state.ended) { endAttack(state); return null; }
+    if (state.ended) { endAttack(state, events); return null; }
     // onAttacked: เป้าเป็นมอนสเตอร์ (ไม่ใช่โจมตีตรง) ยังอยู่ และหงายอยู่ (เป้าคว่ำยังไม่เปิดเอฟเฟกต์ จะพลิกที่ damageStep)
     if (a.to !== null) {
       const t = opp.monsters[a.to];
       if (t && t.uid === state.attack.targetUid && !t.faceDown && me.monsters[a.from] === m) {
         E.fire(state, events, 'onAttacked', { source: t, attackerUid: m.uid });
-        if (state.ended) { endAttack(state); return null; }
+        if (state.ended) { endAttack(state, events); return null; }
       }
     }
     enterStep(state, events, 'declare');
     return null;
   };
 
-  function endAttack(state) { state.battleStep = null; state.attack = null; }
+  function endAttack(state, events) {
+    state.battleStep = null;
+    state.attack = null;
+    if (state.flags && state.flags.forceEndTurnAfterBattle) {
+      delete state.flags.forceEndTurnAfterBattle;
+      events = events || [];
+      E.endTurn(state, { type: 'endTurn', player: state.activeIdx }, events);
+    }
+  }
 
   function enterStep(state, events, step) {
     state.battleStep = step;
@@ -116,7 +124,7 @@
           return;
         }
       }
-      return endAttack(state);
+      return endAttack(state, events);
     }
 
     if (WINDOWED[step]) {
@@ -127,8 +135,8 @@
 
   E.battleResume = function (state, events) {
     if (!state.attack) return;
-    if (state.attack.negated) return endAttack(state);
-    if (state.battleStep === 'afterDamage') return endAttack(state);
+    if (state.attack.negated) return endAttack(state, events);
+    if (state.battleStep === 'afterDamage') return endAttack(state, events);
     enterStep(state, events, STEPS[STEPS.indexOf(state.battleStep) + 1]);
   };
 
@@ -144,7 +152,15 @@
       else { kill(me.idx, at.from, attacker.uid); E.changeLp(state, events, me.idx, -(D - A), 'battle'); }
     } else {
       const D = E.def(target);
-      if (A > D) kill(opp.idx, at.to, target.uid);                                    // ATK>DEF: เป้าตาย ไม่เสีย LP
+      if (A > D) {
+        kill(opp.idx, at.to, target.uid);                                    // ATK>DEF: เป้าตาย
+        const defCard = E.cardOf ? E.cardOf(attacker) : null;
+        const hasPiercing = (attacker.flags && (attacker.flags.piercing || attacker.flags.pierce)) ||
+          (defCard && (defCard.piercing || defCard.pierce)) || attacker.piercing || attacker.pierce;
+        if (hasPiercing) {
+          E.changeLp(state, events, opp.idx, -(A - D), 'battle');
+        }
+      }
       else if (A < D) E.changeLp(state, events, me.idx, -(D - A), 'battle');          // ATK<DEF: ผู้โจมตีเสีย LP
     }
   }

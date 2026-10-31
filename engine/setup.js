@@ -5,7 +5,7 @@
   const E = CG.engine;
 
   function createPlayer(state, idx, deckKey, name) {
-    const deck = CG.cards && CG.cards[deckKey];
+    const deck = (typeof deckKey === 'object' && deckKey !== null) ? deckKey : (CG.cards && CG.cards[deckKey]);
     if (!deck) throw new Error('UNKNOWN_DECK:' + deckKey);
     const cfg = state.config;
     const main = [];
@@ -42,7 +42,7 @@
     // 5D: เกมจริง (มี mode) เปิด autoChoose=false, chainMode=true เป็นค่าเริ่มต้น
     // เทสต์ที่ไม่ได้ส่ง mode จะได้ค่าเริ่มต้นเดิม (autoChoose=true, chainMode=false)
     if (opts.mode) {
-      opts.config = Object.assign({ autoChoose: false, chainMode: true }, opts.config);
+      opts.config = Object.assign({ autoChoose: false, chainMode: true, interactiveFusion: true }, opts.config);
     }
     const state = E.buildState(opts);
     const events = [];

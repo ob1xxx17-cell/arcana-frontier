@@ -45,6 +45,7 @@
       p.spells.forEach((m, s) => { if (m) list.push({ inst: m, zone, owner: pi, slot: s }); });
       if (p.fieldSpell) list.push({ inst: p.fieldSpell, zone: 'field', owner: pi, slot: 0 });
     } else if (Array.isArray(p[zone])) p[zone].forEach((m, i) => list.push({ inst: m, zone, owner: pi, slot: i }));
+    if (target.slot !== undefined) list = list.filter(l => l.slot === target.slot);
     list = FX.refine(list.filter(l => matches(l.inst, target.filter, ctx)), target, ctx, l => l.inst);
 
     const count = target.count === undefined ? list.length : target.count;
@@ -71,8 +72,8 @@
         player: ctx.player,
         prompt: prompt,
         options: options,
-        min: count,
-        max: count,
+        min: Math.min(count, list.length),
+        max: Math.min(count, list.length),
         resume: FX.makeResume(state, step, ctx)
       });
       return null;
@@ -136,7 +137,42 @@
       E.resetInstance(inst);
       p[to].push(inst);
       events.push({ type: 'moveCard', uid, from, to, player: ctx.player, slot: i, how: 'search' });
+      if (to === 'grave') {
+        E.fire(state, events, 'onSentToGrave', { source: inst });
+      }
     }
+    ctx.lastResult = { op: 'search', count: uids.length, ok: uids.length > 0 };
+  });
+
+  // mill { count?: number, filter?, player?: 'self'|'opp'|'both', sendTo?: 'grave'|'removed' } : โม่การ์ดจากใบบนสุดของเด็คลงสุสาน/นอกเกม
+  reg('mill', function (state, events, step, ctx) {
+    const E = eng();
+    const who = step.player || 'self';
+    const targets = who === 'both' ? [0, 1] : [sideIdx(ctx, who)];
+    const want = step.count === undefined ? 1 : step.count;
+    const dest = step.sendTo || 'grave';
+    let totalMilled = 0;
+
+    for (const targetPi of targets) {
+      const p = state.players[targetPi];
+      let milledForPlayer = 0;
+      while (p.deck.length > 0 && milledForPlayer < want) {
+        const top = p.deck[0];
+        if (step.filter && !matches(top, step.filter, ctx) && step.filterOnly) {
+          break;
+        }
+        const c = p.deck.shift();
+        E.resetInstance(c);
+        p[dest].push(c);
+        milledForPlayer++;
+        totalMilled++;
+        events.push({ type: 'moveCard', uid: c.uid, from: 'deck', to: dest, player: targetPi, how: 'mill' });
+        if (dest === 'grave') {
+          E.fire(state, events, 'onSentToGrave', { source: c });
+        }
+      }
+    }
+    ctx.lastResult = { op: 'mill', count: totalMilled, ok: totalMilled > 0 };
   });
 
   // ---- specialSummon {from, filter, count, slot?, faceDown?} : เรียกพิเศษ ไม่แตะโควตาลงปกติ ช่องเต็มเรียกไม่ได้ ----
@@ -183,8 +219,8 @@
         player: ctx.player,
         prompt: step.prompt || 'CHOOSE_CARDS',
         options: options,
-        min: maxCanSummon,
-        max: maxCanSummon,
+        min: Math.min(maxCanSummon, candidates.length),
+        max: Math.min(maxCanSummon, candidates.length),
         resume: FX.makeResume(state, step, ctx)
       });
       return;
@@ -198,9 +234,10 @@
       const inst = item.inst;
       const z = item.zone;
       if (!p[z] || !p[z].some(c => c.uid === inst.uid)) continue;
-      const slot = (step.slot !== undefined && done === 0) ? step.slot : firstFree();
+      const leaderSlot = (state.config && state.config.leaderSlot !== undefined) ? state.config.leaderSlot : Math.floor(((state.config && state.config.monsterSlots) || p.monsters.length) / 2);
+      const slot = step.slot === 'leader' ? leaderSlot : ((step.slot !== undefined && done === 0) ? step.slot : firstFree());
       if (slot < 0) return;                       // ช่องเต็ม: เรียกเพิ่มไม่ได้
-      const err = E.specialSummon(state, events, ctx.player, inst, slot, z, !!step.faceDown);
+      const err = E.specialSummon(state, events, ctx.player, inst, slot, z, !!step.faceDown, step.how);
       if (err === 'SLOT_FULL' || err === 'INVALID_SLOT') return;
       if (err) continue;                          // เช่น GRADE4_LIMIT ข้ามตัวนี้ไปตัวถัดไป
       done++;
@@ -240,7 +277,8 @@
             actualDest = 'grave';
           }
         }
-        const o = state.players[c.owner];
+        const owner = c.owner !== undefined ? c.owner : (loc.owner !== undefined ? loc.owner : ctx.player);
+        const o = state.players[owner];
         o[actualDest] = o[actualDest] || [];
         if (actualDest === 'deck' && step.position === 'top') o.deck.unshift(c); else o[actualDest].push(c);   // ค่าเริ่มต้นคืนใต้เด็ค
         events.push({ type: 'moveCard', uid: c.uid, from: c === loc.inst ? loc.zone : 'under', to: actualDest, player: loc.owner, slot: loc.slot });
@@ -258,7 +296,221 @@
   }
   reg('returnToHand', (state, events, step, ctx) => moveTo('hand', step, state, events, ctx));
   reg('returnToDeck', (state, events, step, ctx) => moveTo('deck', step, state, events, ctx));
+  reg('returnToGrave', (state, events, step, ctx) => moveTo('grave', step, state, events, ctx));
   reg('banish', (state, events, step, ctx) => moveTo('removed', step, state, events, ctx));
+
+  // excavate { count?: number, player?: 'self'|'opp', pick?: number, filter?, to?: 'hand'|'field'|'grave', restTo?: 'deckBottom'|'grave'|'deck' }
+  reg('excavate', function (state, events, step, ctx) {
+    const E = eng();
+    const who = step.player || 'self';
+    const targetPi = sideIdx(ctx, who);
+    const p = state.players[targetPi];
+    const wantCount = step.count === undefined ? 3 : step.count;
+    const numToExcavate = Math.min(wantCount, p.deck.length);
+    if (numToExcavate <= 0) {
+      ctx.lastResult = { op: 'excavate', excavated: 0, pickedCount: 0, ok: false };
+      return;
+    }
+
+    const excavated = [];
+    for (let i = 0; i < numToExcavate; i++) {
+      excavated.push(p.deck.shift());
+    }
+
+    events.push({
+      type: 'excavate',
+      player: targetPi,
+      count: excavated.length,
+      cardIds: excavated.map(c => c.cardId),
+      uids: excavated.map(c => c.uid)
+    });
+
+    const wantPick = step.pick === undefined ? 1 : step.pick;
+    const dest = step.to || 'hand';
+    const restDest = step.restTo || 'deckBottom';
+
+    const matching = [];
+    const nonMatching = [];
+    for (const c of excavated) {
+      if (matching.length < wantPick && matches(c, step.filter, ctx)) {
+        matching.push(c);
+      } else {
+        nonMatching.push(c);
+      }
+    }
+
+    for (const c of matching) {
+      E.resetInstance(c);
+      if (dest === 'field') {
+        const slots = (state.config && state.config.monsterSlots) || p.monsters.length;
+        let freeSlot = -1;
+        for (let s = 0; s < slots; s++) if (!p.monsters[s]) { freeSlot = s; break; }
+        if (freeSlot >= 0) {
+          p.monsters[freeSlot] = c;
+          c.position = 'atk';
+          c.faceDown = false;
+          c.controller = targetPi;
+          events.push({ type: 'summon', player: targetPi, slot: freeSlot, uid: c.uid, how: 'special' });
+          E.fire(state, events, 'onSummon', { source: c });
+        } else {
+          p.grave.push(c);
+          events.push({ type: 'moveCard', uid: c.uid, from: 'deck', to: 'grave', player: targetPi, how: 'excavate' });
+          E.fire(state, events, 'onSentToGrave', { source: c });
+        }
+      } else {
+        p[dest].push(c);
+        events.push({ type: 'moveCard', uid: c.uid, from: 'deck', to: dest, player: targetPi, how: 'excavate' });
+        if (dest === 'grave') {
+          E.fire(state, events, 'onSentToGrave', { source: c });
+        }
+      }
+    }
+
+    for (const c of nonMatching) {
+      E.resetInstance(c);
+      if (restDest === 'grave') {
+        p.grave.push(c);
+        events.push({ type: 'moveCard', uid: c.uid, from: 'deck', to: 'grave', player: targetPi, how: 'excavate' });
+        E.fire(state, events, 'onSentToGrave', { source: c });
+      } else if (restDest === 'deck') {
+        p.deck.push(c);
+        events.push({ type: 'moveCard', uid: c.uid, from: 'deck', to: 'deck', player: targetPi, how: 'excavate' });
+      } else {
+        p.deck.push(c);
+        events.push({ type: 'moveCard', uid: c.uid, from: 'deck', to: 'deck', player: targetPi, how: 'excavate', position: 'bottom' });
+      }
+    }
+
+    if (restDest === 'deck') {
+      E.shuffle(p.deck, state.rng);
+    }
+
+    ctx.lastResult = {
+      op: 'excavate',
+      excavated: excavated.length,
+      pickedCount: matching.length,
+      ok: matching.length > 0
+    };
+  });
+
+  // discard { count?: number, player?: 'self'|'opp', mode?: 'random'|'first'|'choose', sendTo?: 'grave'|'removed', filter? }
+  reg('discard', function (state, events, step, ctx) {
+    const E = eng();
+    const who = step.player || 'self';
+    const targetPi = sideIdx(ctx, who);
+    const p = state.players[targetPi];
+    const want = step.count === undefined ? 1 : step.count;
+    const dest = step.sendTo || 'grave';
+    if (!p.hand.length || want <= 0) {
+      ctx.lastResult = { op: 'discard', count: 0, ok: false };
+      return;
+    }
+
+    let eligible = [];
+    p.hand.forEach((c, idx) => {
+      if (matches(c, step.filter, ctx)) eligible.push({ card: c, idx });
+    });
+    if (!eligible.length) {
+      ctx.lastResult = { op: 'discard', count: 0, ok: false };
+      return;
+    }
+
+    const mode = step.mode || (who === 'opp' ? 'random' : (step.choose === 'player' ? 'player' : 'first'));
+    let toDiscard = [];
+
+    if (ctx && ctx._stepChoice !== undefined) {
+      toDiscard = ctx._stepChoice.map(i => eligible[i]).filter(Boolean);
+    } else if (mode !== 'random' && FX.shouldAskPlayer && FX.shouldAskPlayer(state, step, step, eligible.length, want, ctx)) {
+      const options = eligible.map((e, i) => ({
+        uid: e.card.uid,
+        zone: 'hand',
+        side: targetPi === ctx.player ? 'self' : 'opp',
+        slot: e.idx,
+        cardId: e.card.cardId,
+        index: i
+      }));
+      FX.openPending(state, events, {
+        kind: 'chooseCards',
+        player: targetPi,
+        prompt: step.prompt || 'CHOOSE_CARDS',
+        options: options,
+        min: Math.min(want, eligible.length),
+        max: Math.min(want, eligible.length),
+        resume: FX.makeResume(state, step, ctx)
+      });
+      return;
+    } else if (mode === 'random') {
+      const pool = eligible.slice();
+      while (toDiscard.length < want && pool.length > 0) {
+        const rand = (state.rng && typeof state.rng.next === 'function') ? state.rng.next() : Math.random();
+        const rIdx = Math.floor(rand * pool.length);
+        toDiscard.push(pool.splice(rIdx, 1)[0]);
+      }
+    } else {
+      toDiscard = eligible.slice(0, want);
+    }
+
+    toDiscard.sort((a, b) => b.idx - a.idx);
+    const discarded = [];
+    for (const item of toDiscard) {
+      const idx = p.hand.findIndex(c => c.uid === item.card.uid);
+      if (idx < 0) continue;
+      const c = p.hand.splice(idx, 1)[0];
+      E.resetInstance(c);
+      p[dest].push(c);
+      discarded.push(c);
+      events.push({ type: 'moveCard', uid: c.uid, from: 'hand', to: dest, player: targetPi, how: 'discard' });
+      if (dest === 'grave') {
+        E.fire(state, events, 'onSentToGrave', { source: c });
+      }
+    }
+    ctx.lastResult = { op: 'discard', count: discarded.length, ok: discarded.length > 0 };
+  });
+
+  // takeControl { target: selector, duration?: 'endTurn'|'permanent' }
+  reg('takeControl', function (state, events, step, ctx) {
+    const locs = resolveTargets(state, step.target, ctx, 'monster', events, step);
+    if (!locs || !locs.length) {
+      ctx.lastResult = { op: 'takeControl', count: 0, ok: false };
+      return;
+    }
+    const myP = state.players[ctx.player];
+    const slots = (state.config && state.config.monsterSlots) || myP.monsters.length;
+    let controlled = 0;
+
+    for (const loc of locs) {
+      if (loc.zone !== 'monster') continue;
+      const oppP = state.players[loc.owner];
+      if (loc.owner === ctx.player) continue;
+
+      let freeSlot = -1;
+      for (let s = 0; s < slots; s++) {
+        if (!myP.monsters[s]) { freeSlot = s; break; }
+      }
+      if (freeSlot < 0) break;
+
+      const inst = oppP.monsters[loc.slot];
+      if (!inst) continue;
+      oppP.monsters[loc.slot] = null;
+      inst.controller = ctx.player;
+      if ((step.duration || 'endTurn') === 'endTurn') {
+        inst.controlRevertTurn = state.turn;
+        inst.originalController = loc.owner;
+      }
+      myP.monsters[freeSlot] = inst;
+      events.push({
+        type: 'controlChange',
+        uid: inst.uid,
+        fromPlayer: loc.owner,
+        toPlayer: ctx.player,
+        fromSlot: loc.slot,
+        toSlot: freeSlot,
+        duration: step.duration || 'endTurn'
+      });
+      controlled++;
+    }
+    ctx.lastResult = { op: 'takeControl', count: controlled, ok: controlled > 0 };
+  });
 
   // ---- 6B: fusionSummon { filter, materialsFrom? } ----
   function matchMaterialSlot(inst, f, ctx) {
@@ -320,6 +572,14 @@
           const def = E.cardOf(c);
           if (def && def.type === 'monster') {
             pool.push({ inst: c, zone: 'hand', slot: h });
+          }
+        }
+      } else if (z === 'grave') {
+        for (let g = 0; g < p.grave.length; g++) {
+          const c = p.grave[g];
+          const def = E.cardOf(c);
+          if (def && def.type === 'monster') {
+            pool.push({ inst: c, zone: 'grave', slot: g });
           }
         }
       }
@@ -428,6 +688,7 @@
 
     let selectedEntry = null;
 
+    const promptFusion = !autoChoose && ((state.config && state.config.interactiveFusion) ? true : summonable.length > 1);
     if (ctx._fusionData && ctx._fusionData.stage === 'fusion') {
       const pickedIdx = ctx._stepChoice !== undefined ? ctx._stepChoice[0] : 0;
       selectedEntry = summonable[pickedIdx] || summonable[0];
@@ -435,13 +696,18 @@
       delete ctx._fusionData;
     } else if (ctx._fusionData && ctx._fusionData.chosenFusionUid) {
       selectedEntry = summonable.find(entry => entry.fusion.uid === ctx._fusionData.chosenFusionUid) || summonable[0];
-    } else if (summonable.length === 1 || autoChoose) {
+    } else if (!promptFusion || autoChoose) {
       selectedEntry = summonable[0];
     } else {
       const options = summonable.map((entry, idx) => ({
         uid: entry.fusion.uid,
         cardId: entry.fusion.cardId,
         name: entry.def.name,
+        level: entry.def.level,
+        atk: entry.def.atk,
+        def: entry.def.def,
+        materials: entry.def.materials,
+        materialSlots: entry.def.materialSlots,
         zone: 'extra',
         side: 'self',
         index: idx
@@ -450,7 +716,8 @@
       FX.openPending(state, events, {
         kind: 'chooseCards',
         player: ctx.player,
-        prompt: 'CHOOSE_CARDS',
+        prompt: 'CHOOSE_FUSION_MONSTER',
+        stage: 'fusion',
         options: options,
         min: 1,
         max: 1,
@@ -474,8 +741,13 @@
       }
     }
 
+    const uidToIndex = new Map();
+    candidatePool.forEach((item, idx) => uidToIndex.set(item.inst.uid, idx));
+    const comboIndices = validCombos.map(combo => combo.map(item => uidToIndex.get(item.inst.uid)).sort((a, b) => a - b));
+
     let chosenCombo = null;
 
+    const promptMaterials = !autoChoose && ((state.config && state.config.interactiveFusion) ? true : validCombos.length > 1);
     if (ctx._fusionData && ctx._fusionData.stage === 'materials') {
       const chosenIndices = ctx._stepChoice;
       delete ctx._stepChoice;
@@ -488,17 +760,24 @@
         });
       }
       if (!chosenCombo) chosenCombo = validCombos[0];
-    } else if (validCombos.length === 1 || autoChoose) {
+    } else if (!promptMaterials || autoChoose) {
       chosenCombo = validCombos[0];
     } else {
-      const options = candidatePool.map((item, idx) => ({
-        uid: item.inst.uid,
-        cardId: item.inst.cardId,
-        zone: item.zone,
-        slot: item.slot,
-        side: 'self',
-        index: idx
-      }));
+      const options = candidatePool.map((item, idx) => {
+        const cDef = E.cardOf(item.inst) || {};
+        return {
+          uid: item.inst.uid,
+          cardId: item.inst.cardId,
+          name: cDef.name || item.inst.cardId,
+          level: item.inst.level !== undefined ? item.inst.level : cDef.level,
+          atk: cDef.atk,
+          def: cDef.def,
+          zone: item.zone,
+          slot: item.slot,
+          side: 'self',
+          index: idx
+        };
+      });
       const K = (selectedEntry.def.materialSlots || []).length;
       ctx._fusionData = {
         stage: 'materials',
@@ -507,7 +786,21 @@
       FX.openPending(state, events, {
         kind: 'chooseCards',
         player: ctx.player,
-        prompt: 'CHOOSE_CARDS',
+        prompt: 'CHOOSE_FUSION_MATERIALS',
+        stage: 'materials',
+        fusionCardId: chosenFusion.cardId,
+        fusionName: selectedEntry.def.name,
+        fusionMaterials: selectedEntry.def.materials,
+        fusionDef: {
+          id: selectedEntry.def.id,
+          name: selectedEntry.def.name,
+          level: selectedEntry.def.level,
+          atk: selectedEntry.def.atk,
+          def: selectedEntry.def.def,
+          materials: selectedEntry.def.materials
+        },
+        sendTo: step.sendTo || 'grave',
+        validCombos: comboIndices,
         options: options,
         min: K,
         max: K,
@@ -516,18 +809,27 @@
       return;
     }
 
-    // 2. Send chosen materials to grave
+    // 2. Send chosen materials to grave (or destZone)
+    const destZone = step.sendTo || 'grave';
     for (const item of chosenCombo) {
       if (item.zone === 'monster') {
-        E.leaveField(state, events, ctx.player, item.slot, 'grave');
-      } else {
+        E.leaveField(state, events, ctx.player, item.slot, destZone);
+      } else if (item.zone === 'hand') {
         const hIdx = p.hand.findIndex(c => c.uid === item.inst.uid);
         if (hIdx >= 0) {
           const c = p.hand.splice(hIdx, 1)[0];
           E.resetInstance(c);
-          p.grave.push(c);
-          events.push({ type: 'moveCard', uid: c.uid, from: 'hand', to: 'grave', player: ctx.player, slot: hIdx });
-          E.fire(state, events, 'onSentToGrave', { source: c });
+          p[destZone].push(c);
+          events.push({ type: 'moveCard', uid: c.uid, from: 'hand', to: destZone, player: ctx.player, slot: hIdx });
+          if (destZone === 'grave') E.fire(state, events, 'onSentToGrave', { source: c });
+        }
+      } else if (item.zone === 'grave') {
+        const gIdx = p.grave.findIndex(c => c.uid === item.inst.uid);
+        if (gIdx >= 0) {
+          const c = p.grave.splice(gIdx, 1)[0];
+          E.resetInstance(c);
+          p[destZone].push(c);
+          events.push({ type: 'moveCard', uid: c.uid, from: 'grave', to: destZone, player: ctx.player, slot: gIdx });
         }
       }
     }
@@ -561,7 +863,10 @@
     FX.openPending(state, events, {
       kind: 'chooseSlot',
       player: ctx.player,
-      prompt: 'CHOOSE_SLOT',
+      prompt: 'CHOOSE_FUSION_SLOT',
+      stage: 'slot',
+      fusionCardId: chosenFusion.cardId,
+      fusionName: selectedEntry.def.name,
       options: slotOptions,
       min: 1,
       max: 1,

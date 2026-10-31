@@ -51,8 +51,8 @@
         player: ctx.player,
         prompt: prompt,
         options: options,
-        min: count,
-        max: count,
+        min: Math.min(count, list.length),
+        max: Math.min(count, list.length),
         resume: FX.makeResume(state, step, ctx)
       });
       return null;
@@ -69,8 +69,39 @@
   reg('addMana', function (state, events, step, ctx) {
     const idx = sideIdx(ctx, step.player);
     const amount = step.amount === undefined ? 1 : step.amount;
-    state.players[idx].mana += amount;
+    state.players[idx].mana = Math.max(0, state.players[idx].mana + amount);
     events.push({ type: 'manaChange', player: idx, delta: amount, reason: 'effect' });
+  });
+
+  // reduceMana { player?: 'opp'|'self', amount?: number } : ลดมานา (Arcana) ของผู้เล่น (ไม่ต่ำกว่า 0)
+  reg('reduceMana', function (state, events, step, ctx) {
+    const idx = sideIdx(ctx, step.player || 'opp');
+    const rawAmount = step.amount === undefined ? 1 : step.amount;
+    const amount = Math.max(0, FX.resolveValue ? FX.resolveValue(state, step, ctx, rawAmount) : rawAmount);
+    const p = state.players[idx];
+    const actualReduced = Math.min(p.mana, amount);
+    if (actualReduced > 0) {
+      p.mana -= actualReduced;
+      events.push({ type: 'manaChange', player: idx, delta: -actualReduced, reason: 'effect' });
+    }
+    ctx.lastResult = { op: 'reduceMana', amount: actualReduced, ok: actualReduced > 0 };
+  });
+
+  // drainMana { amount?: number } : ดูดมานา (Arcana) จากฝ่ายตรงข้ามมาเพิ่มให้เรา
+  reg('drainMana', function (state, events, step, ctx) {
+    const oppIdx = sideIdx(ctx, 'opp');
+    const myIdx = ctx.player;
+    const rawAmount = step.amount === undefined ? 1 : step.amount;
+    const amount = Math.max(0, FX.resolveValue ? FX.resolveValue(state, step, ctx, rawAmount) : rawAmount);
+    const opp = state.players[oppIdx];
+    const drained = Math.min(opp.mana, amount);
+    if (drained > 0) {
+      opp.mana -= drained;
+      events.push({ type: 'manaChange', player: oppIdx, delta: -drained, reason: 'effect' });
+      state.players[myIdx].mana += drained;
+      events.push({ type: 'manaChange', player: myIdx, delta: drained, reason: 'effect' });
+    }
+    ctx.lastResult = { op: 'drainMana', amount: drained, ok: drained > 0 };
   });
 
   reg('modifyStat', function (state, events, step, ctx) {
@@ -123,6 +154,54 @@
   // ---- 4E-2B ----
   // reduceCost : ตัวประกาศ (ใช้ใน effect continuous) ไม่ทำอะไรตอนรัน ตัวลดมานาจริงอยู่ที่ runner.js (FX.run)
   reg('reduceCost', function () {});
+
+  reg('reduceTurnCost', function (state, events, step, ctx) {
+    const p = state.players[ctx.player];
+    p.flags.turnCostReduction = {
+      amount: step.amount || 1,
+      tag: step.tag || 'luna',
+      turn: state.turn
+    };
+    events.push({ type: 'turnCostReduced', player: ctx.player, amount: step.amount || 1, tag: step.tag || 'luna' });
+  });
+
+  reg('skipOpponentDraw', function (state, events, step, ctx) {
+    const opp = 1 - ctx.player;
+    state.players[opp].flags = state.players[opp].flags || {};
+    state.players[opp].flags.skipDrawPhase = true;
+    events.push({ type: 'skipDrawSet', player: opp });
+  });
+
+  reg('immuneEffects', function (state, events, step, ctx) {
+    const p = state.players[ctx.player];
+    for (const m of p.monsters) {
+      if (m) {
+        m.flags = m.flags || {};
+        m.flags.immuneEffectsTurn = state.turn;
+      }
+    }
+    events.push({ type: 'immuneEffectsSet', player: ctx.player });
+  });
+
+  reg('checkAndNukeFP', function (state, events, step, ctx) {
+    const p = state.players[ctx.player];
+    const wantCount = step.count || 4;
+    let count = 0;
+    for (const m of p.monsters) {
+      if (m && !m.faceDown && FX.matchFilter(m, step.filter, ctx)) count++;
+    }
+    if (count >= wantCount) {
+      const amt = step.amount || 4000;
+      eng().changeLp(state, events, ctx.player, amt, 'effect');
+      eng().changeLp(state, events, 1 - ctx.player, -amt, 'effect');
+    }
+  });
+
+  reg('forceEndTurnAfterBattle', function (state, events, step, ctx) {
+    state.flags = state.flags || {};
+    state.flags.forceEndTurnAfterBattle = true;
+    events.push({ type: 'forceEndTurnSet', player: ctx.player });
+  });
 
   // choice {choose:'player'|'auto', options:[{do:[steps]}, ...], pick?} : เลือก 1 จาก N เอฟเฟกต์ย่อย
   // ข้อจำกัดชั่วคราว (CONTRACT ข้อ 10): ยังไม่มีหน้าต่างให้ผู้เล่นเลือก engine เลือกอัตโนมัติ = ตัวแรกที่ \"ทำได้จริง\"

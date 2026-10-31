@@ -389,5 +389,73 @@ module.exports = [
         E().fire = origFire;
       }
     }
+  },
+
+  {
+    name: 'FUS-11 ตรวจสอบ Fusion Flow แบบโต้ตอบ (interactiveFusion: true) ครบทั้ง 3 ขั้นตอน',
+    run(assert) {
+      const s = game({
+        config: { chainMode: true, autoChoose: false, interactiveFusion: true },
+        turn: 3,
+        activeIdx: 0,
+        phase: 'main1',
+        p0: {
+          hand: ['dino_fusion', 'dino_hunter_raptor', 'dino_compy'],
+          monsters: { 0: 'dino_trex' },
+          extra: ['dino_tyrano_raptor', 'dino_raptor_swarm'],
+          mana: 5
+        },
+        p1: { monsters: {}, mana: 0 }
+      });
+
+      // 1. เปิดใช้ dino_fusion
+      const rSpell = E().applyAction(s, { type: 'activateSpell', player: 0, handIdx: 0 });
+      assert.ok(rSpell.ok, 'เปิดใช้สเปลสำเร็จ');
+
+      // ตรวจสอบ ขั้นที่ 1: เลือก Fusion Monster
+      assert.ok(s.pending, 'มี pending เกิดขึ้น');
+      assert.strictEqual(s.pending.prompt, 'CHOOSE_FUSION_MONSTER', 'prompt เป็น CHOOSE_FUSION_MONSTER');
+      assert.strictEqual(s.pending.stage, 'fusion', 'stage เป็น fusion');
+      assert.strictEqual(s.pending.options.length, 2, 'มีตัวเลือก 2 ตัว');
+      assert.ok(s.pending.options[0].name, 'มีชื่อมอนสเตอร์');
+      assert.ok(s.pending.options[0].materials, 'มีสูตรฟิวชั่น');
+
+      // 2. เลือกตัวแรก (dino_tyrano_raptor)
+      const rResp1 = E().applyAction(s, { type: 'respond', player: 0, choice: [0] });
+      assert.ok(rResp1.ok, 'ตอบเลือก Fusion สำเร็จ');
+
+      // ตรวจสอบ ขั้นที่ 2: เลือกวัสดุ (CHOOSE_FUSION_MATERIALS)
+      assert.ok(s.pending, 'มี pending เลือกวัสดุ');
+      assert.strictEqual(s.pending.prompt, 'CHOOSE_FUSION_MATERIALS');
+      assert.strictEqual(s.pending.stage, 'materials');
+      assert.ok(Array.isArray(s.pending.validCombos), 'มี validCombos สำหรับ UI validation');
+      assert.ok(s.pending.validCombos.length > 0, 'มีสูตรที่ถูกต้องอย่างน้อย 1 สูตร');
+      assert.ok(s.pending.options.some(o => o.zone === 'monster'), 'มีวัสดุบนสนาม');
+      assert.ok(s.pending.options.some(o => o.zone === 'hand'), 'มีวัสดุบนมือ');
+
+      // 3. ตอบเลือกวัสดุตาม validCombos[0]
+      const validChoice = s.pending.validCombos[0];
+      const rResp2 = E().applyAction(s, { type: 'respond', player: 0, choice: validChoice });
+      assert.ok(rResp2.ok, 'ตอบเลือกวัสดุสำเร็จ');
+
+      // ตรวจสอบ ขั้นที่ 3: เลือกช่องลง (CHOOSE_FUSION_SLOT)
+      assert.ok(s.pending, 'มี pending เลือกช่อง');
+      assert.strictEqual(s.pending.prompt, 'CHOOSE_FUSION_SLOT');
+      assert.strictEqual(s.pending.stage, 'slot');
+      assert.strictEqual(s.pending.kind, 'chooseSlot');
+
+      // 4. เลือกลงช่อง index 2
+      const slotOptIdx = s.pending.options.findIndex(o => o.slot === 2);
+      assert.ok(slotOptIdx >= 0, 'ช่อง 2 ว่างและเลือกได้');
+      const rResp3 = E().applyAction(s, { type: 'respond', player: 0, choice: [slotOptIdx] });
+      assert.ok(rResp3.ok, 'ตอบเลือกช่องสำเร็จ');
+
+      // ตรวจสอบผลลัพธ์สุดท้าย
+      assert.strictEqual(s.pending, null, 'ไม่มี pending ค้าง');
+      assert.ok(s.players[0].monsters[2], 'มีตัวที่ช่อง 2');
+      assert.strictEqual(s.players[0].monsters[2].cardId, 'dino_tyrano_raptor', 'เป็นไทรานโนแรปเตอร์ตัวที่เลือก');
+      assert.ok(s.players[0].grave.some(c => c.cardId === 'dino_trex'), 'dino_trex ลงสุสาน');
+      assert.ok(s.players[0].grave.some(c => c.cardId === 'dino_hunter_raptor'), 'dino_hunter_raptor ลงสุสาน');
+    }
   }
 ];

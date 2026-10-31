@@ -8,7 +8,13 @@
   function runStart(state, events, stage) {
     if (stage === 'draw') {
       E.setPhase(state, events, 'draw');
-      E.drawCard(state, events, state.activeIdx, true);
+      const p = state.players[state.activeIdx];
+      if (p.flags && p.flags.skipDrawPhase) {
+        delete p.flags.skipDrawPhase;
+        events.push({ type: 'drawSkipped', player: state.activeIdx });
+      } else {
+        E.drawCard(state, events, state.activeIdx, true);
+      }
       if (E.openWindow(state, events, { kind: 'phase', phase: 'draw' })) return;
       stage = 'standby';
     }
@@ -121,12 +127,50 @@
     return null;
   };
 
-  // จบเทิร์นจริง: ล้าง temp, Grade 4 กลับ extra, รีเซ็ต flags, เช็ก tiebreak, สลับเทิร์น
+  // จบเทิร์นจริง: ล้าง temp, Grade 4 กลับ extra, คืนการควบคุม, รีเซ็ต flags, เช็ก tiebreak, สลับเทิร์น
   E.finishTurn = function (state, events) {
+    // คืนการควบคุมมอนสเตอร์ที่ยึดมาชั่วคราว
+    for (let pi = 0; pi < state.players.length; pi++) {
+      const p = state.players[pi];
+      for (let s = 0; s < p.monsters.length; s++) {
+        const m = p.monsters[s];
+        if (m && m.controlRevertTurn === state.turn && m.originalController !== undefined) {
+          const origP = state.players[m.originalController];
+          let freeSlot = -1;
+          for (let fs = 0; fs < origP.monsters.length; fs++) {
+            if (!origP.monsters[fs]) { freeSlot = fs; break; }
+          }
+          p.monsters[s] = null;
+          m.controlRevertTurn = null;
+          const orig = m.originalController;
+          delete m.originalController;
+          m.controller = orig;
+          if (freeSlot >= 0) {
+            origP.monsters[freeSlot] = m;
+            events.push({ type: 'controlChange', uid: m.uid, fromPlayer: pi, toPlayer: orig, fromSlot: s, toSlot: freeSlot, reason: 'revert' });
+          } else {
+            origP.grave.push(m);
+            events.push({ type: 'moveCard', uid: m.uid, from: 'monster', to: 'grave', player: orig, reason: 'rule' });
+            E.fire(state, events, 'onSentToGrave', { source: m });
+          }
+        }
+      }
+    }
+
     for (const p of state.players) {
       for (let s = 0; s < p.monsters.length; s++) {
         const m = p.monsters[s]; if (!m) continue;
         m.tempAtkMod = 0; m.tempDefMod = 0;
+        if (m.tempCannotAttackTurn === state.turn) m.tempCannotAttackTurn = null;
+        if (m.frozenUntilTurn !== undefined && state.turn >= m.frozenUntilTurn) {
+          m.frozen = false; m.cannotAttack = false; m.cannotChangePosition = false; delete m.frozenUntilTurn;
+        }
+        if (m.silencedTurn === state.turn) {
+          m.negated = false; m.silenced = false; m.silencedTurn = null;
+        }
+        if (m.piercingTurn === state.turn) {
+          m.piercing = false; m.piercingTurn = null;
+        }
         const def = E.cardOf(m);
         if (def && def.type === 'grade4') E.leaveField(state, events, p.idx, s, 'extra', { keepUnder: true });
       }

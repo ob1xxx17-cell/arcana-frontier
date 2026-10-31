@@ -6,7 +6,11 @@
   const S = () => CG.ui.strings;
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   V.esc = esc;
-  const def = (inst) => CG.engine.cardOf(inst) || { name: '?', type: 'monster', text: '' };
+  const def = (inst) => {
+    if (!inst) return { name: '?', type: 'monster', text: '' };
+    if (inst.name && (inst.type || inst.atk != null)) return inst;
+    return CG.engine.cardOf(inst) || (inst.id ? CG.engine.findCard(inst.id) : null) || { name: '?', type: 'monster', text: '' };
+  };
   V.def = def;
 
   // แผนที่ uid -> CardInstance จากทุกโซน (ใช้ตั้งชื่อใน log)
@@ -36,11 +40,11 @@
       case 'attackDeclared': return fill(e.attackDeclared, { p: P(ev.player), from: ev.from + 1, to: ev.to === null ? e.attackDirect : ev.to + 1 });
       case 'destroy': return fill(e.destroy, { c: nm(ev.uid), r: s.reason[ev.by] || ev.by });
       case 'lpChange': return fill(e.lpChange, { p: P(ev.player), lp: s.term.lp, d: (ev.delta > 0 ? '+' : '') + ev.delta, r: s.reason[ev.reason] || ev.reason });
-      case 'statChange': return fill(e.statChange, { c: nm(ev.uid), stat: ev.stat, d: ev.delta });
+      case 'statChange': return fill(e.statChange, { c: nm(ev.uid), stat: (ev.stat || '').toUpperCase(), d: (ev.delta > 0 ? '+' : '') + ev.delta });
       case 'moveCard': {
         const c = map[ev.uid]; if (!c) return null;
         if ((ev.to === 'deck' || ev.from === 'deck' || ev.to === 'hand' || ev.from === 'hand') && c.owner !== viewer) return null;
-        if (ev.from === 'monster' && ev.to === 'grave') return null; // มี destroy แสดงอยู่แล้ว
+        if ((ev.from === 'monster' || ev.from === 'field') && ev.to === 'grave') return null; // มี destroy แสดงอยู่แล้ว
         return fill(e.moveCard, { c: nm(ev.uid), from: s.zone[ev.from] || ev.from, to: s.zone[ev.to] || ev.to });
       }
       case 'phaseChange': return ev.phase === 'draw' ? fill(e.turnStart, { t: ev.turn, p: P(ev.activeIdx) }) : null;
@@ -68,7 +72,9 @@
           const c = p.hand[act.handIdx];
           const d = E.cardOf(c);
           cardName = d ? d.name : '';
-          label = (a.activateSpell || 'ใช้สเปล') + (cardName ? ': ' + cardName : '');
+          const isField = d && (d.field || d.group === 'field');
+          const prefix = isField ? (a.activateField || 'ร่ายเวทสนาม') : (a.activateSpell || 'ใช้สเปล');
+          label = prefix + (cardName ? ': ' + cardName : '');
           id = 'activateSpell:hand:' + act.handIdx;
         } else if (act.spellSlot !== undefined) {
           const c = p.spells[act.spellSlot];
@@ -233,27 +239,44 @@
             reason = 'สเปลสวนกลับ ใช้ในหน้าต่างตอบโต้';
           } else if (state.phase !== 'main1' && state.phase !== 'main2') {
             reason = s.errors.WRONG_PHASE;
+          } else {
+            const eff = d.effects && d.effects[0];
+            const ctx = { source: c, player: viewer, trigger: 'spell' };
+            const FXc = CG.effects;
+            if (eff && FXc && FXc.checkCanActivate && !FXc.checkCanActivate(state, eff, ctx)) {
+              const hasGraveOp = (eff.do || []).some(step => step.from === 'grave' || (step.target && step.target.zone === 'grave') || (Array.isArray(step.from) && step.from.length === 1 && step.from[0] === 'grave'));
+              if (hasGraveOp) {
+                reason = s.errors.NO_TARGET_IN_GRAVE || 'ไม่มีการ์ดเป้าหมายในสุสาน';
+              } else {
+                reason = s.errors.CONDITION_FAILED || 'เงื่อนไขการใช้ไม่ครบถ้วน';
+              }
+            }
           }
+          const isField = Boolean(d.field || d.group === 'field');
+          const actLabel = isField ? (a.activateField || 'ร่ายเวทสนาม') : (a.activateSpell || 'ใช้สเปล');
           buttons.push({
             id: 'activateSpell:disabled',
             type: 'activateSpell',
-            label: a.activateSpell || 'ใช้สเปล',
+            label: actLabel,
             enabled: false,
             reason: reason || s.errors.NOT_IN_ZONE || 'ใช้ไม่ได้ในขณะนี้'
           });
         }
-        const hasSet = buttons.some(b => b.type === 'setSpell');
-        if (!hasSet) {
-          const maxSpells = (state.config && state.config.spellSlots) || 5;
-          const hasEmpty = (p.spells || []).slice(0, maxSpells).some(x => !x);
-          const reason = !hasEmpty ? (s.errors.SLOT_FULL || 'ช่องสเปลเต็ม') : (state.phase !== 'main1' && state.phase !== 'main2' ? s.errors.WRONG_PHASE : 'หมอบไม่ได้');
-          buttons.push({
-            id: 'setSpell:disabled',
-            type: 'setSpell',
-            label: a.setSpell || 'หมอบสเปล',
-            enabled: false,
-            reason
-          });
+        const isField = Boolean(d.field || d.group === 'field');
+        if (!isField) {
+          const hasSet = buttons.some(b => b.type === 'setSpell');
+          if (!hasSet) {
+            const maxSpells = (state.config && state.config.spellSlots) || 5;
+            const hasEmpty = (p.spells || []).slice(0, maxSpells).some(x => !x);
+            const reason = !hasEmpty ? (s.errors.SLOT_FULL || 'ช่องสเปลเต็ม') : (state.phase !== 'main1' && state.phase !== 'main2' ? s.errors.WRONG_PHASE : 'หมอบไม่ได้');
+            buttons.push({
+              id: 'setSpell:disabled',
+              type: 'setSpell',
+              label: a.setSpell || 'หมอบสเปล',
+              enabled: false,
+              reason
+            });
+          }
         }
       } else {
         // Monster in hand
@@ -396,6 +419,19 @@
           reason = s.errors.SET_THIS_TURN || 'เพิ่งหมอบในเทิร์นนี้';
         } else if (state.phase !== 'main1' && state.phase !== 'main2') {
           reason = s.errors.WRONG_PHASE;
+        } else {
+          const spDef = E.cardOf(sp);
+          const eff = spDef && spDef.effects && spDef.effects[0];
+          const ctx = { source: sp, player: viewer, trigger: 'spell' };
+          const FXc = CG.effects;
+          if (eff && FXc && FXc.checkCanActivate && !FXc.checkCanActivate(state, eff, ctx)) {
+            const hasGraveOp = (eff.do || []).some(step => step.from === 'grave' || (step.target && step.target.zone === 'grave') || (Array.isArray(step.from) && step.from.length === 1 && step.from[0] === 'grave'));
+            if (hasGraveOp) {
+              reason = s.errors.NO_TARGET_IN_GRAVE || 'ไม่มีการ์ดเป้าหมายในสุสาน';
+            } else {
+              reason = s.errors.CONDITION_FAILED || 'เงื่อนไขการใช้ไม่ครบถ้วน';
+            }
+          }
         }
         buttons.push({
           id: 'activateSpell:disabled',
@@ -489,8 +525,9 @@
     const d = def(inst), s = S();
     const hidden = inst.faceDown && !o.reveal;
     const cls = ['card', 't-' + d.type];
+    if (d.rare || (d.id && d.id.endsWith('_rare'))) cls.push('rare-secret');
     if (inst.faceDown) cls.push('fd' + (o.reveal ? ' mine-fd' : ''));
-    if (inst.position === 'def' && !inst.faceDown) cls.push('def');
+    if (inst.position === 'def') cls.push('def');
     if (o.field) cls.push('on-field');
     if (o.sel) cls.push('sel'); if (o.dis) cls.push('dis');
     if (o.hlClass) cls.push(o.hlClass);
@@ -503,19 +540,21 @@
     const lvl = inst.level != null ? inst.level : (d.level != null ? d.level : 1);
     const onField = o.field;
 
-    // 1. ไอคอนแท็ก 1 อัน กึ่งกลางบน (สเปลแสดงวงกลมน้ำเงินพร้อมชื่อกลุ่ม sp-badge)
+    // 1. ไอคอนแท็ก กึ่งกลางบน (วงกลมพื้นหลังเข้ม ขอบดำ ตามม็อกอัป)
     let iconHtml = '';
     const iconName = getCardIcon(d);
     if (iconName) {
-      iconHtml = '<img class="tag-icon" src="assets/icons/' + iconName + '.png" alt="' + iconName + '">';
+      iconHtml = '<div class="icon-circle"><img class="tag-icon" src="assets/icons/' + iconName + '.png" alt="' + iconName + '"></div>';
     } else if (d.type === 'spell') {
-      const spText = s.spellGroup[d.group] || d.group || '';
-      iconHtml = '<span class="sp-circle sp-badge">' + esc(spText) + '</span>';
+      const grpKey = (d.field || d.group === 'field') ? 'field' : d.group;
+      const spText = s.spellGroup[grpKey] || d.group || '';
+      iconHtml = '<div class="icon-circle sp-circle sp-badge">' + esc(spText) + '</div>';
     }
     const iconArea = '<div class="card-icon-area">' + iconHtml + '</div>';
 
-    // 2. ภาพการ์ด (ช่องว่างไว้ก่อน ใช้พื้นสีตามชนิด)
-    const artHtml = '<div class="card-art art-' + d.type + '"></div>';
+    // 2. ภาพการ์ด (ดึงจาก assets/cards/[id].png หรือ d.image หากไม่มีแสดงสีพื้นหลัง)
+    const artImg = d.image || ('assets/cards/' + d.id + '.png');
+    const artHtml = '<div class="card-art art-' + d.type + '"><img src="' + esc(artImg) + '" alt="" class="card-art-img" onerror="if(!this.dataset.t){this.dataset.t=\'1\';this.src=\'assets/cards/' + d.id + '.jpg\';}else{this.remove();}"></div>';
 
     // 3. แถวค่า: ATK วงรีแดงซ้าย, Level วงกลมเหลืองกลาง, DEF วงรีน้ำเงินขวา
     let statsHtml = '';
@@ -526,51 +565,107 @@
         '<span class="stat-pill stat-def">' + dfn + '</span>' +
         '</div>';
     } else {
+      const manaVal = d.mana != null ? d.mana : (d.cost && d.cost.mana != null ? d.cost.mana : 0);
       statsHtml = '<div class="card-stats sp-stat-row">' +
-        '<span class="sp-type-label">' + esc(s.type.spell) + '</span>' +
+        '<span class="stat-pill stat-mana">💧 ' + manaVal + '</span>' +
         '</div>';
     }
 
     // 4. แถบชื่อ
     const nameHtml = '<div class="card-name nm">' + esc(d.name) + '</div>';
 
-    // 5. กรอบข้อความเอฟเฟกต์ (d.text)
+    // 5. กรอบข้อความเอฟเฟกต์ (d.text) ปรับขนาดฟอนต์อัตโนมัติตามความยาว
     let textHtml = '';
     if (d.text) {
       const textLen = d.text.length;
       let textLenClass = '';
-      if (textLen > 100) textLenClass = ' text-xs';
-      else if (textLen > 50) textLenClass = ' text-sm';
+      if (textLen > 65) textLenClass = ' text-xxs';
+      else if (textLen > 45) textLenClass = ' text-xs';
+      else if (textLen > 22) textLenClass = ' text-sm';
       textHtml = '<div class="card-text' + textLenClass + '">' + esc(d.text) + '</div>';
     }
 
-    // Badge ท่าป้องกัน / ตัวใต้การ์ด
+    // Badge ท่าป้องกัน / ตัวใต้การ์ด / วัสดุสังเวย / เป้าหมายอัญเชิญพิเศษ
     let extraBadges = '';
     if (onField && mon) {
       extraBadges += '<div class="pos">' + (inst.faceDown ? '' : inst.position === 'atk' ? '⚔' : '🛡') + '</div>';
     }
     if (inst.under && inst.under.length) {
       extraBadges += '<div class="under">+' + inst.under.length + '</div>';
+      if (onField) {
+        const stackLayers = Math.min(inst.under.length, 3);
+        extraBadges += '<div class="stack-layers-wrap stack-' + stackLayers + '"></div>';
+      }
+    }
+    if (o.isTributeMat) {
+      extraBadges += '<div class="tribute-badge-overlay"><span class="t-skull">💀</span> <span class="t-badge-txt">สังเวย #' + (o.tributeOrder || 1) + '</span></div>';
+    }
+    if (o.isExtraTarget) {
+      extraBadges += '<div class="extra-target-badge-overlay"><span class="et-icon">🎯</span> <span class="et-badge-txt">แตะใช้วางทับ</span></div>';
     }
 
+    if (o.isTributeMat) cls.push('tribute-mat-card');
+    if (o.isExtraTarget) cls.push('extra-target-card');
+
     return '<div class="' + cls.join(' ') + '"' + data + '>' +
-      iconArea +
       artHtml +
-      statsHtml +
-      nameHtml +
-      textHtml +
+      iconArea +
+      '<div class="card-bottom-bar">' +
+        statsHtml +
+        nameHtml +
+        textHtml +
+      '</div>' +
       extraBadges +
       '</div>';
   }
   V.cardHtml = cardHtml;
 
-  CG.ui.sideOpen = (CG.ui.sideOpen !== undefined) ? CG.ui.sideOpen : (typeof window !== 'undefined' ? window.innerWidth > 820 : true);
+  CG.ui.sideOpen = false;
   CG.ui.toggleSide = function () {
     CG.ui.sideOpen = !CG.ui.sideOpen;
     const sideEl = document.querySelector('.side');
     const btn = document.getElementById('btnSideToggle');
     if (sideEl) sideEl.classList.toggle('side-collapsed', !CG.ui.sideOpen);
     if (btn) btn.textContent = CG.ui.sideOpen ? '📜 ปิดบันทึก' : '📜 บันทึก';
+  };
+
+  V.formatMaterialsRequirement = function (def) {
+    if (!def) return '';
+    if (def.materials && def.materials.trim().length > 0) return def.materials;
+    const es = def.extraSummon;
+    if (!es) return (def.type === 'fusion' || def.type === 'grade4') ? 'เงื่อนไขพิเศษจาก Astral Gate' : '';
+    const parts = [];
+    if (es.onto) {
+      if (es.onto.cardId) {
+        const targetDef = CG.engine ? CG.engine.findCard(es.onto.cardId) : null;
+        const targetName = targetDef ? targetDef.name : es.onto.cardId;
+        parts.push('วางทับ ' + targetName + (es.onto.underCount ? ' (มี ' + es.onto.underCount + ' ใบทับอยู่)' : ''));
+      } else if (es.onto.tag) {
+        parts.push('วางทับมอนสเตอร์แท็ก ' + es.onto.tag + ' 1 ตัวบนสนาม');
+      } else {
+        parts.push('วางทับมอนสเตอร์ 1 ตัวบนสนาม');
+      }
+    }
+    if (es.fromHand) {
+      parts.push('ใช้วัสดุ ' + (es.fromHand.count || 1) + ' ใบจากมือ');
+    }
+    if (es.cost && es.cost.length) {
+      for (const c of es.cost) {
+        if (c.op === 'sendToGrave') {
+          const tag = (c.target && c.target.filter && c.target.filter.tag) ? (' ' + c.target.filter.tag) : '';
+          parts.push('ส่งการ์ด' + tag + ' ' + ((c.target && c.target.count) || 1) + ' ใบจากมือลงสุสาน');
+        } else if (c.op === 'returnToDeck') {
+          const cid = (c.target && c.target.filter && c.target.filter.cardId);
+          const cDef = cid && CG.engine ? CG.engine.findCard(cid) : null;
+          const cName = cDef ? cDef.name : (cid || 'การ์ด');
+          parts.push('นำ ' + cName + ' ' + ((c.target && c.target.count) || 1) + ' ใบจากสุสานกลับเด็ค');
+        } else if (c.op === 'banish') {
+          const tag = (c.target && c.target.filter && c.target.filter.tag) ? (' ' + c.target.filter.tag) : '';
+          parts.push('Exile การ์ด' + tag + ' ' + ((c.target && c.target.count) || 1) + ' ใบจากสุสาน');
+        }
+      }
+    }
+    return parts.join(' + ') || 'เงื่อนไขพิเศษจาก Astral Gate';
   };
 
   // 10: หน้าต่างรายละเอียดการ์ดกลางจอ พร้อมแถบคำสั่งสีม่วง
@@ -588,6 +683,28 @@
     // ซ้าย = หน้าการ์ดใบใหญ่
     const largeCardHtml = cardHtml(cardInst, { reveal: true, field: false });
 
+    // กล่องแสดงวัตถุดิบและเงื่อนไขการอัญเชิญพิเศษ (Resonance / Apex)
+    let summonReqHtml = '';
+    const isExtraMonster = (d.type === 'fusion' || d.type === 'grade4' || d.extraSummon || (d.materials && d.materials.trim()));
+    if (isExtraMonster) {
+      const isFusion = d.type === 'fusion';
+      const isApex = d.type === 'grade4';
+      const reqText = V.formatMaterialsRequirement(d);
+      const icon = isFusion ? '🌀' : isApex ? '👑' : '💫';
+      const title = isFusion ? 'วัตถุดิบฟิวชั่น (Resonance)' : isApex ? 'เงื่อนไขอัญเชิญ Apex (Grade 4)' : 'เงื่อนไขอัญเชิญพิเศษ';
+      const hint = isFusion
+        ? '💡 อัญเชิญด้วยการใช้การ์ดสเปลผสานร่าง (เช่น "เมก้า เรโซแนนซ์" หรือ "มิราเคิล รีบูต") ร่ายจากบนมือหรือสนาม'
+        : isApex
+          ? '💡 แตะช่อง Astral Gate แล้วเลือกอัญเชิญพิเศษวางทับ (เรียกได้ 1 ครั้ง/เทิร์น, จบเทิร์นกลับ Astral Gate)'
+          : '';
+
+      summonReqHtml = '<div class="detail-materials-box ' + (isFusion ? 'fusion-req' : 'apex-req') + '">' +
+        '<div class="mat-badge-title">' + icon + ' <b>' + esc(title) + '</b></div>' +
+        '<div class="mat-desc-line">🎯 <b>' + esc(reqText) + '</b></div>' +
+        (hint ? '<div class="mat-hint-line">' + esc(hint) + '</div>' : '') +
+      '</div>';
+    }
+
     // ขวาบน = แถวค่า: ATK วงรีแดง | Level วงกลมเหลือง | DEF วงรีน้ำเงิน (การ์ดสเปลแสดงชนิดแทน)
     let statsRowHtml = '';
     if (mon) {
@@ -597,7 +714,8 @@
         '<div class="detail-stat-oval stat-oval-def"><span class="stat-lbl">' + (a.def || 'DEF') + '</span> <span class="stat-val">' + dfn + '</span></div>' +
       '</div>';
     } else {
-      const spGroup = s.spellGroup[d.group] || d.group || 'ปกติ';
+      const grpKey = (d.field || d.group === 'field') ? 'field' : d.group;
+      const spGroup = s.spellGroup[grpKey] || d.group || 'ปกติ';
       statsRowHtml = '<div class="detail-stats-row sp-row">' +
         '<div class="detail-spell-type-badge"><span class="sp-badge-icon">🌀</span> <span class="sp-badge-name">' + esc(s.type.spell) + ' — ' + esc(spGroup) + '</span></div>' +
         (d.mana ? '<div class="detail-stat-oval stat-oval-mana"><span class="stat-lbl">' + esc(a.manaCost) + '</span> <span class="stat-val">' + d.mana + '</span></div>' : '') +
@@ -612,18 +730,22 @@
         const typeLabel = (s.effectType && s.effectType[eff.trigger]) || eff.trigger || 'เอฟเฟกต์';
         let isUsable = false;
         let actData = '';
+        const myP = state && state.players ? state.players[viewer] : null;
+        const cardSlot = (myP && cardInst && cardInst.uid) ? myP.monsters.findIndex(m => m && m.uid === cardInst.uid) : (sel && sel.kind === 'field' ? sel.slot : -1);
+        const cardHandIdx = (myP && cardInst && cardInst.uid) ? myP.hand.findIndex(c => c && c.uid === cardInst.uid) : (sel && sel.kind === 'hand' ? sel.idx : -1);
+
         if (!isOpponent && legalActions) {
-          if (sel && sel.kind === 'hand') {
-            const canAct = legalActions.some(x => x.type === 'activateEffect' && x.handIdx === sel.idx && x.effectId === eff.id);
+          if (cardHandIdx >= 0) {
+            const canAct = legalActions.some(x => x.type === 'activateEffect' && x.handIdx === cardHandIdx && x.effectId === eff.id);
             if (canAct) {
               isUsable = true;
-              actData = ' data-act="actEff:hand:' + esc(eff.id) + '"';
+              actData = ' data-act="actEff:hand:' + cardHandIdx + ':' + esc(eff.id) + '"';
             }
-          } else if (sel && sel.kind === 'field') {
-            const canAct = legalActions.some(x => x.type === 'activateEffect' && x.slot === sel.slot && x.effectId === eff.id);
+          } else if (cardSlot >= 0) {
+            const canAct = legalActions.some(x => x.type === 'activateEffect' && x.slot === cardSlot && x.effectId === eff.id);
             if (canAct) {
               isUsable = true;
-              actData = ' data-act="actEff:field:' + esc(eff.id) + '"';
+              actData = ' data-act="actEff:field:' + cardSlot + ':' + esc(eff.id) + '"';
             }
           }
         }
@@ -654,7 +776,32 @@
       '</div>';
     }
 
-    // ใต้ช่องเอฟเฟกต์ = กล่องข้อความเต็มของการ์ด (d.text)
+    // ใต้ช่องเอฟเฟกต์ = การ์ดที่ซ้อนอยู่ใต้ร่าง (ถ้ามี)
+    let underCardsHtml = '';
+    if (cardInst.under && cardInst.under.length > 0) {
+      underCardsHtml = '<div class="detail-under-section">' +
+        '<div class="under-section-header">' +
+          '<span class="under-icon">📚</span>' +
+          '<span class="under-title">การ์ดที่ซ้อนอยู่ใต้ร่าง (Stacked Materials): <strong>' + cardInst.under.length + ' ใบ</strong></span>' +
+        '</div>' +
+        '<div class="under-cards-row">' +
+          cardInst.under.map((uCard, uIdx) => {
+            const uDef = def(uCard);
+            return '<div class="under-card-item">' +
+              '<div class="under-card-thumb" data-act="inspectUnder:' + uCard.uid + '" title="แตะเพื่อดูรายละเอียด">' +
+                cardHtml(uCard, { reveal: true, field: false }) +
+              '</div>' +
+              '<div class="under-card-meta">' +
+                '<span class="under-card-name">' + esc(uDef ? uDef.name : uCard.cardId) + '</span>' +
+                '<button class="pill inspect-under-btn" data-act="inspectUnder:' + uCard.uid + '">🔍 ดูการ์ด</button>' +
+              '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    }
+
+    // กล่องข้อความเต็มของการ์ด (d.text)
     const fullTextHtml = '<div class="detail-full-text">' +
       '<div class="full-text-title">คำอธิบายการ์ด</div>' +
       '<div class="full-text-content">' + esc(d.text || '(ไม่มีข้อความเอฟเฟกต์)') + '</div>' +
@@ -664,11 +811,24 @@
     let commandCellsHtml = '';
     if (isOpponent) {
       commandCellsHtml = '<button class="cmd-cell btn-close enabled" data-act="closeModal">' + esc(a.close) + '</button>';
+    } else if (state.phase === 'mulligan') {
+      commandCellsHtml = '<button class="cmd-cell btn-deselect enabled" data-act="deselectMulligan">✕ ยกเลิกเลือกใบนี้</button>' +
+        '<button class="cmd-cell btn-close enabled" data-act="closeModal">' + esc(a.close) + '</button>';
     } else {
-      const menuActions = sel ? V.getMenuActions(state, viewer, sel, legalActions) : [];
+      let isMatchingSel = false;
+      if (sel) {
+        const myP = state && state.players ? state.players[viewer] : null;
+        if (myP) {
+          if (sel.kind === 'hand' && myP.hand[sel.idx] && myP.hand[sel.idx].uid === cardInst.uid) isMatchingSel = true;
+          else if (sel.kind === 'field' && myP.monsters[sel.slot] && myP.monsters[sel.slot].uid === cardInst.uid) isMatchingSel = true;
+          else if (sel.kind === 'spell' && myP.spells[sel.slot] && myP.spells[sel.slot].uid === cardInst.uid) isMatchingSel = true;
+          else if (sel.kind === 'extra' && myP.extra[sel.idx] && myP.extra[sel.idx].uid === cardInst.uid) isMatchingSel = true;
+        }
+      }
+      const menuActions = isMatchingSel ? V.getMenuActions(state, viewer, sel, legalActions) : [];
       let btns = '';
 
-      if (sel && sel.kind === 'hand') {
+      if (isMatchingSel && sel.kind === 'hand') {
         if (d.type === 'spell') {
           const actSpellBtn = menuActions.find(x => x.type === 'activateSpell' && x.enabled);
           const setSpellBtn = menuActions.find(x => x.type === 'setSpell' && x.enabled);
@@ -721,7 +881,7 @@
             }
           });
         }
-      } else if (sel && sel.kind === 'field') {
+      } else if (isMatchingSel && sel.kind === 'field') {
         const m = cardInst;
         if (m.faceDown) {
           const canFlip = menuActions.some(x => x.type === 'flipSummon' && x.enabled);
@@ -757,7 +917,7 @@
             }
           });
         }
-      } else if (sel && sel.kind === 'spell') {
+      } else if (isMatchingSel && sel.kind === 'spell') {
         const canAct = menuActions.find(x => x.type === 'activateSpell' && x.enabled);
         if (canAct) {
           btns += '<button class="cmd-cell enabled" data-act="actSpellField">' + esc(canAct.label) + '</button>';
@@ -765,7 +925,7 @@
           const dis = menuActions.find(x => x.type === 'activateSpell' && !x.enabled);
           if (dis) btns += '<button class="cmd-cell disabled" data-reason="' + esc(dis.reason || '') + '">' + esc(dis.label) + '</button>';
         }
-      } else if (sel && sel.kind === 'extra') {
+      } else if (isMatchingSel && sel.kind === 'extra') {
         const canExtra = menuActions.find(x => x.type === 'extraSummon' && x.enabled);
         if (canExtra) {
           btns += '<button class="cmd-cell enabled" data-act="callExtra:' + sel.idx + '">' + esc(a.extraSummon) + '</button>';
@@ -784,7 +944,7 @@
     '</div>';
 
     return '<div class="card-detail-overlay" data-act="closeModal">' +
-      '<div class="card-detail-modal" onclick="event.stopPropagation()">' +
+      '<div class="card-detail-modal">' +
         '<button class="detail-close-btn" data-act="closeModal" title="ปิด">✕</button>' +
         '<div class="detail-modal-body">' +
           '<div class="detail-left-col"><div class="detail-big-card-wrap">' + largeCardHtml + '</div></div>' +
@@ -793,7 +953,9 @@
               '<div class="detail-card-name">' + esc(d.name) + '</div>' +
               statsRowHtml +
             '</div>' +
+            summonReqHtml +
             effectsGridHtml +
+            underCardsHtml +
             fullTextHtml +
           '</div>' +
         '</div>' +
@@ -805,7 +967,7 @@
   // ---- ทั้งหน้าจอเกม ----
   // ctx = { state, viewer, sel, legal, handSel(Set uid), botBusy }
   V.render = function (root, ctx) {
-    const st = ctx.state, me = st.players[ctx.viewer], op = st.players[1 - ctx.viewer], s = S(), a = s.app;
+    const st = ctx.state, me = st.players[ctx.viewer], op = st.players[1 - ctx.viewer], s = S(), a = s.app, E = CG.engine;
     const mine = st.activeIdx === ctx.viewer;
     const sel = ctx.sel || {};
     const botTurn = st.mode === 'bot' && st.phase !== 'mulligan' && st.activeIdx === 1;
@@ -821,6 +983,7 @@
       '<span class="phases">' + phases + '</span><span class="pill">' + a.seed + ' ' + esc(st.rng.seed) + '</span></div>' +
       '<div class="row">' +
         '<button id="btnSideToggle" class="pill side-btn" onclick="CG.ui.toggleSide()" title="เปิด/ปิด แผงบันทึก">' + (CG.ui.sideOpen ? '📜 ปิดบันทึก' : '📜 บันทึก') + '</button>' +
+        '<button id="btnSound" class="pill speed-btn" title="เปิด/ปิดเสียง">' + (CG.ui.audio && CG.ui.audio.isEnabled() ? '🔊 เสียง' : '🔇 ปิดเสียง') + '</button>' +
         '<button id="btnSpeed" class="pill speed-btn" title="' + esc(a.speed ? a.speed.title : 'ความเร็ว') + '">' + esc(speedLabel) + '</button>' +
         '<button id="btnMenu">' + a.back + '</button>' +
       '</div></div>';
@@ -838,29 +1001,30 @@
     function pilesGrid(p, idx) {
       const resCount = p.extra.filter(c => def(c).type === 'fusion').length;
       const apexCount = p.extra.filter(c => def(c).type === 'grade4').length;
+      const canExtraSummon = idx === ctx.viewer && ctx.legal && ctx.legal.some(x => x.type === 'extraSummon');
       return '<div class="piles-grid">' +
         '<div class="pile-box pile-deck" data-zone="' + idx + ':deck" title="' + esc(s.app.deck) + '">' +
-          '<div class="pile-header"><span class="pile-icon">📚</span><span class="pile-title">Chronicle</span></div>' +
+          '<div class="pile-header"><span class="pile-title">Chronicle</span></div>' +
           '<div class="pile-num">' + p.deck.length + '</div>' +
         '</div>' +
         '<div class="pile-box pile-grave" data-zone="' + idx + ':grave" title="' + esc(s.app.grave) + '">' +
-          '<div class="pile-header"><span class="pile-icon">🕳️</span><span class="pile-title">Abyss</span></div>' +
+          '<div class="pile-header"><span class="pile-title">Abyss</span></div>' +
           '<div class="pile-num">' + p.grave.length + '</div>' +
         '</div>' +
-        '<div class="pile-box pile-extra" data-zone="' + idx + ':extra" title="' + esc(s.app.extraDeck) + '">' +
-          '<div class="pile-header"><span class="pile-icon">🌌</span><span class="pile-title">Astral</span></div>' +
+        '<div class="pile-box pile-extra' + (canExtraSummon ? ' can-summon' : '') + '" data-zone="' + idx + ':extra" title="' + esc(s.app.extraDeck) + '">' +
+          '<div class="pile-header"><span class="pile-title">Astral Gate</span></div>' +
           '<div class="pile-num">' + p.extra.length + '</div>' +
           '<div class="pile-sub-r-a">R:' + resCount + ' A:' + apexCount + '</div>' +
         '</div>' +
         '<div class="pile-box pile-removed" data-zone="' + idx + ':removed" title="' + esc(s.app.removed) + '">' +
-          '<div class="pile-header"><span class="pile-icon">⚡</span><span class="pile-title">Exile</span></div>' +
+          '<div class="pile-header"><span class="pile-title">Exile</span></div>' +
           '<div class="pile-num">' + p.removed.length + '</div>' +
         '</div>' +
       '</div>';
     }
 
-    // แผงขวา: วงกลมชื่อผู้เล่น, FP, Arcana, เทิร์น, เวลา
-    function playerPanel(p, idx) {
+    // แผงขวาตามแบบร่าง: 3 กล่องเรียงแนวตั้ง (Frontier Point, ข้อมูลผู้เล่น, acana)
+    function playerPanel(p, idx, isOpponent) {
       const act = st.activeIdx === idx && st.phase !== 'mulligan';
       const fpPct = Math.max(0, Math.min(100, (p.lp / 8000) * 100));
       const manaPct = Math.max(0, Math.min(100, (p.mana / 10) * 100));
@@ -868,24 +1032,136 @@
       const timers = (ctx.timers || (CG.ui && CG.ui.timers)) || {};
       const timeVal = fmtTime(timers['p' + idx]);
       const isLowFp = p.lp <= 2500;
-      return '<div class="player-panel ' + (act ? 'active' : '') + '">' +
-        '<div class="panel-top-row">' +
-          '<div class="player-avatar-circle" title="' + name + '">' + name.slice(0, 3) + '</div>' +
-          '<div class="panel-meta-col">' +
-            '<div class="meta-badge turn-box"><span class="meta-tag">' + esc(a.turn) + '</span> <span class="meta-val">' + st.turn + '</span></div>' +
-            '<div class="meta-badge time-box"><span class="meta-tag">⏱</span> <span class="meta-val" data-time-p="' + idx + '">' + timeVal + '</span></div>' +
+      const isBot = st.mode === 'bot' && idx === 1;
+      const avatarIcon = isBot ? '🤖' : '👤';
+      const levelText = isBot ? 'Lv.AI' : 'Lv.14';
+      const idText = isBot ? 'ID: BOT-AI' : 'ID: AF-88294';
+
+      return '<div class="sketch-panel-stack ' + (act ? 'active' : '') + (isOpponent ? ' is-opp' : ' is-self') + '">' +
+        '<div class="sketch-info-box fp-box">' +
+          '<div class="sketch-box-top-row">' +
+            '<span class="sketch-box-title">Frontier Point</span>' +
+            '<span class="sketch-box-timer" data-time-p="' + idx + '">⏱ ' + timeVal + '</span>' +
+          '</div>' +
+          '<div class="sketch-box-val-row"><span class="lp bar-num" data-lp="' + idx + '">' + p.lp.toLocaleString() + '</span></div>' +
+          '<div class="sketch-bar-track fp-track">' +
+            '<div class="sketch-bar-ghost fp-ghost" data-lp-ghost="' + idx + '" style="width:' + fpPct + '%"></div>' +
+            '<div class="sketch-bar-fill fp-fill ' + (isLowFp ? 'is-low' : '') + '" data-lp-fill="' + idx + '" style="width:' + fpPct + '%"></div>' +
           '</div>' +
         '</div>' +
-        '<div class="panel-stat-bars">' +
-          '<div class="stat-bar-group fp-group">' +
-            '<div class="bar-info"><span class="bar-lbl">FP</span><span class="lp bar-num" data-lp="' + idx + '">' + p.lp + '</span></div>' +
-            '<div class="bar-track"><div class="bar-fill fp-fill ' + (isLowFp ? 'is-low' : '') + '" style="width:' + fpPct + '%"></div></div>' +
+        '<div class="sketch-profile-box">' +
+          '<div class="sketch-profile-avatar">' +
+            avatarIcon +
+            '<span class="sketch-avatar-level">' + levelText + '</span>' +
           '</div>' +
-          '<div class="stat-bar-group mana-group">' +
-            '<div class="bar-info"><span class="bar-lbl">Arcana</span><span class="mana bar-num">' + p.mana + '</span></div>' +
-            '<div class="bar-track"><div class="bar-fill mana-fill" style="width:' + manaPct + '%"></div></div>' +
+          '<div class="sketch-profile-meta">' +
+            '<div class="sketch-profile-name">' + name + '</div>' +
+            '<div class="sketch-profile-id">' + idText + '</div>' +
           '</div>' +
         '</div>' +
+        '<div class="sketch-info-box acana-box">' +
+          '<div class="sketch-box-title">acana</div>' +
+          '<div class="sketch-box-val-row"><span class="mana bar-num">' + p.mana + '</span> <span class="sketch-max-mana">/10</span></div>' +
+          '<div class="sketch-bar-track"><div class="sketch-bar-fill mana-fill" style="width:' + manaPct + '%"></div></div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // ฟังก์ชันสร้างเลย์เอาต์สนาม 7x2 ช่องสี่เหลี่ยมตามแบบร่าง
+    function sketchSideHtml(p, idx, isOpponent) {
+      const isMe = idx === ctx.viewer;
+      const resCount = p.extra.filter(c => def(c).type === 'fusion').length;
+      const apexCount = p.extra.filter(c => def(c).type === 'grade4').length;
+      const canExtraSummon = idx === ctx.viewer && ctx.legal && ctx.legal.some(x => x.type === 'extraSummon');
+
+      // 4 Piles (กองการ์ด 4 กอง)
+      const pileChronicle = '<div class="slot pile-box sketch-slot" data-zone="' + idx + ':deck" title="' + esc(s.app.deck) + '">' +
+        '<div class="sketch-pile-name">Chronicle</div>' +
+        '<div class="sketch-pile-num">' + p.deck.length + '</div>' +
+      '</div>';
+
+      const pileAbyss = '<div class="slot pile-box sketch-slot" data-zone="' + idx + ':grave" title="' + esc(s.app.grave) + '">' +
+        '<div class="sketch-pile-name">Abyss</div>' +
+        '<div class="sketch-pile-num">' + p.grave.length + '</div>' +
+      '</div>';
+
+      const pileAstral = '<div class="slot pile-box sketch-slot' + (canExtraSummon ? ' can-summon' : '') + '" data-zone="' + idx + ':extra" title="' + esc(s.app.extraDeck) + '">' +
+        '<div class="sketch-pile-name">Astral Gate</div>' +
+        '<div class="sketch-pile-num">' + p.extra.length + '</div>' +
+        '<div class="sketch-pile-sub">R:' + resCount + ' A:' + apexCount + '</div>' +
+      '</div>';
+
+      const pileExile = '<div class="slot pile-box sketch-slot" data-zone="' + idx + ':removed" title="' + esc(s.app.removed) + '">' +
+        '<div class="sketch-pile-name">Exile</div>' +
+        '<div class="sketch-pile-num">' + p.removed.length + '</div>' +
+      '</div>';
+
+      // 5 Monsters
+      let monSlots = [];
+      for (let i = 0; i < p.monsters.length; i++) {
+        const m = p.monsters[i];
+        const cls = ['slot', 'sketch-slot'];
+        if (i === 2) cls.push('leader');
+        if (isMe && hlOwn.has(i)) cls.push('hl');
+        if (!isMe && hlOpp.has(i)) cls.push('hlred');
+        if (isMe && sel.kind === 'field' && sel.slot === i) cls.push('sel');
+        const isTributeMat = isMe && sel && sel.kind === 'hand' && sel.mode === 'tribute' && sel.mats && sel.mats.includes(i);
+        const tributeOrder = isTributeMat ? (sel.mats.indexOf(i) + 1) : 0;
+        const isExtraTarget = isMe && ((sel && sel.kind === 'extra') || (sel && sel.kind === 'hand' && sel.mode === 'overlay')) && hlOwn.has(i);
+        if (isTributeMat) cls.push('tribute-mat-slot');
+        if (isExtraTarget) cls.push('extra-mat-slot');
+        const at = ' data-p="' + idx + '" data-slot="' + i + '" data-zone2="mon"';
+        const hl = ctx.cardHl && m ? ctx.cardHl[m.uid] : null;
+        const ghost = !m && ctx.ghosts ? ctx.ghosts[idx + ':' + i] : null;
+        let cHtml = '';
+        if (m) {
+          cHtml = cardHtml(m, {
+            field: true,
+            reveal: isMe,
+            hlClass: hl,
+            sel: (sel.kind === 'attack' && isMe && sel.slot === i) || isTributeMat,
+            isTributeMat: isTributeMat,
+            tributeOrder: tributeOrder,
+            isExtraTarget: isExtraTarget,
+            attrs: at
+          });
+        } else if (ghost) {
+          cHtml = cardHtml(ghost.card, { field: true, reveal: ghost.card.owner === ctx.viewer, hlClass: 'ev-destroyed', attrs: at });
+        } else if (i === 2) {
+          cHtml = '<span class="sketch-slot-wm leader-wm">Pioneer</span>';
+        } else {
+          cHtml = '<span class="sketch-slot-wm">Entity</span>';
+        }
+        monSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + cHtml + '</div>');
+      }
+
+      // 5 Spells
+      let spellSlots = [];
+      for (let i = 0; i < p.spells.length; i++) {
+        const c = p.spells[i];
+        const cls = ['slot', 'spellslot', 'sketch-slot'];
+        if (isMe && sel.kind === 'hand' && sel.mode === 'setSpell' && hlSpellOwn.has(i)) cls.push('hl');
+        if (isMe && sel.kind === 'spell' && sel.slot === i) cls.push('sel');
+        const at = ' data-p="' + idx + '" data-spell-slot="' + i + '" data-zone2="spell"';
+        const wm = c ? '' : '<span class="sketch-slot-wm">Distortion</span>';
+        spellSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>');
+      }
+
+      let row1 = '', row2 = '';
+      if (isOpponent) {
+        row1 = '<div class="sketch-row">' + pileChronicle + pileAbyss + spellSlots.join('') + '</div>';
+        row2 = '<div class="sketch-row">' + pileAstral + pileExile + monSlots.join('') + '</div>';
+      } else {
+        row1 = '<div class="sketch-row">' + pileChronicle + pileAbyss + monSlots.join('') + '</div>';
+        row2 = '<div class="sketch-row">' + pileAstral + pileExile + spellSlots.join('') + '</div>';
+      }
+
+      return '<div class="sketch-side ' + (isOpponent ? 'opp-side' : 'self-side') + '">' +
+        '<div class="sketch-grid-7x2">' +
+          row1 +
+          row2 +
+        '</div>' +
+        playerPanel(p, idx, isOpponent) +
       '</div>';
     }
 
@@ -899,7 +1175,13 @@
         if (sel.mode === 'overlay' && x.type === 'overlay') hlOwn.add(x.targetSlot);
         if (sel.mode === 'tribute' && x.type === 'tributeSummon' && x.materials.slice().sort().join() === sel.mats.slice().sort().join()) hlOwn.add(x.slot);
       });
-    if (sel.kind === 'hand' && sel.mode === 'setSpell') {
+    if (sel.kind === 'hand' && !sel.mode) {
+      ctx.legal.forEach(x => {
+        if (x.handIdx !== sel.idx) return;
+        if (x.type === 'normalSummon') hlOwn.add(x.slot);
+      });
+    }
+    if (sel.kind === 'hand' && (sel.mode === 'setSpell' || !sel.mode)) {
       ctx.legal.forEach(x => {
         if (x.type === 'setSpell' && x.handIdx === sel.idx) hlSpellOwn.add(x.slot);
       });
@@ -911,6 +1193,149 @@
     }
     if (sel.kind === 'attack') ctx.legal.forEach(x => { if (x.type === 'attack' && x.from === sel.slot && x.to !== null) hlOpp.add(x.to); });
 
+    function formatMaterialsRequirement(def) {
+      if (!def) return '';
+      if (def.materials && def.materials.trim().length > 0) return def.materials;
+      const es = def.extraSummon;
+      if (!es) return 'เงื่อนไขพิเศษจาก Extra Deck';
+      const parts = [];
+      if (es.onto) {
+        if (es.onto.cardId) {
+          const targetDef = CG.engine ? CG.engine.findCard(es.onto.cardId) : null;
+          const targetName = targetDef ? targetDef.name : es.onto.cardId;
+          parts.push('วางทับ ' + targetName + (es.onto.underCount ? ' (มี ' + es.onto.underCount + ' ใบทับอยู่)' : ''));
+        } else if (es.onto.tag) {
+          parts.push('วางทับมอนสเตอร์แท็ก ' + es.onto.tag + ' 1 ตัวบนสนาม');
+        } else {
+          parts.push('วางทับมอนสเตอร์ 1 ตัวบนสนาม');
+        }
+      }
+      if (es.fromHand) {
+        parts.push('ใช้วัสดุ ' + (es.fromHand.count || 1) + ' ใบจากมือ');
+      }
+      if (es.cost && es.cost.length) {
+        for (const c of es.cost) {
+          if (c.op === 'sendToGrave') {
+            const tag = (c.target && c.target.filter && c.target.filter.tag) ? (' ' + c.target.filter.tag) : '';
+            parts.push('ส่งการ์ด' + tag + ' ' + ((c.target && c.target.count) || 1) + ' ใบจากมือลงสุสาน');
+          } else if (c.op === 'returnToDeck') {
+            const cid = (c.target && c.target.filter && c.target.filter.cardId);
+            const cDef = cid && CG.engine ? CG.engine.findCard(cid) : null;
+            const cName = cDef ? cDef.name : (cid || 'การ์ด');
+            parts.push('นำ ' + cName + ' ' + ((c.target && c.target.count) || 1) + ' ใบจากสุสานกลับเด็ค');
+          }
+        }
+      }
+      return parts.join(' + ') || 'เงื่อนไขพิเศษจาก Extra Deck';
+    }
+    V.formatMaterialsRequirement = formatMaterialsRequirement;
+
+    function tributeBarHtml(st, viewer, sel) {
+      const me = st.players[viewer];
+      const handCard = me.hand[sel.idx];
+      const d = handCard ? def(handCard) : {};
+      const reqLv = handCard ? (handCard.level || d.level || 2) : 2;
+
+      const selectedCards = (sel.mats || []).map(slotIdx => {
+        const inst = me.monsters[slotIdx];
+        return inst ? { slot: slotIdx, inst, def: def(inst) } : null;
+      }).filter(Boolean);
+
+      const totalLv = selectedCards.reduce((sum, item) => sum + (item.inst.level || item.def.level || 1), 0);
+      const okSum = (reqLv === 2 && totalLv === 2) || (reqLv === 3 && totalLv === 3);
+
+      if (sel.matsOk) {
+        const namesList = selectedCards.map(x => esc(x.def.name)).join(', ');
+        return '<div class="quick-action-bar tribute-bar mats-confirmed">' +
+          '<div class="tb-info">' +
+            '<div class="tb-title gold">✅ ยืนยันตัวสังเวยแล้ว: ' + (namesList || '(เลือกแล้ว)') + '</div>' +
+            '<div class="tb-sub">👉 แตะช่องมอนสเตอร์บนสนามที่ต้องการวาง <b>' + esc(d.name) + '</b></div>' +
+          '</div>' +
+          '<div class="actbar">' +
+            '<button data-act="reselectMats" class="pill reselect-btn">↩ เปลี่ยนตัวสังเวย</button>' +
+            '<button data-act="cancel" class="cancel-btn">' + esc(s.app.cancel) + '</button>' +
+          '</div>' +
+        '</div>';
+      }
+
+      let listHtml = '';
+      if (selectedCards.length > 0) {
+        listHtml = '<div class="tb-chips">' + selectedCards.map((x, idx) => {
+          const lvl = x.inst.level || x.def.level || 1;
+          const atk = x.inst.baseAtk != null ? CG.engine.atk(x.inst) : (x.def.atk || 0);
+          return '<span class="t-chip">💀 #' + (idx + 1) + ' ช่อง ' + (x.slot + 1) + ': <b>' + esc(x.def.name) + '</b> (Lv' + lvl + ' ATK ' + atk + ')</span>';
+        }).join('') + '</div>';
+      } else {
+        listHtml = '<div class="tb-empty">👉 แตะมอนสเตอร์บนสนามเพื่อเลือกตัวที่จะสังเวย</div>';
+      }
+
+      const statusText = 'เลเวลวัสดุรวม: ' + totalLv + ' / ต้องการ ' + reqLv + ' (Lv2 = 1+1, Lv3 = 1+2 หรือ 1+1+1)';
+
+      return '<div class="quick-action-bar tribute-bar">' +
+        '<div class="tb-info">' +
+          '<div class="tb-title">💀 เสียสละมอนสเตอร์เพื่ออัญเชิญ <b>' + esc(d.name) + ' (Lv' + reqLv + ')</b></div>' +
+          '<div class="tb-status' + (okSum ? ' ready' : '') + '">' + esc(statusText) + '</div>' +
+          listHtml +
+        '</div>' +
+        '<div class="actbar">' +
+          '<button data-act="mats" class="gold confirm-mats-btn" ' + (selectedCards.length ? '' : 'disabled') + '>💀 ' + esc(s.app.confirmMats) + ' (' + selectedCards.length + ' ตัว)</button>' +
+          '<button data-act="cancel" class="cancel-btn">' + esc(s.app.cancel) + '</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function extraBarHtml(st, viewer, sel) {
+      const me = st.players[viewer];
+      const c = me.extra[sel.idx];
+      const d = c ? def(c) : {};
+      const reqText = formatMaterialsRequirement(d);
+
+      return '<div class="quick-action-bar extra-summon-bar">' +
+        '<div class="esa-info">' +
+          '<div class="esa-title">⚡ กำลังอัญเชิญพิเศษ: <b class="gold">' + esc(d.name) + '</b> <span class="esa-stats">(Lv' + (d.level || '?') + ' • ATK ' + (d.atk || 0) + ' / DEF ' + (d.def || 0) + ')</span> <span class="esa-badge ' + (d.type || '') + '">' + (d.type === 'fusion' ? '🌀 Fusion' : '👑 Grade 4') + '</span></div>' +
+          '<div class="esa-req">🎯 <b>เงื่อนไข/วัสดุ:</b> ' + esc(reqText) + '</div>' +
+          '<div class="esa-sub">👉 แตะมอนสเตอร์เป้าหมายบนสนาม (กรอบฟ้ากระพริบ) เพื่อใช้วางทับเป็นวัสดุ</div>' +
+        '</div>' +
+        '<div class="actbar">' +
+          '<button data-act="cancel" class="cancel-btn">' + esc(s.app.cancel) + '</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderBotBannerHtml(banner, fade) {
+      if (!banner) return '';
+      const fadeCls = fade ? ' fade' : '';
+      if (typeof banner === 'string') {
+        return '<div class="bot-banner' + fadeCls + '">' + esc(banner) + '</div>';
+      }
+
+      let cardVisual = '';
+      if (banner.inst || banner.cardId) {
+        const cardObj = banner.inst || { cardId: banner.cardId };
+        cardVisual = '<div class="bba-card-preview">' + cardHtml(cardObj, { reveal: true, field: false }) + '</div>';
+      } else if (banner.isSet) {
+        cardVisual = '<div class="bba-card-preview"><div class="card back" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">🂠</div></div>';
+      }
+
+      const isComplex = !!(banner.cardName || banner.inst || banner.cardId || banner.isSet);
+      const backdrop = isComplex ? '<div class="bot-spotlight-backdrop' + fadeCls + '"></div>' : '';
+
+      return backdrop + '<div class="bot-banner bot-card-announcement' + fadeCls + '">' +
+        '<div class="bba-header">' +
+          '<span class="bba-icon">' + (banner.icon || '🤖') + '</span>' +
+          '<span class="bba-title">' + esc(banner.title || '') + '</span>' +
+        '</div>' +
+        '<div class="bba-content-grid">' +
+          cardVisual +
+          '<div class="bba-details">' +
+            (banner.cardName ? '<div class="bba-card-name">' + esc(banner.cardName) + '</div>' : '') +
+            (banner.stats ? '<div class="bba-card-stats">' + esc(banner.stats) + '</div>' : '') +
+            (banner.desc ? '<div class="bba-card-desc">' + esc(banner.desc) + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
     function monRow(p, idx) {
       const isMe = idx === ctx.viewer; let h = '';
       for (let i = 0; i < p.monsters.length; i++) {
@@ -919,18 +1344,32 @@
         if (isMe && (hlOwn.has(i))) cls.push('hl');
         if (!isMe && hlOpp.has(i)) cls.push('hlred');
         if (isMe && sel.kind === 'field' && sel.slot === i) cls.push('sel');
+        const isTributeMat = isMe && sel && sel.kind === 'hand' && sel.mode === 'tribute' && sel.mats && sel.mats.includes(i);
+        const tributeOrder = isTributeMat ? (sel.mats.indexOf(i) + 1) : 0;
+        const isExtraTarget = isMe && ((sel && sel.kind === 'extra') || (sel && sel.kind === 'hand' && sel.mode === 'overlay')) && hlOwn.has(i);
+        if (isTributeMat) cls.push('tribute-mat-slot');
+        if (isExtraTarget) cls.push('extra-mat-slot');
         const at = ' data-p="' + idx + '" data-slot="' + i + '" data-zone2="mon"';
         const hl = ctx.cardHl && m ? ctx.cardHl[m.uid] : null;
         const ghost = !m && ctx.ghosts ? ctx.ghosts[idx + ':' + i] : null;
         let cHtml = '';
         if (m) {
-          cHtml = cardHtml(m, { field: true, reveal: isMe, hlClass: hl, sel: (sel.kind === 'attack' && isMe && sel.slot === i) || (sel.kind === 'hand' && sel.mode === 'tribute' && isMe && sel.mats.includes(i)), attrs: at });
+          cHtml = cardHtml(m, {
+            field: true,
+            reveal: isMe,
+            hlClass: hl,
+            sel: (sel.kind === 'attack' && isMe && sel.slot === i) || isTributeMat,
+            isTributeMat: isTributeMat,
+            tributeOrder: tributeOrder,
+            isExtraTarget: isExtraTarget,
+            attrs: at
+          });
         } else if (ghost) {
           cHtml = cardHtml(ghost.card, { field: true, reveal: ghost.card.owner === ctx.viewer, hlClass: 'ev-destroyed', attrs: at });
         } else if (i === 2) {
-          cHtml = '<span class="slot-watermark pioneer-wm">' + esc(s.app.slotPioneer || 'PIONEER') + '</span>';
+          cHtml = '<span class="slot-watermark pioneer-wm">Pioneer</span>';
         } else {
-          cHtml = '<span class="slot-watermark">' + esc(s.app.slotEntity || 'ENTITY') + '</span>';
+          cHtml = '<span class="slot-watermark">Entity</span>';
         }
         h += '<div class="' + cls.join(' ') + '"' + at + '>' + cHtml + '</div>';
       }
@@ -945,7 +1384,7 @@
         if (isMe && sel.kind === 'hand' && sel.mode === 'setSpell' && hlSpellOwn.has(i)) cls.push('hl');
         if (isMe && sel.kind === 'spell' && sel.slot === i) cls.push('sel');
         const at = ' data-p="' + idx + '" data-spell-slot="' + i + '" data-zone2="spell"';
-        const wm = c ? '' : '<span class="slot-watermark spell-wm">' + esc(s.app.slotDistortion || 'DISTORTION') + '</span>';
+        const wm = c ? '' : '<span class="slot-watermark spell-wm">Entity</span>';
         h += '<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>';
       }
       return '<div class="zone">' + h + '</div>';
@@ -982,14 +1421,14 @@
         }
         mid = '<div class="hint">เลือกเอฟเฟกต์ที่จะใช้</div><div class="actbar eff-list-bar">' + effRows + '<button data-act="cancel">' + a.cancel + '</button></div>';
       } else if (sel.mode === 'setSpell') {
-        mid = '<div class="hint">' + (a.pickSpellSlot || 'เลือกช่องสเปลที่จะวางคว่ำ') + '</div><div class="actbar"><button data-act="cancel">' + a.cancel + '</button></div>';
+        mid = '';
       } else if (sel.mode === 'overlay') {
-        mid = '<div class="hint">' + a.pickOverlayTarget + '</div><div class="actbar"><button data-act="cancel">' + a.cancel + '</button></div>';
-      } else if (sel.mode === 'tribute' && !sel.matsOk) {
-        mid = '<div class="hint">' + a.pickMats + '</div><div class="actbar"><button data-act="mats" class="gold">' + a.confirmMats + ' (' + sel.mats.length + ')</button><button data-act="cancel">' + a.cancel + '</button></div>';
-      } else mid = '<div class="hint">' + a.pickSlot + '</div><div class="actbar"><button data-act="cancel">' + a.cancel + '</button></div>';
+        mid = '';
+      } else if (sel.mode === 'tribute') {
+        mid = '';
+      } else mid = '';
     } else if (sel.kind === 'extra') {
-      mid = '<div class="hint">' + a.pickExtraSlot + '</div><div class="actbar"><button data-act="cancel">' + a.cancel + '</button></div>';
+      mid = '';
     } else if (sel.kind === 'field') {
       const m = me.monsters[sel.slot];
       const menuActions = V.getMenuActions(st, ctx.viewer, sel, ctx.legal);
@@ -997,41 +1436,29 @@
       if (!sel.mode) {
         mid = '';
       } else if (sel.mode === 'effects') {
-        const effBtns = menuActions.filter(x => x.type === 'activateEffect');
-        let effRows = '';
-        for (const eb of effBtns) {
-          const efDef = (d.effects || []).find(e => e.id === eb.action.effectId) || {};
-          const efText = efDef.text || efDef.name || eb.label;
-          if (eb.enabled) {
-            effRows += '<button data-act="actEff:field:' + esc(eb.action.effectId) + '" class="gold eff-row-btn"><b>' + esc(eb.label) + '</b><span class="eff-desc">' + esc(efText) + '</span></button>';
-          } else {
-            effRows += '<button disabled class="dis-btn eff-row-btn" title="' + esc(eb.reason || '') + '"><b>' + esc(eb.label) + '</b><span class="eff-desc">' + esc(efText) + ' (' + esc(eb.reason || 'ใช้ไม่ได้') + ')</span></button>';
-          }
-        }
-        mid = '<div class="hint">เลือกเอฟเฟกต์ที่จะใช้</div><div class="actbar eff-list-bar">' + effRows + '<button data-act="cancel">' + a.cancel + '</button></div>';
+        mid = '';
       }
     } else if (sel.kind === 'spell') {
       mid = '';
     } else if (sel.kind === 'attack') {
-      const direct = ctx.legal.some(x => x.type === 'attack' && x.from === sel.slot && x.to === null);
-      mid = '<div class="hint">' + a.pickTarget + '</div><div class="actbar">' + (direct ? '<button data-act="direct" class="danger">' + a.attackDirect + '</button>' : '') + '<button data-act="cancel">' + a.cancel + '</button></div>';
+      mid = '';
     } else if (mine && !st.pending && st.phase !== 'mulligan') {
       // 3) ปุ่มเฟสและจบเทิร์นรวมเป็นปุ่มเดียวแล้ว (ลบปุ่มแยกเดิมออกจากกลางสนาม)
       mid = '';
     }
 
-    const bannerHtml = ctx.botBanner ? '<div class="bot-banner' + (ctx.botBannerFade ? ' fade' : '') + '">' + esc(ctx.botBanner) + '</div>' : '';
+    const bannerHtml = ctx.botBanner ? renderBotBannerHtml(ctx.botBanner, ctx.botBannerFade) : '';
 
-    // 2) ช่อง Field กลางสนาม (วงกลม 1 ช่อง ที่กึ่งกลางพอดี)
+    // 2) ช่อง Field กลางสนาม (ตามแบบร่าง: สี่เหลี่ยม 1 ช่อง "ช่องสนาม")
     const fsCard = me.fieldSpell || op.fieldSpell;
     let sharedFieldHtml = '';
     if (fsCard) {
-      sharedFieldHtml = '<div class="shared-field-circle has-card">' +
+      sharedFieldHtml = '<div class="slot sketch-slot sketch-field-slot has-card" data-zone2="field">' +
         cardHtml(fsCard, { field: true, reveal: true, attrs: ' data-zone2="field"' }).replace('class="card', 'style="height:100%" class="card') +
       '</div>';
     } else {
-      sharedFieldHtml = '<div class="shared-field-circle empty">' +
-        '<span class="field-label">' + esc(a.fieldSpell || 'สนาม') + '</span>' +
+      sharedFieldHtml = '<div class="slot sketch-slot sketch-field-slot empty" data-zone2="field">' +
+        '<span class="sketch-slot-wm field-slot-wm">ช่องสนาม</span>' +
       '</div>';
     }
 
@@ -1055,75 +1482,196 @@
     const coinBtnClass = 'phase-coin-btn ' + (canPhaseAct ? 'active' : 'disabled');
     const phaseCoinHtml = '<div class="phase-coin-wrap phase-btn-wrap">' +
       '<button class="' + coinBtnClass + '" data-act="togglePhaseMenu" ' + (canPhaseAct ? '' : 'disabled') + ' title="เลือกเฟส">' +
-        '<span class="coin-turn">' + esc(a.turn) + ' ' + st.turn + '</span>' +
+        '<span class="coin-turn">' + esc(a.turn) + '</span>' +
         '<span class="coin-phase">' + esc(currentPhName) + '</span>' +
       '</button>' +
       phaseDropdownHtml +
     '</div>';
 
-    const centerDivider = '<div class="center-field-divider">' +
-      '<div class="center-spacer-left"></div>' +
-      '<div class="center-mid-area">' +
-        '<div class="shared-field-wrap">' + sharedFieldHtml + '</div>' +
-        (mid ? '<div class="mid">' + mid + '</div>' : '') +
+    const centerDivider = '<div class="sketch-side sketch-center-row">' +
+      '<div class="sketch-row sketch-center-grid-row">' +
+        '<div class="sketch-center-cell-spacer"></div>' +
+        '<div class="sketch-center-cell-spacer"></div>' +
+        '<div class="sketch-center-cell-spacer"></div>' +
+        '<div class="sketch-center-cell-spacer"></div>' +
+        '<div class="sketch-center-field-slot-wrap">' +
+          sharedFieldHtml +
+        '</div>' +
+        '<div class="sketch-center-cell-spacer"></div>' +
+        '<div class="sketch-center-cell-spacer"></div>' +
       '</div>' +
-      '<div class="center-right-area">' +
+      '<div class="sketch-center-panel-space">' +
         phaseCoinHtml +
       '</div>' +
     '</div>';
 
-    const oppSideHtml = '<div class="duel-side opp-side">' +
-      pilesGrid(op, 1 - ctx.viewer) +
-      '<div class="field-center">' +
-        spellRow(op, 1 - ctx.viewer) +
-        monRow(op, 1 - ctx.viewer) +
-      '</div>' +
-      playerPanel(op, 1 - ctx.viewer) +
-    '</div>';
-
-    const selfSideHtml = '<div class="duel-side self-side">' +
-      pilesGrid(me, ctx.viewer) +
-      '<div class="field-center">' +
-        monRow(me, ctx.viewer) +
-        spellRow(me, ctx.viewer) +
-      '</div>' +
-      playerPanel(me, ctx.viewer) +
-    '</div>';
+    const oppSideHtml = sketchSideHtml(op, 1 - ctx.viewer, true);
+    const selfSideHtml = sketchSideHtml(me, ctx.viewer, false);
 
     let modalHtml = '';
     if (ctx.inspectCard) {
-      modalHtml = V.cardDetailModal(st, ctx.viewer, ctx.inspectCard.inst, ctx.inspectCard.isOpponent, null, ctx.legal);
-    } else if (sel && !sel.mode) {
-      let inst = null;
-      if (sel.kind === 'hand') inst = me.hand[sel.idx];
-      else if (sel.kind === 'field') inst = me.monsters[sel.slot];
-      else if (sel.kind === 'spell') inst = me.spells[sel.slot];
-      else if (sel.kind === 'extra') inst = me.extra[sel.idx];
-      if (inst) {
-        modalHtml = V.cardDetailModal(st, ctx.viewer, inst, false, sel, ctx.legal);
+      modalHtml = V.cardDetailModal(st, ctx.viewer, ctx.inspectCard.inst, ctx.inspectCard.isOpponent, ctx.sel, ctx.legal);
+    }
+
+    // แถบคำสั่งลอยด่วนบนกระดานแบบยูกิ (Quick Action Bar ไม่ต้องเปิดหน้าต่างยักษ์มาบังกระดาน)
+    let quickActionHtml = '';
+    if (mine && !st.ended && !st.pending) {
+      if (sel && sel.kind === 'attack') {
+        const canDirect = ctx.legal.some(x => x.type === 'attack' && x.from === sel.slot && x.to === null);
+        quickActionHtml = '<div class="quick-action-bar atk-bar">' +
+          '<span class="quick-act-hint">⚔️ ' + esc(a.pickTarget) + '</span>' +
+          (canDirect ? '<button class="quick-act-btn danger" data-act="direct">⚔️ ' + esc(a.attackDirect) + '</button>' : '') +
+          '<button class="quick-act-btn cancel" data-act="cancel">✕ ' + esc(a.cancel) + '</button>' +
+        '</div>';
+      } else if (sel && sel.kind === 'hand' && sel.mode === 'tribute') {
+        quickActionHtml = tributeBarHtml(st, ctx.viewer, sel);
+      } else if (sel && sel.kind === 'extra' && sel.mode === 'extra') {
+        quickActionHtml = extraBarHtml(st, ctx.viewer, sel);
+      } else if (sel && sel.kind === 'hand' && sel.mode === 'normal') {
+        quickActionHtml = '<div class="quick-action-bar pick-slot-bar"><span class="quick-act-hint">👉 ' + esc(a.pickSlot) + '</span><button class="quick-act-btn cancel" data-act="cancel">✕ ' + esc(a.cancel) + '</button></div>';
+      } else if (sel && sel.kind === 'hand' && sel.mode === 'set') {
+        quickActionHtml = '<div class="quick-action-bar"><span class="quick-act-hint">👉 ' + esc(a.pickSlot) + '</span><button class="quick-act-btn cancel" data-act="cancel">✕ ' + esc(a.cancel) + '</button></div>';
+      } else if (sel && sel.kind === 'hand' && sel.mode === 'setSpell') {
+        quickActionHtml = '<div class="quick-action-bar"><span class="quick-act-hint">👉 ' + esc(a.pickSpellSlot || 'เลือกช่องสเปลที่จะวางคว่ำ') + '</span><button class="quick-act-btn cancel" data-act="cancel">✕ ' + esc(a.cancel) + '</button></div>';
+      } else if (sel && sel.kind === 'hand' && sel.mode === 'overlay') {
+        quickActionHtml = '<div class="quick-action-bar pick-slot-bar"><span class="quick-act-hint">👉 ' + esc(a.pickOverlayTarget) + '</span><button class="quick-act-btn cancel" data-act="cancel">✕ ' + esc(a.cancel) + '</button></div>';
+      } else if (sel && !sel.mode) {
+        let cardInst = null;
+        if (sel.kind === 'hand') cardInst = me.hand[sel.idx];
+        else if (sel.kind === 'field') cardInst = me.monsters[sel.slot];
+        else if (sel.kind === 'spell') cardInst = me.spells[sel.slot];
+        else if (sel.kind === 'extra') cardInst = me.extra[sel.idx];
+
+        if (cardInst) {
+          const menuActions = V.getMenuActions(st, ctx.viewer, sel, ctx.legal);
+          let btns = '';
+          if (sel.kind === 'hand') {
+            const canNorm = menuActions.find(x => x.type === 'normalSummon' && x.enabled);
+            const canSet = menuActions.find(x => x.type === 'setMonster' && x.enabled);
+            const canTrib = menuActions.find(x => x.type === 'tributeSummon' && x.enabled);
+            const canOver = menuActions.find(x => x.type === 'overlay' && x.enabled);
+            const canSpell = menuActions.find(x => x.type === 'activateSpell' && x.enabled);
+            const canSetSpell = menuActions.find(x => x.type === 'setSpell' && x.enabled);
+
+            if (canNorm) btns += '<button class="quick-act-btn gold" data-act="mode:normal">⚔️ ' + esc(a.summon) + '</button>';
+            if (canSet) btns += '<button class="quick-act-btn" data-act="mode:set">🛡️ ' + esc(a.setMon) + '</button>';
+            if (canTrib) btns += '<button class="quick-act-btn gold" data-act="mode:tribute">⚔️ ' + esc(a.tribute) + '</button>';
+            if (canOver) btns += '<button class="quick-act-btn gold" data-act="mode:overlay">💫 วางทับ</button>';
+            if (canSpell) {
+              const cd = E.cardOf(cardInst);
+              const isField = cd && (cd.field || cd.group === 'field');
+              const actText = isField ? (a.activateField || 'ร่ายเวทสนาม') : (a.activateSpell || 'ใช้สเปล');
+              btns += '<button class="quick-act-btn gold" data-act="actSpell">⚡ ' + esc(actText) + '</button>';
+            }
+            if (canSetSpell) btns += '<button class="quick-act-btn" data-act="mode:setSpell">🛡️ ' + esc(a.setSpell || 'Set สเปล') + '</button>';
+
+            const effActs = menuActions.filter(x => x.type === 'activateEffect' && x.enabled);
+            effActs.forEach(eb => {
+              btns += '<button class="quick-act-btn gold" data-act="actEff:hand:' + esc(eb.action.effectId) + '">✨ ' + esc(eb.label) + '</button>';
+            });
+          } else if (sel.kind === 'field') {
+            if (cardInst.faceDown) {
+              const canFlip = menuActions.some(x => x.type === 'flipSummon' && x.enabled);
+              if (canFlip) btns += '<button class="quick-act-btn gold" data-act="flip">✨ ' + esc(a.flip) + '</button>';
+            } else {
+              if (st.phase === 'battle') {
+                const canAtk = menuActions.some(x => x.type === 'attack' && x.enabled);
+                if (canAtk) btns += '<button class="quick-act-btn danger" data-act="atk">⚔️ ' + esc(a.attack) + '</button>';
+              }
+              const canPos = menuActions.some(x => x.type === 'changePosition' && x.enabled);
+              if (canPos) btns += '<button class="quick-act-btn" data-act="pos">🔄 ' + esc(a.changePos) + '</button>';
+
+              const effActs = menuActions.filter(x => x.type === 'activateEffect' && x.enabled);
+              effActs.forEach(eb => {
+                btns += '<button class="quick-act-btn gold" data-act="actEff:field:' + esc(eb.action.effectId) + '">✨ ' + esc(eb.label) + '</button>';
+              });
+            }
+          } else if (sel.kind === 'spell') {
+            const canAct = menuActions.find(x => x.type === 'activateSpell' && x.enabled);
+            if (canAct) btns += '<button class="quick-act-btn gold" data-act="actSpellField">⚡ ' + esc(canAct.label) + '</button>';
+          } else if (sel.kind === 'extra') {
+            const canExtra = menuActions.find(x => x.type === 'extraSummon' && x.enabled);
+            if (canExtra) btns += '<button class="quick-act-btn gold" data-act="mode:extra">💫 ' + esc(canExtra.label) + '</button>';
+          }
+
+          if (btns) {
+            const barType = sel.kind === 'field' ? 'field-bar' : 'hand-bar';
+            quickActionHtml = '<div class="quick-action-bar ' + barType + '">' +
+              btns +
+              '<button class="quick-act-btn cancel" data-act="cancel">✕</button>' +
+            '</div>';
+          } else if (sel.kind === 'hand') {
+            const cd = E.cardOf(cardInst);
+            const disabledAct = menuActions.find(x => !x.enabled && x.reason);
+            let reasonText = disabledAct ? disabledAct.reason : '';
+            if (!reasonText && cd) {
+              if (cd.type !== 'spell' && cd.level > 1) {
+                reasonText = (cd.name || 'การ์ดนี้') + ' (Lv.' + cd.level + ') ต้องสังเวยมอนสเตอร์บนสนาม';
+              } else {
+                reasonText = 'ยังไม่สามารถใช้การ์ดใบนี้ได้ในขณะนี้';
+              }
+            }
+            quickActionHtml = '<div class="quick-action-bar hand-bar unusable-bar">' +
+              '<span class="quick-act-hint-warn">⚠ ' + esc(reasonText) + '</span>' +
+              '<button class="quick-act-btn cancel" data-act="cancel">✕</button>' +
+            '</div>';
+          }
+        }
       }
     }
 
-    root.innerHTML = top + '<div class="main"><div class="board">' +
+    const tutorialBar = st.tutorial
+      ? '<div class="tutorial-guide-banner"><span>🎓 <b>' + esc(st.tutorial.title) + ':</b> ' + esc(st.tutorial.hint) + '</span><button class="pill" data-act="exitTutorial">↩ จบบทเรียน</button></div>'
+      : '';
+
+    root.innerHTML = top + tutorialBar + '<div class="main"><div class="board">' +
       bannerHtml +
-      '<div class="handrow opp ' + (op.hand.length > 5 ? 'overlapping' : '') + '">' + oppHand + '</div>' +
-      oppSideHtml +
-      centerDivider +
-      selfSideHtml +
-      '<div class="handrow ' + (me.hand.length > 5 ? 'overlapping' : '') + '" id="handRow">' + handHtml + '</div></div>' +
+      quickActionHtml +
+      '<div class="handrow opp ' + (op.hand.length > 7 ? 'overlapping' : '') + '">' + oppHand + '</div>' +
+      '<div class="sketch-arena">' +
+        oppSideHtml +
+        centerDivider +
+        selfSideHtml +
+      '</div>' +
+      (() => {
+        const isPlacing = sel && !!sel.mode;
+        const cls = 'handrow' + (isPlacing ? ' mode-placing' : '') + (me.hand.length > 7 ? ' overlapping' : '');
+        return '<div class="' + cls + '" id="handRow">' + handHtml + '</div></div>';
+      })() +
       '<div class="side ' + (CG.ui.sideOpen ? '' : 'side-collapsed') + '"><div id="inspect"><div class="m">' + a.inspectHint + '</div></div><h3>' + a.logTitle + '</h3><div id="log"></div></div></div>' +
       modalHtml;
   };
 
   V.inspectHtml = function (inst, viewer) {
-    const d = def(inst), s = S();
+    const d = def(inst), s = S(), a = s.app;
     if (inst.faceDown && inst.controller !== viewer) return '<div class="m">' + s.app.cardBack + '</div>';
     const mon = d.type !== 'spell';
-    let h = '<div class="t">' + esc(d.name) + '</div><div class="m">' + esc(s.type[d.type] || d.type) +
-      (mon ? ' · ' + s.app.lvl + (inst.level != null ? inst.level : d.level) + ' · ' + s.app.atk + ' ' + (inst.baseAtk != null ? CG.engine.atk(inst) : d.atk) + ' / ' + s.app.def + ' ' + (inst.baseDef != null ? CG.engine.def(inst) : d.def) : ' · ' + esc(s.spellGroup[d.group] || '')) + '</div>';
-    if (d.mana && d.mana !== '0') h += '<div class="m">' + s.app.manaCost + ': ' + esc(d.mana) + '</div>';
-    if (d.materials) h += '<div class="m">' + esc(d.materials) + '</div>';
-    return h + '<div>' + esc(d.text || '') + '</div>';
+    const E = CG.engine;
+    const atk = mon && inst.baseAtk != null ? E.atk(inst) : (d.atk != null ? d.atk : 0);
+    const dfn = mon && inst.baseDef != null ? E.def(inst) : (d.def != null ? d.def : 0);
+    const lvl = inst.level != null ? inst.level : (d.level != null ? d.level : 1);
+
+    const miniCard = cardHtml(inst, { reveal: true, field: false });
+
+    let stats = '';
+    if (mon) {
+      stats = '<div class="inspect-stats"><span class="stat-badge lvl">★ ' + lvl + '</span> <span class="stat-badge atk">' + (a.atk || 'ATK') + ' ' + atk + '</span> <span class="stat-badge def">' + (a.def || 'DEF') + ' ' + dfn + '</span></div>';
+    } else {
+      const grpKey = (d.field || d.group === 'field') ? 'field' : d.group;
+      const spGroup = s.spellGroup[grpKey] || d.group || 'ปกติ';
+      stats = '<div class="inspect-stats"><span class="stat-badge spell">' + esc(s.type.spell || 'สเปล') + ' · ' + esc(spGroup) + '</span>' + (d.mana ? ' <span class="stat-badge mana">' + (a.manaCost || 'มานา') + ' ' + d.mana + '</span>' : '') + '</div>';
+    }
+
+    return '<div class="inspect-card-box" data-act="zoomCardDetail" title="🔍 แตะเพื่อเปิดอ่านแบบจอใหญ่">' +
+      '<div class="inspect-card-wrap">' + miniCard + '</div>' +
+      '<div class="inspect-zoom-hint">🔍 แตะเพื่ออ่านเต็มจอ</div>' +
+      '</div>' +
+      '<div class="inspect-info">' +
+        '<div class="t">' + esc(d.name) + '</div>' +
+        stats +
+        (V.formatMaterialsRequirement(d) ? '<div class="m materials" style="color:var(--gold);font-weight:700">🎯 ' + esc(V.formatMaterialsRequirement(d)) + '</div>' : '') +
+        '<div class="inspect-text">' + esc(d.text || '') + '</div>' +
+      '</div>';
   };
 
   // 5) หน้าต่างเลือกการ์ด (chooseTarget / chooseCards) ยกเครื่องใหม่: การ์ดจริง แถวเลื่อนได้ ดูเอฟเฟกต์
@@ -1140,12 +1688,14 @@
     if (mon) {
       stats = '<div class="m">' + a.lvl + ' ' + (cDef.level || 1) + ' · ' + a.atk + ' ' + (cDef.atk || 0) + ' / ' + a.def + ' ' + (cDef.def || 0) + '</div>';
     } else {
-      stats = '<div class="m">' + (s.spellGroup[cDef.group] || cDef.group || '') + '</div>';
+      const grpKey = (cDef.field || cDef.group === 'field') ? 'field' : cDef.group;
+      stats = '<div class="m">' + (s.spellGroup[grpKey] || cDef.group || '') + '</div>';
     }
     ov.innerHTML = '<div class="modal inspect-modal">' +
       '<div class="t" style="color:var(--gold);font-weight:800;font-size:1.1rem;margin-bottom:6px">' + esc(cDef.name) + '</div>' +
       stats +
       (cDef.mana ? '<div class="m">' + a.manaCost + ': ' + esc(cDef.mana) + '</div>' : '') +
+      (V.formatMaterialsRequirement(cDef) ? '<div class="m materials" style="color:var(--gold);font-weight:700;margin:4px 0">🎯 ' + esc(V.formatMaterialsRequirement(cDef)) + '</div>' : '') +
       '<div class="inspect-text" style="text-align:left;margin:12px 0;padding:8px;background:rgba(0,0,0,0.5);border-radius:6px;font-size:.85rem;line-height:1.4">' + esc(cDef.text || '(ไม่มีข้อความเอฟเฟกต์)') + '</div>' +
       '<button class="gold btn-close-inspect">ปิด</button>' +
       '</div>';
@@ -1155,83 +1705,4 @@
     document.body.appendChild(ov);
   }
 
-  function enhancePickerModal() {
-    const grid = document.querySelector('.picker-grid');
-    if (!grid) return;
-
-    const debugState = CG.ui.app && CG.ui.app._debug && CG.ui.app._debug().state;
-    if (!debugState || !debugState.pending) return;
-    const pd = debugState.pending;
-    if (pd.kind !== 'chooseTarget' && pd.kind !== 'chooseCards') return;
-
-    const modal = grid.closest('.modal');
-    if (modal) {
-      modal.classList.add('card-picker-modal');
-      const h2 = modal.querySelector('h2');
-      if (h2 && !h2.dataset.titleSet) {
-        h2.dataset.titleSet = 'true';
-        const s = S();
-        const minMax = pd.min === pd.max ? pd.min : (pd.min + ' - ' + pd.max);
-        let zoneName = '';
-        if (pd.sourceZone) {
-          zoneName = s.zone[pd.sourceZone] || pd.sourceZone;
-        } else if (pd.options && pd.options[0] && pd.options[0].zone) {
-          zoneName = s.zone[pd.options[0].zone] || pd.options[0].zone;
-        }
-        h2.textContent = 'เลือก ' + minMax + ' ใบ' + (zoneName ? ' จาก ' + zoneName : '');
-      }
-    }
-
-    const items = grid.querySelectorAll('.pick-item');
-    items.forEach(function (el) {
-      if (el.dataset.cardRendered) return;
-      el.dataset.cardRendered = 'true';
-      const dataOv = el.getAttribute('data-ov') || '';
-      if (!dataOv.startsWith('pickIdx:')) return;
-      const idx = Number(dataOv.slice(8));
-      const opt = pd.options[idx];
-      if (!opt) return;
-
-      const cardDef = CG.engine.findCard(opt.cardId);
-      if (!cardDef) return;
-      const uidMap = V.uidMap(debugState);
-      const inst = opt.uid ? (uidMap[opt.uid] || { uid: opt.uid, cardId: opt.cardId, baseAtk: cardDef.atk, baseDef: cardDef.def, level: cardDef.level }) : { uid: 9000 + idx, cardId: opt.cardId, baseAtk: cardDef.atk, baseDef: cardDef.def, level: cardDef.level };
-
-      el.innerHTML = '<div class="picker-card-wrap">' +
-        V.cardHtml(inst, { reveal: true, field: false }) +
-        '<button class="btn-inspect-pick" data-inspect-cid="' + esc(opt.cardId) + '" title="ดูรายละเอียดเอฟเฟกต์">🔍 ดูเอฟเฟกต์</button>' +
-        '</div>';
-    });
-
-    if (!grid.dataset.listenerAdded) {
-      grid.dataset.listenerAdded = 'true';
-      grid.addEventListener('click', function (e) {
-        const btn = e.target.closest('.btn-inspect-pick');
-        if (btn) {
-          e.stopPropagation();
-          const cid = btn.getAttribute('data-inspect-cid');
-          const cDef = CG.engine.findCard(cid);
-          if (cDef) {
-            showCardInspectOverlay(cDef);
-          }
-        }
-      });
-    }
-  }
-
-  if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined') {
-    const initPickerObserver = function () {
-      const root = document.getElementById('overlayRoot');
-      if (!root) { setTimeout(initPickerObserver, 100); return; }
-      const obs = new MutationObserver(function () {
-        enhancePickerModal();
-      });
-      obs.observe(root, { childList: true, subtree: true });
-    };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initPickerObserver);
-    } else {
-      initPickerObserver();
-    }
-  }
 })();

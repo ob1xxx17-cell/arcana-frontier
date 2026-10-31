@@ -49,7 +49,7 @@
   let cache = null, cacheN = -1;
   function buildIndex() {
     const idx = {}; const decks = CG.cards || {};
-    for (const k of Object.keys(decks)) for (const c of (decks[k].main || []).concat(decks[k].extra || [])) idx[c.id] = c;
+    for (const k of Object.keys(decks)) for (const c of (decks[k].main || []).concat(decks[k].extra || []).concat(decks[k].rarePool || [])) idx[c.id] = c;
     cache = idx; cacheN = Object.keys(decks).length;
   }
   E.findCard = function (id) {
@@ -57,7 +57,7 @@
     if (!cache[id]) buildIndex();
     return cache[id] || null;
   };
-  E.cardOf = function (inst) { return E.findCard(inst.cardId); };
+  E.cardOf = function (inst) { return inst ? E.findCard(inst.cardId || inst.id) : null; };
 
   // ---- CardInstance ----
   E.newInstance = function (state, def, ownerIdx) {
@@ -273,7 +273,7 @@
     const FX = CG.effects;
     for (const e of def.effects || []) {
       if (e.trigger !== 'continuous') continue;
-      const s = (e.do || []).find(x => x.op === 'preventDestruction');
+      const s = (e.do || []).find(x => x.op === 'preventDestruction' || x.op === 'battleProtection');
       if (!s) continue;
       const c = { source: inst, player: inst.controller, cause: cause || 'effect' };
       const conds = (s.condition || []).concat(e.condition || []);
@@ -304,14 +304,19 @@
       return false;
     }
     const def = E.cardOf(m);
-    const unders = state.config.overlayDestroyTogether ? m.under.slice() : [];
+    const unders = (state.config.overlayDestroyTogether && Array.isArray(m.under)) ? m.under.slice() : [];
     events.push({ type: 'destroy', uid: m.uid, by });
     unders.forEach(u => events.push({ type: 'destroy', uid: u.uid, by }));
     E.leaveField(state, events, pIdx, slot, def && def.type === 'grade4' ? 'extra' : 'grave');
     E.fire(state, events, 'onDestroyed', { source: m, by });
     unders.forEach(u => E.fire(state, events, 'onDestroyed', { source: u, by }));
     if (state.config && state.config.chainMode) {
-      E.openWindow(state, events, { kind: 'monsterDestroyed', uid: m.uid, card: m, destroyedCard: m, destroyedOwner: pIdx, owner: pIdx, by });
+      if (state._isResolvingEffect) {
+        state._deferredWindows = state._deferredWindows || [];
+        state._deferredWindows.push({ kind: 'monsterDestroyed', uid: m.uid, card: m, destroyedCard: m, destroyedOwner: pIdx, owner: pIdx, by });
+      } else {
+        E.openWindow(state, events, { kind: 'monsterDestroyed', uid: m.uid, card: m, destroyedCard: m, destroyedOwner: pIdx, owner: pIdx, by });
+      }
     }
     return true;
   };

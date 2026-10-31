@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="ui/style.css">
 </head>
 <body>
+<div id="mobileRotateNotice">🔄 แนะนำหมุนหน้าจอเป็น "แนวนอน" เพื่อการเล่นเกมการ์ดที่ดีที่สุด</div>
 <div id="lobby"></div>
 <div id="game" class="hidden"></div>
 <div id="overlayRoot"></div>
@@ -14,6 +15,9 @@
 <!-- classic script ทั้งหมด เปิดด้วยดับเบิลคลิกได้ (CONTRACT ข้อ 3) ลำดับไม่สำคัญเพราะไม่เรียกกันตอนโหลด ยกเว้น app.js ท้ายสุดเพื่อเริ่มระบบ -->
 <script src="cards/dinosaur.js"></script>
 <script src="cards/aquila.js"></script>
+<script src="cards/mecha_strike.js"></script>
+<script src="cards/mecha_scrap.js"></script>
+<script src="cards/luna_guardians.js"></script>
 <script src="engine/core.js"></script>
 <script src="effects/runner.js"></script>
 <script src="effects/primitives_core.js"></script>
@@ -26,9 +30,12 @@
 <script src="engine/battle.js"></script>
 <script src="engine/effectBridge.js"></script>
 <script src="engine/actions.js"></script>
+<script src="engine/deck_builder.js"></script>
 <script src="ui/strings_th.js"></script>
 <script src="ui/view.js"></script>
+<script src="ui/deck_builder.js"></script>
 <script src="bot/bot.js"></script>
+<script src="ui/network.js"></script>
 <script src="ui/app.js"></script>
 </body>
 </html>

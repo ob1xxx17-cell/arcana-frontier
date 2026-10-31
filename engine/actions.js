@@ -225,6 +225,21 @@
         const hd = E.cardOf(p.hand[h]);
         if (hd && hd.type !== 'spell') for (const ef of hd.effects || []) if (ef.trigger === 'ignition' && [].concat(ef.from || []).includes('hand')) push({ type: 'activateEffect', player: P, handIdx: h, effectId: ef.id });
       }
+      // เอฟเฟกต์ ignition จากการ์ดเวทสนาม (fieldSpell)
+      if (p.fieldSpell && !p.fieldSpell.faceDown) {
+        const fd = E.cardOf(p.fieldSpell);
+        if (fd) for (const ef of fd.effects || []) if (ef.trigger === 'ignition') {
+          push({ type: 'activateEffect', player: P, fieldSpell: true, effectId: ef.id });
+        }
+      }
+      // เอฟเฟกต์ ignition จากสุสาน (effect.from หรือ effect.zone มี 'grave')
+      for (let g = 0; g < (p.grave || []).length; g++) {
+        const gd = E.cardOf(p.grave[g]);
+        if (gd) for (const ef of gd.effects || []) {
+          const fromZones = [].concat(ef.from || ef.zone || []);
+          if (ef.trigger === 'ignition' && fromZones.includes('grave')) push({ type: 'activateEffect', player: P, graveIdx: g, effectId: ef.id });
+        }
+      }
       // 6A: action overlay จากมือ เมื่อ chainMode = true
       if (state.config && state.config.chainMode) {
         for (let h = 0; h < p.hand.length; h++) {
@@ -253,7 +268,7 @@
         if (emptySpellSlots.length > 0) {
           for (let h = 0; h < p.hand.length; h++) {
             const hd = E.cardOf(p.hand[h]);
-            if (hd && hd.type === 'spell') {
+            if (hd && hd.type === 'spell' && !hd.field && hd.group !== 'field') {
               for (const s of emptySpellSlots) {
                 out.push({ type: 'setSpell', player: P, handIdx: h, slot: s });
               }
@@ -265,6 +280,15 @@
         for (let h = 0; h < p.hand.length; h++) {
           const hd = E.cardOf(p.hand[h]);
           if (hd && hd.type === 'spell') {
+            if (hd.group === 'counter' || hd.group === 'set') continue;
+            const isField = Boolean(hd.field || hd.group === 'field');
+            if (isField) {
+              const manaCost = Number(hd.mana) || 0;
+              if (p.mana >= manaCost) {
+                out.push({ type: 'activateSpell', player: P, handIdx: h });
+              }
+              continue;
+            }
             const eff = hd.effects && hd.effects[0];
             const eWin = eff && (eff.timingWindow || eff['win' + 'dow']);
             const ctx = { source: p.hand[h], player: P, trigger: 'spell' };
@@ -297,6 +321,12 @@
         if (!p.monsters[s]) continue;
         push({ type: 'attack', player: P, from: s, to: null });
         for (let t = 0; t < n; t++) push({ type: 'attack', player: P, from: s, to: t });
+        const mm = p.monsters[s], dd = mm && !mm.faceDown && E.cardOf(mm);
+        if (dd) for (const ef of dd.effects || []) {
+          const eWin = ef.timingWindow || ef['win' + 'dow'];
+          const isBattleEff = (eWin && (eWin.includes('battle') || eWin.includes('startOfBattle'))) || ef.phase === 'battle' || ef.trigger === 'battle';
+          if (isBattleEff) push({ type: 'activateEffect', player: P, slot: s, effectId: ef.id });
+        }
       }
     }
     if (!E.validateAdvance(state)) {

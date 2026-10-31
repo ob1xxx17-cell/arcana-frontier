@@ -15,6 +15,7 @@
     inst.controller = pIdx;
     inst.faceDown = !!opt.faceDown;
     inst.position = opt.faceDown ? 'def' : 'atk';
+    inst.flags = inst.flags || {};
     inst.flags.summonedTurn = state.turn;
     inst.flags.setTurn = opt.faceDown ? state.turn : null;
     inst.flags.canAttack = true; inst.flags.attackedThisTurn = false; inst.flags.positionChangedThisTurn = false;
@@ -102,7 +103,7 @@
 
   // ---- Special Summon (ไม่จำกัดจำนวน ช่องเต็มเรียกเพิ่มไม่ได้) สำหรับให้เอฟเฟกต์ขั้น 4-6 เรียกใช้ ----
   // คืน null เมื่อสำเร็จ หรือรหัสผิดพลาด (ไม่แก้ state เมื่อผิด)
-  E.specialSummon = function (state, events, pIdx, inst, slot, from, faceDown) {
+  E.specialSummon = function (state, events, pIdx, inst, slot, from, faceDown, how) {
     const p = state.players[pIdx];
     const def = E.cardOf(inst);
     if (!slotOk(state, slot)) return 'INVALID_SLOT';
@@ -114,7 +115,7 @@
       p.flags.grade4SummonedThisTurn = true;
     }
     zone.splice(i, 1);
-    E.placeMonster(state, events, pIdx, inst, slot, { how: 'special', faceDown: !!faceDown, from });
+    E.placeMonster(state, events, pIdx, inst, slot, { how: how || 'special', faceDown: !!faceDown, from });
     E.openWindow(state, events, { kind: 'summon', uid: inst.uid });
     return null;
   };
@@ -148,6 +149,7 @@
     if (m.faceDown) return 'USE_FLIP_SUMMON';
     if (m.flags.summonedTurn === state.turn) return 'SUMMONED_THIS_TURN';
     if (m.flags.positionChangedThisTurn) return 'POSITION_ALREADY_CHANGED';
+    if (m.cannotChangePosition || m.frozen) return 'CANNOT_CHANGE_POSITION';
     return null;
   };
   E.changePosition = function (state, a, events) {

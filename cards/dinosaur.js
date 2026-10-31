@@ -418,6 +418,7 @@
       "effects": [
         {
           "id": "eat_king",
+          "name": "ราชาแห่งการกิน",
           "trigger": "ignition",
           "speed": 1,
           "cost": {
@@ -471,6 +472,7 @@
         },
         {
           "id": "roar_king",
+          "name": "คำรามราชา",
           "trigger": "ignition",
           "speed": 1,
           "cost": {
@@ -629,6 +631,17 @@
           "id": "dig",
           "trigger": "ignition",
           "speed": 1,
+          "condition": [
+            {
+              "op": "hasCard",
+              "zone": "grave",
+              "filter": {
+                "tag": "dino",
+                "levelMin": 1
+              },
+              "min": 1
+            }
+          ],
           "cost": {
             "mana": 1
           },
@@ -1171,7 +1184,7 @@
       "atk": 3000,
       "def": 2000,
       "mana": "0",
-      "materials": "",
+      "materials": "นำไข่ไดโน 3 ใบจากสุสานกลับเด็ค + วางทับมอนสเตอร์ไดโนบนสนาม",
       "proposed_level": true,
       "tags": [
         "dino"

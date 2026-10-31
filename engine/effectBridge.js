@@ -46,6 +46,7 @@
     depth++;
     try {
       for (const inst of list) {
+        if (inst.negated || inst.silenced) continue;
         const def = E.cardOf(inst);
         if (!def || !def.effects) continue;
         for (const eff of def.effects) {
@@ -119,13 +120,24 @@
   const REASON = { unknownOp: 'NOT_IMPLEMENTED', conditionFailed: 'CONDITION_FAILED',
     limitReached: 'LIMIT_REACHED', notEnoughMana: 'NOT_ENOUGH_MANA' };
 
-  // effect.from = โซนที่ใช้เอฟเฟกต์ได้ ('field' | 'hand' หรือ array) ค่าเริ่มต้น 'field' (4E-2B) เอฟเฟกต์เดิมที่ไม่มี from ทำงานเหมือนเดิมทุกอย่าง
-  const zonesOf = eff => [].concat(eff.from || 'field');
+  // effect.from = โซนที่ใช้เอฟเฟกต์ได้ ('field' | 'hand' | 'grave' หรือ array) ค่าเริ่มต้น 'field' (4E-2B)
+  const zonesOf = eff => [].concat(eff.from || eff.zone || 'field');
 
   function lookup(state, a) {
     const p = state.players[a.player];
     let m, zone;
-    if (a.handIdx !== undefined) {   // ใช้จากมือ: ระบุ handIdx แทน slot (ห้ามระบุทั้งคู่)
+    if (a.fieldSpell) {
+      m = p.fieldSpell; zone = 'field';
+      if (!m) return { err: 'NO_CARD' };
+      if (m.faceDown) return { err: 'FACE_DOWN' };
+      if (m.negated || m.silenced) return { err: 'EFFECT_NEGATED' };
+    } else if (a.graveIdx !== undefined) {
+      if (a.slot !== undefined || a.handIdx !== undefined) return { err: 'INVALID_SLOT' };
+      if (!Number.isInteger(a.graveIdx) || a.graveIdx < 0 || a.graveIdx >= p.grave.length) return { err: 'INVALID_GRAVE_INDEX' };
+      m = p.grave[a.graveIdx]; zone = 'grave';
+      const gd = E.cardOf(m);
+      if (!gd) return { err: 'NO_CARD' };
+    } else if (a.handIdx !== undefined) {   // ใช้จากมือ: ระบุ handIdx แทน slot (ห้ามระบุทั้งคู่)
       if (a.slot !== undefined) return { err: 'INVALID_SLOT' };
       if (!Number.isInteger(a.handIdx) || a.handIdx < 0 || a.handIdx >= p.hand.length) return { err: 'INVALID_HAND_INDEX' };
       m = p.hand[a.handIdx]; zone = 'hand';
@@ -139,6 +151,7 @@
       m = p.monsters[a.slot]; zone = 'field';
       if (!m) return { err: 'NO_MONSTER' };
       if (m.faceDown) return { err: 'FACE_DOWN' };
+      if (m.negated || m.silenced) return { err: 'EFFECT_NEGATED' };
     }
     const def = E.cardOf(m);
     const eff = def && (def.effects || []).find(e => e.id === a.effectId);
@@ -148,18 +161,23 @@
     } else if (eff.trigger !== 'ignition' && !(state.config && state.config.chainMode && def.type === 'spell')) {
       return { err: 'WRONG_TRIGGER' };
     }
-    if (!zonesOf(eff).includes(zone) && def.type !== 'spell') return { err: 'WRONG_ZONE' };
+    if (!zonesOf(eff).includes(zone) && (zone !== 'hand' || def.type !== 'spell')) return { err: 'WRONG_ZONE' };
     return { m, eff, zone };
   }
 
   E.validateActivateEffect = function (state, a) {
-    if (state.phase !== 'main1' && state.phase !== 'main2') return 'WRONG_PHASE';
-    if (state.battleStep !== null) return 'WRONG_PHASE';
     const l = lookup(state, a); if (l.err) return l.err;
+    const trig = l.eff.trigger || 'ignition';
+    const eWin = l.eff.timingWindow || l.eff['win' + 'dow'];
+    const canBattle = (eWin && (eWin.includes('battle') || eWin.includes('startOfBattle'))) || l.eff.phase === 'battle' || trig === 'battle';
+    if (!canBattle && state.phase !== 'main1' && state.phase !== 'main2') return 'WRONG_PHASE';
+    if (canBattle && state.phase !== 'battle' && state.phase !== 'main1' && state.phase !== 'main2') return 'WRONG_PHASE';
+    if (state.battleStep !== null && !canBattle) return 'WRONG_PHASE';
     if (!FX.run) return 'NOT_IMPLEMENTED';
     const probe = E.cloneState(state);   // ลองรันกับสำเนา เพื่อให้ตัวตรวจเป็นตัวเดียวกับตอนรันจริง
-    const psrc = l.zone === 'hand' ? probe.players[a.player].hand[a.handIdx] : probe.players[a.player].monsters[a.slot];
-    const trig = l.eff.trigger || 'ignition';
+    const psrc = a.fieldSpell ? probe.players[a.player].fieldSpell
+      : (l.zone === 'grave' ? probe.players[a.player].grave[a.graveIdx]
+      : (l.zone === 'hand' ? probe.players[a.player].hand[a.handIdx] : probe.players[a.player].monsters[a.slot]));
     const r = FX.run(probe, [], l.eff, { source: psrc, player: a.player, trigger: trig });
     return r.ok ? null : (REASON[r.reason] || 'CONDITION_FAILED');
   };
@@ -203,6 +221,7 @@
       slot: a.slot,
       spellSlot: a.spellSlot !== undefined ? a.spellSlot : a.slot,
       handIdx: a.handIdx,
+      graveIdx: a.graveIdx,
       targetSlot: a.targetSlot,
       targetUid: targetUid,
       isSpell: def.type === 'spell',
@@ -261,6 +280,7 @@
     const c = p.hand[a.handIdx];
     const def = E.cardOf(c);
     if (!def || def.type !== 'spell') return 'NOT_A_SPELL';
+    if (def.field || def.group === 'field') return 'CANNOT_SET_FIELD';
     const maxSlots = (state.config && state.config.spellSlots) || 5;
     if (!Number.isInteger(a.slot) || a.slot < 0 || a.slot >= maxSlots) return 'INVALID_SLOT';
     if (p.spells[a.slot] !== null) return 'SLOT_FULL';
@@ -312,6 +332,21 @@
     const card = p.hand[a.handIdx];
     const def = E.cardOf(card);
     if (!def || def.type !== 'spell') return 'NOT_A_SPELL';
+    if (def.group === 'counter' || def.group === 'set') return 'CANNOT_ACTIVATE_FROM_HAND';
+
+    const isField = Boolean(def.field || def.group === 'field');
+    if (isField) {
+      const manaCost = Number(def.mana) || 0;
+      if (p.mana < manaCost) return 'NOT_ENOUGH_MANA';
+      const castEff = {
+        id: def.id + '_activate',
+        trigger: 'spell',
+        speed: 1,
+        cost: { mana: manaCost }
+      };
+      return E.addChainLink(state, events, a, card, castEff, def, 'hand');
+    }
+
     const eff = def.effects && def.effects[0];
     if (!eff) return 'NO_SUCH_EFFECT';
     const ctx = { source: card, player: a.player, trigger: 'spell' };
@@ -545,6 +580,7 @@
       slot: a.slot,
       spellSlot: a.spellSlot !== undefined ? a.spellSlot : (zone === 'spells' ? a.slot : undefined),
       handIdx: a.handIdx,
+      graveIdx: a.graveIdx,
       targetSlot: a.targetSlot,
       targetUid: targetUid,
       isSpell: def.type === 'spell',
@@ -598,8 +634,44 @@
   function disposeSpell(state, events, link) {
     if (!link.isSpell || !link.spellCard) return;
     const cDef = E.cardOf(link.spellCard) || {};
-    const stays = !link.negated && !link.fizzled && (cDef.continuous || cDef.group === 'continuous' || cDef.field);
-    if (stays) return;
+    const isField = Boolean(cDef.field || cDef.group === 'field');
+
+    if (!link.negated && !link.fizzled && isField) {
+      // 1. ช่องสนามมีได้ใบเดียว ถ้าใครใช้ใบใหม่ ใบเก่าจะโดนทำลายแทนที่ทันที
+      for (let pi = 0; pi < state.players.length; pi++) {
+        const oldFs = state.players[pi].fieldSpell;
+        if (oldFs && oldFs.uid !== link.spellCard.uid) {
+          state.players[pi].fieldSpell = null;
+          E.resetInstance(oldFs);
+          state.players[pi].grave.push(oldFs);
+          events.push({ type: 'destroy', uid: oldFs.uid, cardId: oldFs.cardId, player: pi, from: 'field', to: 'grave', by: 'rule' });
+          events.push({ type: 'moveCard', uid: oldFs.uid, from: 'field', to: 'grave', player: pi });
+          E.fire(state, events, 'onSentToGrave', { source: oldFs });
+        }
+      }
+      // 2. ถ้าเปิดมาจาก spellSlot ให้ล้างช่องนั้นออก
+      if (link.fromZone === 'spells') {
+        const spSlot = link.spellSlot !== undefined ? link.spellSlot : link.slot;
+        if (state.players[link.controller].spells && spSlot !== undefined) {
+          state.players[link.controller].spells[spSlot] = null;
+        }
+      }
+      // 3. วางลงในช่องสนามของผู้เล่นที่ร่าย
+      const p = state.players[link.controller];
+      p.fieldSpell = link.spellCard;
+      link.spellCard.faceDown = false;
+      events.push({
+        type: 'moveCard',
+        uid: link.spellCard.uid,
+        from: link.fromZone === 'spells' ? 'spell' : 'hand',
+        to: 'field',
+        player: link.controller
+      });
+      return;
+    }
+
+    const stays = !link.negated && !link.fizzled && (cDef.continuous || cDef.group === 'continuous');
+    if (stays || link.fromZone === 'grave') return;
     const p = state.players[link.controller];
     if (link.fromZone === 'spells') {
       const spSlot = link.spellSlot !== undefined ? link.spellSlot : link.slot;
@@ -687,7 +759,7 @@
           }
           const def = E.cardOf(topCard);
           if (def && def.type === 'grade4') p.flags.grade4SummonedThisTurn = true;
-          E.performOverlay(state, events, link.controller, topCard, link.targetSlot, null, { fromZone: 'extra', how: 'extra', fromHandCards });
+          E.performOverlay(state, events, link.controller, topCard, link.targetSlot, null, { fromZone: 'extra', how: 'extra', fromHandCards, banishOnto: !!link.banishOnto });
         }
         if (state.pending) {
           return;
