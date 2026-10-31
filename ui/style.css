@@ -1862,6 +1862,26 @@ button.gold:hover:not(:disabled) {
   box-shadow: 0 0 18px var(--gold), inset 0 0 10px rgba(255, 204, 0, 0.4) !important;
 }
 
+.pick-toggle-btn {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border: 1.5px solid #64748b !important;
+  color: #f1f5f9 !important;
+  border-radius: 6px !important;
+  padding: 3px 6px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
+}
+.pick-toggle-btn.selected {
+  background: #15803d !important;
+  border-color: #4ade80 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.6) !important;
+}
+
 .btn-read-eff {
   background: rgba(18, 20, 36, 0.95) !important;
   border: 1px solid var(--purple, #9d7cd8) !important;
@@ -7922,28 +7942,58 @@ button.gold:hover:not(:disabled) {
 /* Mobile Responsive & Orientation Helper */
 #mobileRotateNotice {
   display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  color: #fef08a;
-  border-bottom: 2px solid #eab308;
-  padding: 10px 14px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-align: center;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  z-index: 99999;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 
 @media screen and (orientation: portrait) and (max-width: 900px) {
   #mobileRotateNotice {
     display: flex !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%) !important;
+    z-index: 999999 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 30px 24px !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+    color: #fef08a !important;
+    gap: 16px !important;
   }
+  .rotate-phone-icon {
+    font-size: 3.5rem !important;
+    animation: rotateBounce 2s infinite ease-in-out;
+  }
+  .rotate-title {
+    font-size: 1.4rem !important;
+    font-weight: 900 !important;
+    color: #fde047 !important;
+    letter-spacing: 0.5px !important;
+  }
+  .rotate-sub {
+    font-size: 0.92rem !important;
+    color: #cbd5e1 !important;
+    max-width: 320px !important;
+    line-height: 1.5 !important;
+  }
+  .rotate-dismiss-btn {
+    margin-top: 10px !important;
+    background: transparent !important;
+    border: 1px solid #475569 !important;
+    color: #94a3b8 !important;
+    padding: 6px 14px !important;
+    border-radius: 999px !important;
+    font-size: 0.78rem !important;
+    cursor: pointer !important;
+  }
+}
+
+@keyframes rotateBounce {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(-90deg) scale(1.1); }
 }
 
 /* ==========================================================================
@@ -7951,20 +8001,20 @@ button.gold:hover:not(:disabled) {
    ========================================================================== */
 @media screen and (max-height: 580px) and (orientation: landscape), screen and (max-height: 520px) {
   :root {
-    --topbar-h: 22px !important;
-    --sq-size: clamp(32px, calc((100dvh - 100px) / 5.25), 52px) !important;
-    --sq-gap: clamp(1.5px, calc(var(--sq-size) * 0.035), 3px) !important;
-    --sketch-panel-w: clamp(80px, calc(var(--sq-size) * 1.55), 125px) !important;
-    --sketch-side-gap: clamp(4px, calc(var(--sq-size) * 0.08), 8px) !important;
-    --hand-card-h: clamp(44px, calc(100dvh * 0.165), 58px) !important;
+    --topbar-h: 20px !important;
+    --sq-size: clamp(24px, calc((100dvh - 54px) / 5.4), 38px) !important;
+    --sq-gap: clamp(1px, calc(var(--sq-size) * 0.03), 2px) !important;
+    --sketch-panel-w: clamp(68px, calc(var(--sq-size) * 1.5), 100px) !important;
+    --sketch-side-gap: clamp(3px, calc(var(--sq-size) * 0.08), 6px) !important;
+    --hand-card-h: clamp(40px, calc(100dvh * 0.16), 50px) !important;
     --hand-card-w: calc(var(--hand-card-h) * 5 / 7) !important;
   }
 
-  /* 1. LOBBY COMPACT (ล็อบบี้แนวนอนมือถือ) */
+  /* 1. LOBBY COMPACT (ล็อบบี้แนวนอนมือถือ พอดีจอ ไม่ล้น ไม่ตกขอบ) */
   #lobby, .grimoire-lobby {
     height: 100dvh !important;
     max-height: 100dvh !important;
-    padding: 3px 8px !important;
+    padding: 2px 8px !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
@@ -7973,18 +8023,23 @@ button.gold:hover:not(:disabled) {
   }
   .wf-lobby-stage {
     height: 100% !important;
+    max-height: 100% !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
     overflow: hidden !important;
   }
+
+  /* TOP ROW: ย่อโปรไฟล์และเหรียญ */
   .wf-top-row {
-    margin-bottom: 2px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     gap: 4px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+    flex-shrink: 0 !important;
   }
   .wf-profile-box {
     padding: 2px 6px !important;
@@ -8000,83 +8055,129 @@ button.gold:hover:not(:disabled) {
   }
   .wf-avatar-circle span {
     font-size: 0.85rem !important;
+    margin-bottom: 0 !important;
+  }
+  .wf-profile-meta {
+    gap: 2px !important;
   }
   .wf-profile-name {
-    font-size: 0.72rem !important;
-    line-height: 1.1 !important;
+    font-size: 0.68rem !important;
+    line-height: 1 !important;
+    padding: 1px 4px !important;
+    min-width: 0 !important;
+    border-width: 1.5px !important;
   }
   .wf-profile-id {
-    font-size: 0.55rem !important;
+    font-size: 0.52rem !important;
+    line-height: 1 !important;
+    padding: 1px 4px !important;
+    min-width: 0 !important;
+    border-width: 1.5px !important;
   }
   .wf-top-actions {
     gap: 3px !important;
     display: flex !important;
     align-items: center !important;
+    flex-wrap: nowrap !important;
   }
   .wf-top-btn {
-    padding: 2px 5px !important;
-    font-size: 0.65rem !important;
+    padding: 1px 5px !important;
+    font-size: 0.64rem !important;
     height: 22px !important;
     border-width: 1.5px !important;
     border-radius: 6px !important;
+    gap: 3px !important;
+    box-shadow: 1.5px 2px 0 #1a1510 !important;
   }
-  .wf-currency-pill {
+  .wf-curr-badge {
+    padding: 1px 6px !important;
+    height: 22px !important;
+    font-size: 0.68rem !important;
+    border-width: 1.5px !important;
+    border-radius: 6px !important;
+    gap: 4px !important;
+    box-shadow: 1.5px 2px 0 #38271d !important;
+  }
+  .wf-curr-badge .curr-val {
+    font-size: 0.72rem !important;
+    font-weight: 900 !important;
+  }
+  .note-svg {
+    width: 20px !important;
+    height: 12px !important;
+  }
+  .wf-sound-btn.mini, .wf-sound-btn {
     padding: 1px 5px !important;
     height: 22px !important;
-    font-size: 0.68rem !important;
+    font-size: 0.75rem !important;
     border-width: 1.5px !important;
     border-radius: 6px !important;
   }
-  .wf-currency-pill img {
-    height: 14px !important;
-  }
-  .wf-sound-btn {
-    padding: 2px 6px !important;
-    height: 22px !important;
-    font-size: 0.68rem !important;
-    border-width: 1.5px !important;
-  }
-  .wf-center-stage {
-    margin: 2px 0 !important;
-    padding: 0 !important;
+
+  /* MIDDLE ROW: โปสเตอร์ซ้าย ร้านค้าขวา ย่อขนาดพอดี */
+  .wf-mid-area {
+    margin: 0 !important;
+    padding: 1px 0 !important;
     display: flex !important;
-    flex-direction: row !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 10px !important;
-  }
-  .wf-poster-frame {
-    width: clamp(90px, 14vw, 120px) !important;
-    height: clamp(50px, 18vh, 70px) !important;
-    padding: 2px !important;
-    border-width: 2px !important;
-  }
-  .wf-shop-box {
-    padding: 3px 8px !important;
-    height: clamp(50px, 18vh, 70px) !important;
-    border-width: 2px !important;
-    border-radius: 8px !important;
-    box-sizing: border-box !important;
-  }
-  .wf-shop-title {
-    font-size: 0.72rem !important;
-  }
-  .wf-shop-subtitle {
-    font-size: 0.6rem !important;
-  }
-  .wf-shop-arrow {
-    width: 22px !important;
-    height: 22px !important;
-    font-size: 0.65rem !important;
-  }
-  .wf-bottom-row {
-    padding-bottom: 2px !important;
-    margin-top: 2px !important;
-    display: flex !important;
-    flex-direction: row !important;
     justify-content: space-between !important;
     align-items: center !important;
-    gap: 6px !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    position: relative !important;
+  }
+  .wf-pinned-poster {
+    width: clamp(100px, 15vw, 130px) !important;
+    margin-top: 0 !important;
+    transform: rotate(-1deg) !important;
+  }
+  .wf-pin-head {
+    font-size: 1rem !important;
+    top: -10px !important;
+  }
+  .wf-poster-frame {
+    padding: 2px 2px 4px 2px !important;
+    border-width: 2px !important;
+    box-shadow: 2px 3px 0 #2b1f1d !important;
+  }
+  .wf-poster-badge {
+    font-size: 0.6rem !important;
+    margin-top: 2px !important;
+    white-space: nowrap !important;
+  }
+  .wf-shop-banner {
+    width: clamp(180px, 26vw, 230px) !important;
+    height: clamp(44px, 13vh, 56px) !important;
+    border-width: 2px !important;
+    border-top: 4px solid #e11d48 !important;
+    border-radius: 10px !important;
+    padding: 0 6px !important;
+    box-shadow: 0 3px 0 #1a1510 !important;
+  }
+  .wf-shop-arrow {
+    width: 20px !important;
+    height: 24px !important;
+    font-size: 0.75rem !important;
+    border-radius: 5px !important;
+    border-width: 1.5px !important;
+  }
+  .wf-shop-title {
+    font-size: 0.7rem !important;
+    font-weight: 900 !important;
+  }
+  .wf-shop-subtitle {
+    font-size: 0.55rem !important;
+  }
+
+  /* BOTTOM ROW: เมนูปุ่มด้านล่าง 4 ปุ่ม + เล่นกับบอท + เริ่มเกมออนไลน์ */
+  .wf-bottom-row {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+    gap: 4px !important;
+    flex-shrink: 0 !important;
   }
   .wf-nav-horizontal {
     gap: 3px !important;
@@ -8084,58 +8185,65 @@ button.gold:hover:not(:disabled) {
     flex-direction: row !important;
   }
   .wf-nav-btn {
-    width: 66px !important;
-    height: 30px !important;
-    font-size: 0.65rem !important;
-    padding: 0 3px !important;
+    width: clamp(52px, 8vw, 64px) !important;
+    height: clamp(26px, 8.5vh, 32px) !important;
+    font-size: 0.6rem !important;
+    padding: 0 2px !important;
     border-radius: 6px !important;
     border-width: 1.5px !important;
     gap: 2px !important;
+    box-shadow: 1.5px 2px 0 #2b1f1d !important;
   }
   .wf-nav-btn .pill-icon {
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 2px !important;
+    width: 13px !important;
+    height: 13px !important;
+    margin-right: 1px !important;
+  }
+  .wf-nav-btn span {
+    font-size: 0.58rem !important;
   }
   .wf-play-group {
     gap: 4px !important;
     display: flex !important;
     flex-direction: row !important;
-    align-items: center !important;
+    align-items: flex-end !important;
   }
   .wf-play-group .wf-btn-bot {
-    width: 95px !important;
-    height: 32px !important;
-    font-size: 0.7rem !important;
-    border-radius: 8px !important;
-    padding: 0 4px !important;
+    width: clamp(72px, 11vw, 86px) !important;
+    height: clamp(26px, 8.5vh, 32px) !important;
+    font-size: 0.64rem !important;
+    border-radius: 6px !important;
+    padding: 0 3px !important;
     border-width: 1.5px !important;
+    box-shadow: 1.5px 2px 0 #1e3a8a !important;
   }
   .wf-play-group .wf-btn-bot .pill-icon {
-    width: 14px !important;
-    height: 14px !important;
-    margin: 0 2px !important;
+    width: 13px !important;
+    height: 13px !important;
+    margin: 0 1px !important;
   }
   .wf-play-group .wf-btn-bot span {
-    font-size: 0.7rem !important;
+    font-size: 0.62rem !important;
   }
   .wf-start-hero-btn {
-    width: 115px !important;
-    height: 34px !important;
-    padding: 1px 6px !important;
+    width: clamp(105px, 15vw, 130px) !important;
+    height: clamp(28px, 9.5vh, 36px) !important;
+    padding: 1px 4px !important;
     border-radius: 8px !important;
-    border-width: 1.5px !important;
+    border-width: 2px !important;
+    box-shadow: 2px 2px 0 #7f1d1d !important;
   }
   .wf-start-hero-btn .hero-icon {
-    width: 18px !important;
-    height: 18px !important;
+    width: 15px !important;
+    height: 15px !important;
+    margin-right: 3px !important;
   }
   .wf-start-main {
-    font-size: 0.8rem !important;
+    font-size: 0.72rem !important;
     line-height: 1 !important;
   }
   .wf-start-sub {
-    font-size: 0.52rem !important;
+    font-size: 0.48rem !important;
   }
 
   /* 2. BOARD & DUEL ARENA COMPACT (สนามประลองแนวนอนมือถือ) */
@@ -8158,36 +8266,45 @@ button.gold:hover:not(:disabled) {
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: flex-start !important;
+    justify-content: center !important;
     align-items: center !important;
     position: relative !important;
     overflow: hidden !important;
   }
-  .topbar {
+  #game .topbar, .topbar {
     height: 20px !important;
     padding: 0 4px !important;
     font-size: 0.65rem !important;
     flex-shrink: 0 !important;
   }
-  .topbar .info {
+  #game .topbar .info, .topbar .info {
     gap: 3px !important;
   }
-  .topbar .pill {
-    padding: 1px 3px !important;
-    font-size: 0.6rem !important;
-  }
-  .topbar button {
-    padding: 1px 4px !important;
+  #game .topbar .info b, .topbar .info b {
     font-size: 0.62rem !important;
   }
-  .topbar .phases {
+  #game .topbar .pill, .topbar .pill {
+    padding: 0 3px !important;
+    font-size: 0.56rem !important;
+    height: 16px !important;
+    line-height: 16px !important;
+  }
+  #game .topbar button, .topbar button {
+    padding: 1px 4px !important;
+    font-size: 0.58rem !important;
+    height: 18px !important;
+  }
+  #game .topbar .phases, .topbar .phases {
     display: none !important; /* ซ่อนชื่อเฟสยาวบนท็อปบาร์มือถือเพราะมี Phase Coin กลางสนามอยู่แล้ว */
+  }
+  #game .topbar #btnSpeed, .topbar #btnSpeed {
+    display: none !important;
   }
 
   /* มือฝ่ายตรงข้ามแถวบนสุด */
   .handrow.opp {
     position: static !important;
-    height: clamp(16px, 3.8vh, 22px) !important;
+    height: clamp(14px, 3vh, 18px) !important;
     margin: 0 auto !important;
     display: flex !important;
     justify-content: center !important;
@@ -8195,8 +8312,8 @@ button.gold:hover:not(:disabled) {
     flex-shrink: 0 !important;
   }
   .handrow.opp .card {
-    height: clamp(16px, 3.8vh, 22px) !important;
-    width: calc(clamp(16px, 3.8vh, 22px) * 5 / 7) !important;
+    height: clamp(14px, 3vh, 18px) !important;
+    width: calc(clamp(14px, 3vh, 18px) * 5 / 7) !important;
     margin-left: -5px !important;
     border-width: 1px !important;
     border-radius: 2px !important;
@@ -8207,6 +8324,10 @@ button.gold:hover:not(:disabled) {
     gap: 1px !important;
     max-width: 99vw !important;
     flex-shrink: 0 !important;
+    margin: 0 auto !important;
+  }
+  .sketch-row {
+    gap: 1px !important;
   }
   .sketch-slot,
   .slot.sketch-slot,
@@ -8215,41 +8336,41 @@ button.gold:hover:not(:disabled) {
     height: var(--sq-size) !important;
     border-width: 2px !important;
     border-radius: 4px !important;
-    padding: 1.5px !important;
+    padding: 1px !important;
   }
   .sketch-slot-wm {
-    font-size: clamp(0.55rem, calc(var(--sq-size) * 0.16), 0.85rem) !important;
+    font-size: clamp(0.42rem, calc(var(--sq-size) * 0.14), 0.65rem) !important;
   }
   .sketch-slot-wm.leader-wm {
-    font-size: clamp(0.6rem, calc(var(--sq-size) * 0.18), 0.95rem) !important;
+    font-size: clamp(0.48rem, calc(var(--sq-size) * 0.16), 0.75rem) !important;
   }
   .sketch-pile-name {
-    font-size: clamp(0.5rem, calc(var(--sq-size) * 0.14), 0.75rem) !important;
+    font-size: clamp(0.42rem, calc(var(--sq-size) * 0.14), 0.65rem) !important;
   }
   .sketch-pile-num {
-    font-size: clamp(0.95rem, calc(var(--sq-size) * 0.38), 1.6rem) !important;
+    font-size: clamp(0.75rem, calc(var(--sq-size) * 0.35), 1.2rem) !important;
   }
   .sketch-pile-sub {
-    font-size: 0.45rem !important;
-    padding: 0 2px !important;
+    font-size: 0.42rem !important;
+    padding: 0 1px !important;
   }
 
   /* การ์ดในช่องสนาม */
   .sketch-slot .card,
   .sketch-slot > .card {
-    height: calc(var(--sq-size) - 6px) !important;
-    width: calc((var(--sq-size) - 6px) * 5 / 7) !important;
-    max-height: calc(var(--sq-size) - 6px) !important;
-    max-width: calc((var(--sq-size) - 6px) * 5 / 7) !important;
+    height: calc(var(--sq-size) - 4px) !important;
+    width: calc((var(--sq-size) - 4px) * 5 / 7) !important;
+    max-height: calc(var(--sq-size) - 4px) !important;
+    max-width: calc((var(--sq-size) - 4px) * 5 / 7) !important;
     border-width: 1px !important;
-    border-radius: 3px !important;
+    border-radius: 2px !important;
   }
 
   /* แผงขวาตามแบบร่าง (Frontier Point, Profile, Acana) */
   .sketch-panel-stack {
     width: var(--sketch-panel-w) !important;
     height: calc(var(--sq-size) * 2 + var(--sq-gap)) !important;
-    gap: 1.5px !important;
+    gap: 1px !important;
     padding: 0 !important;
     flex-shrink: 0 !important;
     justify-content: space-between !important;
@@ -8257,49 +8378,49 @@ button.gold:hover:not(:disabled) {
   .sketch-info-box.fp-box,
   .sketch-profile-box,
   .sketch-info-box.acana-box {
-    padding: 1.5px 4px !important;
+    padding: 1px 3px !important;
     border-width: 1.5px !important;
-    border-radius: 5px !important;
+    border-radius: 4px !important;
   }
   .sketch-box-title {
-    font-size: 0.58rem !important;
+    font-size: 0.52rem !important;
     line-height: 1 !important;
   }
   .sketch-box-timer {
-    font-size: 0.52rem !important;
+    font-size: 0.48rem !important;
   }
   .sketch-box-val-row .lp {
-    font-size: 0.85rem !important;
+    font-size: 0.78rem !important;
     line-height: 1 !important;
   }
   .sketch-profile-box {
-    gap: 4px !important;
-    padding: 1px 3px !important;
+    gap: 3px !important;
+    padding: 1px 2px !important;
   }
   .sketch-profile-avatar {
-    width: 18px !important;
-    height: 18px !important;
-    font-size: 0.7rem !important;
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 0.65rem !important;
     border-width: 1px !important;
   }
   .sketch-avatar-level {
-    font-size: 0.42rem !important;
+    font-size: 0.4rem !important;
     bottom: -3px !important;
     padding: 0 1px !important;
   }
   .sketch-profile-name {
-    font-size: 0.62rem !important;
+    font-size: 0.58rem !important;
     line-height: 1 !important;
   }
   .sketch-profile-id {
-    font-size: 0.48rem !important;
+    font-size: 0.45rem !important;
   }
   .sketch-info-box.acana-box .sketch-box-val-row .mana {
-    font-size: 0.78rem !important;
+    font-size: 0.72rem !important;
     line-height: 1 !important;
   }
   .sketch-info-box.acana-box .sketch-max-mana {
-    font-size: 0.55rem !important;
+    font-size: 0.5rem !important;
   }
   .sketch-bar-track {
     height: 3px !important;
@@ -8308,15 +8429,15 @@ button.gold:hover:not(:disabled) {
 
   /* ปุ่มเหรียญเฟสตรงกลาง */
   .phase-coin-btn {
-    width: clamp(26px, calc(var(--sq-size) * 0.72), 38px) !important;
-    height: clamp(26px, calc(var(--sq-size) * 0.72), 38px) !important;
+    width: clamp(24px, calc(var(--sq-size) * 0.7), 34px) !important;
+    height: clamp(24px, calc(var(--sq-size) * 0.7), 34px) !important;
     border-width: 1.5px !important;
   }
   .phase-coin-btn .coin-turn {
-    font-size: 0.45rem !important;
+    font-size: 0.42rem !important;
   }
   .phase-coin-btn .coin-phase {
-    font-size: 0.58rem !important;
+    font-size: 0.52rem !important;
   }
 
   /* มือผู้เล่นด้านล่างสุด (ชูขึ้นเหนือบาร์ ไม่ตกขอบจอ) */
@@ -8339,7 +8460,7 @@ button.gold:hover:not(:disabled) {
     height: var(--hand-card-h) !important;
     width: var(--hand-card-w) !important;
     pointer-events: auto !important;
-    margin-left: -12px !important;
+    margin-left: -10px !important;
     border-width: 1.5px !important;
     border-radius: 4px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
@@ -8348,7 +8469,7 @@ button.gold:hover:not(:disabled) {
   .board > .handrow:not(.opp) .card:hover,
   .handrow#handRow .card.sel,
   .board > .handrow:not(.opp) .card.sel {
-    transform: translateY(-22px) !important;
+    transform: translateY(-20px) !important;
     z-index: 100 !important;
   }
   .handrow.mode-placing {
@@ -8377,19 +8498,19 @@ button.gold:hover:not(:disabled) {
 
   /* รายละเอียดการ์ดในการ์ดมือและสนาม */
   .card-stats {
-    font-size: 0.58rem !important;
+    font-size: 0.55rem !important;
   }
   .stat-pill {
     padding: 0 2px !important;
-    font-size: 0.55rem !important;
+    font-size: 0.52rem !important;
   }
   .stat-circle {
-    width: 13px !important;
-    height: 13px !important;
-    font-size: 0.55rem !important;
+    width: 12px !important;
+    height: 12px !important;
+    font-size: 0.52rem !important;
   }
   .card-name {
-    font-size: 0.52rem !important;
+    font-size: 0.5rem !important;
     padding: 0 1px !important;
     line-height: 1.1 !important;
   }

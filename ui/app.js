@@ -2880,6 +2880,9 @@
         '<div class="picker-card-wrap" data-ov="pickIdx:' + i + '" title="แตะเพื่อเลือก/ยกเลิก">' +
           cardFaceHtml +
         '</div>' +
+        '<button class="pick-toggle-btn ' + (picked ? 'selected' : '') + '" data-ov="pickIdx:' + i + '">' +
+          (picked ? '✓ เลือกแล้ว' : 'แตะเพื่อเลือก') +
+        '</button>' +
         '<button class="btn-read-eff" data-ov="inspectPendingCard:' + i + '" title="อ่านเอฟเฟกต์">📖 อ่านเอฟเฟกต์</button>' +
       '</div>';
     }

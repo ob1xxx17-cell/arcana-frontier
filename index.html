@@ -7,7 +7,12 @@
 <link rel="stylesheet" href="ui/style.css">
 </head>
 <body>
-<div id="mobileRotateNotice">🔄 แนะนำหมุนหน้าจอเป็น "แนวนอน" เพื่อการเล่นเกมการ์ดที่ดีที่สุด</div>
+<div id="mobileRotateNotice">
+  <div class="rotate-phone-icon">📱 ↷ 🔄</div>
+  <div class="rotate-title">กรุณาหมุนโทรศัพท์เป็น "แนวนอน"</div>
+  <div class="rotate-sub">เพื่อการเล่นเกมการ์ด Arcana Frontier ได้เต็มจอและมองเห็นการ์ดครบทุกใบ</div>
+  <button id="btnDismissRotate" class="rotate-dismiss-btn" onclick="document.getElementById('mobileRotateNotice').style.display='none'">ดูต่อในแนวตั้ง (ไม่แนะนำ)</button>
+</div>
 <div id="lobby"></div>
 <div id="game" class="hidden"></div>
 <div id="overlayRoot"></div>
