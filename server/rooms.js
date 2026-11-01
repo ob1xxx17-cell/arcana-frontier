@@ -95,7 +95,7 @@ class RoomManager {
     this.send(ws, { type: 'quickMatchCancelled' });
   }
 
-  createRoom(ws, { deckKey = 'luna_guardians', playerName = 'Player 1' }) {
+  createRoom(ws, { deckKey = 'luna_guardians', playerName = 'Player 1', firstPlayer = undefined }) {
     // If ws was already in a room or queue, remove old association
     this.cancelQuickMatch(ws);
     this.leaveCurrentRoom(ws);
@@ -105,6 +105,7 @@ class RoomManager {
       code: roomCode,
       createdAt: Date.now(),
       state: null,
+      firstPlayer,
       turnTimer: null,
       turnTimeRemaining: TURN_TIMEOUT_SEC,
       players: [
@@ -214,9 +215,11 @@ class RoomManager {
     const deckB = (room.players[1] && room.players[1].customDeck) || globalThis.CG.cards[room.players[1].deckKey] || globalThis.CG.cards.mecha_scrap;
 
     try {
+      const firstPlayer = (room.firstPlayer !== undefined) ? room.firstPlayer : (Math.random() < 0.5 ? 0 : 1);
       room.state = E.createGame({
         deckA,
         deckB,
+        firstPlayer,
         mode: 'pvp',
         config: {
           chainMode: true,
@@ -229,13 +232,14 @@ class RoomManager {
       if (room.state.players[0]) room.state.players[0].name = room.players[0].name;
       if (room.state.players[1]) room.state.players[1].name = room.players[1].name;
 
-      console.log(`[ROOM] Game started in ${room.code}: ${room.players[0].name} (${room.players[0].deckKey}) vs ${room.players[1].name} (${room.players[1].deckKey})`);
+      console.log(`[ROOM] Game started in ${room.code}: ${room.players[0].name} vs ${room.players[1].name} (First: P${firstPlayer + 1} ${room.players[firstPlayer].name})`);
 
       // Broadcast gameStart with sanitized state
       this.send(room.players[0].ws, {
         type: 'gameStart',
         playerIndex: 0,
         roomCode: room.code,
+        firstPlayer,
         opponentName: room.players[1].name,
         state: sanitizeStateForViewer(room.state, 0)
       });
@@ -244,6 +248,7 @@ class RoomManager {
         type: 'gameStart',
         playerIndex: 1,
         roomCode: room.code,
+        firstPlayer,
         opponentName: room.players[0].name,
         state: sanitizeStateForViewer(room.state, 1)
       });

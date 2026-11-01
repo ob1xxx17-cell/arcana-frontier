@@ -3298,10 +3298,12 @@
     endSoundPlayed = false;
     cleanupDragVisuals();
     seed = (Math.random() * 1e9) | 0;
+    const firstPlayer = Math.random() < 0.5 ? 0 : 1;
     state = E().createGame({
       deckA,
       deckB,
       seed,
+      firstPlayer,
       mode: (mode === 'online' ? 'pvp' : 'bot'),
       config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true }
     });
@@ -3317,6 +3319,8 @@
           state.players[1].name = 'บอท AI';
         }
       }
+      const firstPlayerName = (firstPlayer === 0) ? 'คุณ' : (state.players[1].name || 'บอท AI');
+      toast('🪙 สุ่มเหรียญเริ่มก่อน: ' + firstPlayerName + ' ได้เริ่มก่อน (Turn 1)!');
     }
     // หากผู้เล่นครอบครองการ์ด Secret Rare ลูน่า ให้เปลี่ยนการ์ด luna_leader ในเด็คเป็นการ์ด Secret Rare (alt-art)
     try {
@@ -3702,7 +3706,17 @@
       }
       h = buildCinematicGameOver(st, v);
     } else if (st.phase === 'mulligan' && !p.flags.mulliganDone) {
-      h = '<div class="overlay"><div class="modal"><h2>' + a.mulliganTitle + ' — ' + V().esc(V().pname(st, v)) + '</h2><p>' + a.mulliganHint + '</p>' + handCards() +
+      const isMeFirst = st.activeIdx === v;
+      const firstLabel = isMeFirst ? 'คุณได้เริ่มก่อน (Turn 1)' : (V().esc(V().pname(st, 1 - v)) + ' ได้เริ่มก่อน (Turn 1)');
+      const firstColor = isMeFirst ? '#15803d' : '#b91c1c';
+      const firstBg = isMeFirst ? '#f0fdf4' : '#fef2f2';
+      const firstBorder = isMeFirst ? '#86efac' : '#fca5a5';
+
+      h = '<div class="overlay"><div class="modal">' +
+        '<div style="background:' + firstBg + ';border:2px solid ' + firstBorder + ';border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:0.92rem;font-weight:900;color:' + firstColor + ';display:flex;align-items:center;justify-content:center;gap:6px">' +
+          '<span>🪙 ผลการสุ่มเริ่มก่อน:</span> <span>' + firstLabel + '</span>' +
+        '</div>' +
+        '<h2>' + a.mulliganTitle + ' — ' + V().esc(V().pname(st, v)) + '</h2><p>' + a.mulliganHint + '</p>' + handCards() +
         '<div class="row" style="justify-content:center"><button class="primary" data-ov="mulSel" ' + (handSel.size ? '' : 'disabled') + '>' + a.mulliganSwapSel + '</button><button data-ov="mulAll">' + a.mulliganSwapAll + '</button><button class="gold" data-ov="keep">' + a.mulliganKeep + '</button></div></div></div>';
     } else if (st.phase === 'mulligan') {
       h = '<div class="overlay"><div class="modal"><p>' + a.waitOther + '</p></div></div>';
@@ -5490,7 +5504,9 @@
 
       mode = 'online';
       state = msg.state;
-      toast('⚔️ เริ่มการดวล! คุณกำลังสู้กับ ' + (msg.opponentName || 'คู่แข่ง'));
+      const isMeFirst = (msg.firstPlayer !== undefined) ? (msg.firstPlayer === msg.playerIndex) : (state.activeIdx === msg.playerIndex);
+      const whoFirst = isMeFirst ? 'คุณได้เริ่มก่อน (Turn 1)!' : ((msg.opponentName || 'คู่แข่ง') + ' ได้เริ่มก่อน (Turn 1)!');
+      toast('⚔️ เริ่มการดวล! 🪙 ' + whoFirst, 4000);
       AudioFX.startBGM();
       endSoundPlayed = false;
       cleanupDragVisuals();

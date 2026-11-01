@@ -156,7 +156,7 @@ module.exports = [
       const ws0 = { send: (msg) => p0Messages.push(JSON.parse(msg)), readyState: 1 };
       const ws1 = { send: (msg) => p1Messages.push(JSON.parse(msg)), readyState: 1 };
 
-      const room = rm.createRoom(ws0, { deckKey: 'mecha_strike', playerName: 'P1' });
+      const room = rm.createRoom(ws0, { deckKey: 'mecha_strike', playerName: 'P1', firstPlayer: 0 });
       rm.joinRoom(ws1, { roomCode: room.code, deckKey: 'mecha_strike', playerName: 'P2' });
 
       // ข้ามมัลลิแกนทั้งคู่
@@ -237,6 +237,28 @@ module.exports = [
       assert.strictEqual(rm.matchQueue.length, 1);
       rm.handleDisconnect(ws0);
       assert.strictEqual(rm.matchQueue.length, 0, 'เมื่อ disconnect ต้องหลุดออกจากคิว');
+    }
+  },
+  {
+    name: 'NET-10 สุ่มผู้เล่นเริ่มก่อน (Random First Player) ในการสร้างห้องออนไลน์',
+    run(assert) {
+      const rm = new RoomManager();
+      const p0Messages = [];
+      const p1Messages = [];
+      const ws0 = { send: (msg) => p0Messages.push(JSON.parse(msg)), readyState: 1 };
+      const ws1 = { send: (msg) => p1Messages.push(JSON.parse(msg)), readyState: 1 };
+
+      const room = rm.createRoom(ws0, { deckKey: 'luna_guardians', playerName: 'P1' });
+      rm.joinRoom(ws1, { roomCode: room.code, deckKey: 'mecha_scrap', playerName: 'P2' });
+
+      const gs0 = p0Messages.find(m => m.type === 'gameStart');
+      const gs1 = p1Messages.find(m => m.type === 'gameStart');
+
+      assert.ok(gs0 && gs1);
+      assert.ok([0, 1].includes(gs0.firstPlayer), 'firstPlayer ต้องเป็น 0 หรือ 1');
+      assert.strictEqual(gs0.firstPlayer, gs1.firstPlayer, 'ผู้เล่นทั้งสองฝั่งต้องได้รับ firstPlayer ตรงกัน');
+      assert.strictEqual(room.state.activeIdx, gs0.firstPlayer, 'activeIdx ของห้องต้องตรงกับ firstPlayer');
+      rm.cleanupRoom(room.code);
     }
   }
 ];

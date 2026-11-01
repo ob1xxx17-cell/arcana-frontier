@@ -25,8 +25,9 @@
 
   // state ฐาน: สับเด็คแล้ว ยังไม่แจกมือ ยังไม่เริ่มเทิร์น
   E.buildState = function (opts) {
+    const firstPlayer = (opts && opts.firstPlayer !== undefined) ? opts.firstPlayer : 0;
     const state = {
-      config: E.mergeConfig(opts.config), turn: 1, activeIdx: 0, phase: 'mulligan', battleStep: null,
+      config: E.mergeConfig(opts.config), turn: 1, activeIdx: firstPlayer, firstPlayer, phase: 'mulligan', battleStep: null,
       chain: [], pending: null, attack: null, winner: null, ended: false, log: [],
       rng: E.makeRng(opts.seed), mode: opts.mode || 'pvp', players: [], nextUid: 1
     };
