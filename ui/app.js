@@ -758,13 +758,21 @@
       this.save();
     },
 
-    register(email, password, nickname) {
-      email = (email || '').trim();
+    register(accountId, password, nickname) {
+      accountId = (accountId || '').trim();
       password = (password || '').trim();
       nickname = (nickname || '').trim();
 
-      if (!email) return { success: false, message: 'กรุณากรอกอีเมลหรือชื่อบัญชี' };
-      if (!password || password.length < 6) return { success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป' };
+      if (!accountId) return { success: false, message: 'กรุณากรอกไอดีผู้เล่น' };
+      if (!/^[A-Za-z0-9]{3,20}$/.test(accountId)) {
+        return { success: false, message: 'ไอดีต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น (3-20 ตัวอักษร)' };
+      }
+      if (!password || password.length < 6) {
+        return { success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป' };
+      }
+      if (!/^[A-Za-z0-9]+$/.test(password)) {
+        return { success: false, message: 'รหัสผ่านต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น' };
+      }
 
       try {
         if (typeof localStorage !== 'undefined') {
@@ -772,20 +780,18 @@
           const rawAll = localStorage.getItem(this.ACCOUNTS_KEY);
           if (rawAll) all = JSON.parse(rawAll);
 
-          const exists = all.some(a => (a.email && a.email.toLowerCase() === email.toLowerCase()) || (a.id && a.id.toUpperCase() === email.toUpperCase()));
+          const exists = all.some(a => (a.id && a.id.toLowerCase() === accountId.toLowerCase()) || (a.email && a.email.toLowerCase() === accountId.toLowerCase()) || (a.username && a.username.toLowerCase() === accountId.toLowerCase()));
           if (exists) {
-            return { success: false, message: 'อีเมลหรือชื่อบัญชีนี้มีอยู่ในระบบแล้ว กรุณาเข้าสู่ระบบ' };
+            return { success: false, message: 'ไอดี "' + accountId + '" มีอยู่ในระบบแล้ว กรุณาเข้าสู่ระบบ' };
           }
 
-          const randomNum = Math.floor(10000 + Math.random() * 90000);
-          const id = 'AF-' + randomNum;
-
           this.current = {
-            id,
-            email,
+            id: accountId,
+            username: accountId,
+            email: accountId,
             password,
             passcode: password,
-            nickname: nickname || ('ผู้ท้าชิง ' + id),
+            nickname: nickname || accountId,
             level: 1, // เริ่มต้น Level 1
             rank: '🥉 Bronze I',
             curr20: 100, // เริ่มต้นแบงก์ 20 จำนวน 100 ใบ
@@ -795,7 +801,7 @@
             onboarded: false,
             mailClaimed: false,
             ownedCards: [],
-            stats: { wins: 0, losses: 0, maxStreak: 0, maxDmg: 0 },
+            stats: { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} },
             createdAt: Date.now()
           };
 
@@ -812,12 +818,12 @@
       return { success: false, message: 'ไม่สามารถสร้างบัญชีได้' };
     },
 
-    login(emailOrId, password) {
-      emailOrId = (emailOrId || '').trim();
+    login(accountId, password) {
+      accountId = (accountId || '').trim();
       password = (password || '').trim();
 
-      if (!emailOrId) return { success: false, message: 'กรุณากรอกอีเมลหรือ Account ID' };
-      if (!password || password.length < 6) return { success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป' };
+      if (!accountId) return { success: false, message: 'กรุณากรอกไอดีผู้เล่น' };
+      if (!password) return { success: false, message: 'กรุณากรอกรหัสผ่าน' };
 
       try {
         if (typeof localStorage !== 'undefined') {
@@ -825,11 +831,11 @@
           const rawAll = localStorage.getItem(this.ACCOUNTS_KEY);
           if (rawAll) all = JSON.parse(rawAll);
 
-          const query = emailOrId.toLowerCase();
-          let found = all.find(a => (a.email && a.email.toLowerCase() === query) || (a.id && a.id.toLowerCase() === query));
+          const query = accountId.toLowerCase();
+          let found = all.find(a => (a.id && a.id.toLowerCase() === query) || (a.email && a.email.toLowerCase() === query) || (a.username && a.username.toLowerCase() === query));
 
           if (!found) {
-            return { success: false, message: 'ไม่พบบัญชีนี้ในระบบ กรุณากด "สร้างไอดีใหม่"' };
+            return { success: false, message: 'ไม่พบไอดีนี้ในระบบ กรุณากด "สร้างไอดีใหม่"' };
           }
 
           const accPass = found.password || found.passcode;
@@ -838,6 +844,10 @@
           }
 
           this.current = found;
+          if (!this.current.level) this.current.level = 1;
+          if (!this.current.stats) {
+            this.current.stats = { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
+          }
           CG.ui.curr20 = this.current.curr20 !== undefined ? this.current.curr20 : 100;
           CG.ui.curr100 = this.current.curr100 !== undefined ? this.current.curr100 : 1;
           CG.ui.mailClaimed = !!this.current.mailClaimed;
@@ -855,10 +865,10 @@
     },
 
     createGuest() {
-      const randomNum = Math.floor(10000 + Math.random() * 90000);
-      const id = 'AF-' + randomNum;
-      const pass = 'guest' + randomNum;
-      return this.register('guest_' + randomNum + '@arcana.game', pass, 'ผู้ท้าชิง ' + id);
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const id = 'guest' + randomNum;
+      const pass = 'pass' + randomNum + 'x';
+      return this.register(id, pass, 'ผู้ท้าชิง ' + id);
     },
 
     chooseStarterDeck(deckKey) {
@@ -952,35 +962,35 @@
         // FORM LOGIN
         '<div id="formAuthLogin">' +
           '<div class="auth-field-group">' +
-            '<label class="auth-field-label">อีเมล หรือ Account ID:</label>' +
-            '<input type="text" id="inpAuthLoginEmail" class="auth-input" placeholder="เช่น player@gmail.com หรือ AF-12345" />' +
+            '<label class="auth-field-label">ไอดีผู้เล่น (Account ID):</label>' +
+            '<input type="text" id="inpAuthLoginId" class="auth-input" placeholder="เช่น player01 (ภาษาอังกฤษและตัวเลข)" autocomplete="username" />' +
           '</div>' +
           '<div class="auth-field-group">' +
-            '<label class="auth-field-label">รหัสผ่าน (6 ตัวอักษรขึ้นไป):</label>' +
-            '<input type="password" id="inpAuthLoginPass" class="auth-input" placeholder="รหัสผ่านของคุณ" />' +
+            '<label class="auth-field-label">รหัสผ่าน (Password):</label>' +
+            '<input type="password" id="inpAuthLoginPass" class="auth-input" placeholder="รหัสผ่านของคุณ (ภาษาอังกฤษและตัวเลข 6 ตัวขึ้นไป)" autocomplete="current-password" />' +
           '</div>' +
           '<button id="btnDoAuthLogin" class="auth-submit-btn">🔓 เข้าสู่ระบบ (Login)</button>' +
-          '<div style="margin:14px 0 4px;font-size:0.75rem;color:#94a3b8">หรือทดลองเล่นทันที</div>' +
+          '<div style="margin:14px 0 4px;font-size:0.75rem;color:#94a3b8">หรือทดลองเล่นแบบผู้เยี่ยมชม</div>' +
           '<button id="btnDoAuthGuest" class="auth-guest-btn">👤 เข้าเล่นแบบ Guest ทันที</button>' +
         '</div>' +
 
         // FORM REGISTER
         '<div id="formAuthRegister" style="display:none">' +
           '<div class="auth-field-group">' +
-            '<label class="auth-field-label">ชื่อผู้เล่น (Nickname):</label>' +
+            '<label class="auth-field-label">ชื่อเล่นในเกม (Nickname):</label>' +
             '<input type="text" id="inpAuthRegNick" class="auth-input" maxlength="14" placeholder="เช่น จอมเวทโอเมก้า" />' +
           '</div>' +
           '<div class="auth-field-group">' +
-            '<label class="auth-field-label">อีเมลของคุณ:</label>' +
-            '<input type="email" id="inpAuthRegEmail" class="auth-input" placeholder="เช่น player@gmail.com" />' +
+            '<label class="auth-field-label">ไอดีผู้เล่น (ภาษาอังกฤษและตัวเลขเท่านั้น):</label>' +
+            '<input type="text" id="inpAuthRegId" class="auth-input" maxlength="20" placeholder="เช่น player01 หรือ duelking99" autocomplete="username" />' +
           '</div>' +
           '<div class="auth-field-group">' +
-            '<label class="auth-field-label">ตั้งรหัสผ่าน (อย่างน้อย 6 ตัวอักษร):</label>' +
-            '<input type="password" id="inpAuthRegPass" class="auth-input" placeholder="รหัสผ่าน 6 ตัวขึ้นไป" />' +
+            '<label class="auth-field-label">ตั้งรหัสผ่าน (ภาษาอังกฤษและตัวเลข 6 ตัวขึ้นไป):</label>' +
+            '<input type="password" id="inpAuthRegPass" class="auth-input" maxlength="30" placeholder="รหัสผ่าน 6 ตัวขึ้นไป (อังกฤษ/ตัวเลขเท่านั้น)" autocomplete="new-password" />' +
           '</div>' +
           '<div class="auth-field-group">' +
             '<label class="auth-field-label">ยืนยันรหัสผ่านอีกครั้ง:</label>' +
-            '<input type="password" id="inpAuthRegPass2" class="auth-input" placeholder="กรอกรหัสผ่านซ้ำอีกครั้ง" />' +
+            '<input type="password" id="inpAuthRegPass2" class="auth-input" maxlength="30" placeholder="กรอกรหัสผ่านซ้ำอีกครั้ง" autocomplete="new-password" />' +
           '</div>' +
           '<button id="btnDoAuthRegister" class="auth-submit-btn">✨ สร้างบัญชีใหม่และเริ่มเล่น (Register)</button>' +
         '</div>' +
@@ -1004,9 +1014,13 @@
         return;
       }
       if (e.target.closest('#btnDoAuthLogin')) {
-        const email = (authEl.querySelector('#inpAuthLoginEmail').value || '').trim();
+        const accId = (authEl.querySelector('#inpAuthLoginId').value || '').trim();
         const pass = (authEl.querySelector('#inpAuthLoginPass').value || '').trim();
-        const res = Account.login(email, pass);
+
+        if (!accId) return toast('⚠ กรุณากรอกไอดีผู้เล่น');
+        if (!pass) return toast('⚠ กรุณากรอกรหัสผ่าน');
+
+        const res = Account.login(accId, pass);
         if (res.success) {
           toast('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
           AudioFX.play('chime');
@@ -1024,15 +1038,23 @@
       }
       if (e.target.closest('#btnDoAuthRegister')) {
         const nick = (authEl.querySelector('#inpAuthRegNick').value || '').trim();
-        const email = (authEl.querySelector('#inpAuthRegEmail').value || '').trim();
+        const accId = (authEl.querySelector('#inpAuthRegId').value || '').trim();
         const pass = (authEl.querySelector('#inpAuthRegPass').value || '').trim();
         const pass2 = (authEl.querySelector('#inpAuthRegPass2').value || '').trim();
 
-        if (!email) return toast('⚠ กรุณากรอกอีเมล');
-        if (!pass || pass.length < 6) return toast('⚠ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป');
+        if (!accId) return toast('⚠ กรุณากรอกไอดีผู้เล่น');
+        if (!/^[A-Za-z0-9]{3,20}$/.test(accId)) {
+          return toast('⚠ ไอดีต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น (3-20 ตัวอักษร)');
+        }
+        if (!pass || pass.length < 6) {
+          return toast('⚠ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป');
+        }
+        if (!/^[A-Za-z0-9]+$/.test(pass)) {
+          return toast('⚠ รหัสผ่านต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น');
+        }
         if (pass !== pass2) return toast('⚠ รหัสผ่านทั้งสองช่องไม่ตรงกัน');
 
-        const res = Account.register(email, pass, nick);
+        const res = Account.register(accId, pass, nick);
         if (res.success) {
           toast('🎉 สร้างบัญชีใหม่สำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
           AudioFX.play('chime');
@@ -2139,7 +2161,7 @@
             '<div>' +
               '<div style="font-size:2rem;margin-bottom:2px">🏠</div>' +
               '<div style="font-weight:900;font-size:1.05rem;margin-bottom:4px">สร้างห้องดวลใหม่</div>' +
-              '<div style="font-size:0.75rem;color:#64748b;line-height:1.3">สร้างห้องออนไลน์และรับรหัส 5 ตัว เพื่อส่งให้เพื่อนเชื่อมต่อเข้ามา</div>' +
+              '<div style="font-size:0.75rem;color:#64748b;line-height:1.3">สร้างห้องออนไลน์รับเลขห้อง 4 ตัว เพื่อส่งให้เพื่อนเชื่อมต่อเข้ามา</div>' +
             '</div>' +
             '<button class="wf-modal-action-btn" id="btnCreateOnlineRoom" style="margin-top:12px;font-size:0.9rem;padding:10px;background:#bbf7d0">✨ สร้างห้องใหม่</button>' +
           '</div>' +
@@ -2147,8 +2169,8 @@
             '<div>' +
               '<div style="font-size:2rem;margin-bottom:2px">🚪</div>' +
               '<div style="font-weight:900;font-size:1.05rem;margin-bottom:4px">เข้าร่วมห้องเพื่อน</div>' +
-              '<div style="font-size:0.75rem;color:#64748b;margin-bottom:6px">ใส่รหัสห้อง 5 ตัวอักษร:</div>' +
-              '<input type="text" id="inputFriendCode" placeholder="เช่น ARC89" maxlength="5" style="width:100%;padding:8px;border:2px solid #2b1f1d;border-radius:6px;font-size:1rem;text-align:center;font-weight:900;letter-spacing:3px;text-transform:uppercase">' +
+              '<div style="font-size:0.75rem;color:#64748b;margin-bottom:6px">ใส่เลขห้อง 4 ตัวเลข:</div>' +
+              '<input type="text" id="inputFriendCode" placeholder="เช่น 4829" maxlength="4" inputmode="numeric" pattern="[0-9]*" style="width:100%;padding:8px;border:2px solid #2b1f1d;border-radius:6px;font-size:1.15rem;text-align:center;font-weight:900;letter-spacing:4px">' +
             '</div>' +
             '<button class="wf-modal-action-btn" id="btnJoinOnlineRoom" style="margin-top:12px;font-size:0.9rem;padding:10px;background:#fef08a">⚡ เข้าร่วมการดวล</button>' +
           '</div>' +
@@ -2175,8 +2197,8 @@
           }
         } else if (e.target.closest('#btnJoinOnlineRoom')) {
           const inp = m.querySelector('#inputFriendCode');
-          const code = inp ? inp.value.trim().toUpperCase() : '';
-          if (!code || code.length < 3) return toast('กรุณาใส่รหัสห้องให้ถูกต้อง');
+          const code = inp ? inp.value.trim() : '';
+          if (!/^\d{4}$/.test(code)) return toast('⚠ กรุณากรอกเลขห้องเป็นตัวเลข 4 ตัว');
           if (!CG.network) return toast('ระบบออนไลน์ไม่พร้อมใช้งาน');
           toast('🔄 กำลังเข้าร่วมห้อง ' + code + '...');
           try {
@@ -2194,11 +2216,11 @@
         if (m) m.remove();
         const waitHtml = 
           '<div style="text-align:center;padding:12px 4px">' +
-            '<div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">รหัสห้องดวลของคุณ (ส่งให้เพื่อนเพื่อเข้าร่วม):</div>' +
+            '<div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">เลขห้องดวลของคุณ (ส่งเลข 4 ตัวนี้ให้เพื่อน):</div>' +
             '<div id="waitingRoomCodeBox" style="font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#1e293b;background:#fef08a;border:3px solid #2b1f1d;border-radius:10px;padding:10px 24px;display:inline-block;margin-bottom:10px">' +
               (CG.network.roomCode || 'กำลังสร้าง...') +
             '</div>' +
-            '<div><button id="btnCopyWaitingCode" style="font-size:0.8rem;padding:6px 14px;cursor:pointer;border:2px solid #2b1f1d;background:#fff;border-radius:6px;font-weight:700">📋 คัดลอกรหัสห้อง</button></div>' +
+            '<div><button id="btnCopyWaitingCode" style="font-size:0.8rem;padding:6px 14px;cursor:pointer;border:2px solid #2b1f1d;background:#fff;border-radius:6px;font-weight:700">📋 คัดลอกเลขห้อง</button></div>' +
             '<div style="margin-top:16px;color:#475569;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:8px">' +
               '<span style="display:inline-block;animation:spin 1.5s linear infinite;font-size:1.1rem">⏳</span> กำลังรอคู่แข่งเข้าร่วมห้อง...' +
             '</div>' +

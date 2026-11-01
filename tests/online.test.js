@@ -4,14 +4,15 @@ const { sanitizeStateForViewer } = require('../server/sanitize.js');
 
 module.exports = [
   {
-    name: 'NET-01 สร้างห้องดวลและออกรหัสห้อง 5 ตัวอักษร',
+    name: 'NET-01 สร้างห้องดวลและออกรหัสห้องเป็นตัวเลข 4 หลัก',
     run(assert) {
       const rm = new RoomManager();
       const mockWs = { send: () => {}, readyState: 1 };
       const room = rm.createRoom(mockWs, { deckKey: 'luna_guardians', playerName: 'LunaMaster' });
 
       assert.strictEqual(typeof room.code, 'string');
-      assert.strictEqual(room.code.length, 5);
+      assert.strictEqual(room.code.length, 4);
+      assert.ok(/^\d{4}$/.test(room.code));
       assert.strictEqual(room.players[0].name, 'LunaMaster');
       assert.strictEqual(room.players[0].deckKey, 'luna_guardians');
       assert.strictEqual(room.players[1], null);

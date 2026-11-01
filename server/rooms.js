@@ -12,14 +12,12 @@ class RoomManager {
   }
 
   generateRoomCode() {
-    for (let attempts = 0; attempts < 1000; attempts++) {
-      let code = '';
-      for (let i = 0; i < 5; i++) {
-        code += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
-      }
+    // เลขห้องเป็นตัวเลขล้วน 4 หลัก (1000 - 9999)
+    for (let attempts = 0; attempts < 10000; attempts++) {
+      const code = String(Math.floor(1000 + Math.random() * 9000));
       if (!this.rooms.has(code)) return code;
     }
-    return 'R' + Date.now().toString(36).toUpperCase().slice(-4);
+    return String(Math.floor(1000 + Math.random() * 9000));
   }
 
   createRoom(ws, { deckKey = 'luna_guardians', playerName = 'Player 1' }) {
