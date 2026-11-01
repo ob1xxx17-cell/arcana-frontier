@@ -2319,9 +2319,9 @@
           
           AudioFX.play('draw');
           const pulled = pullGachaPack(dKey, isSingle ? 1 : 10);
+          m.remove();
           openPackTearAnimation(pulled, dKey, () => {
             openGachaRevealModal(pulled, dKey, () => {
-              m.remove();
               openShopModal(dKey);
             });
           });
