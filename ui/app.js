@@ -4562,7 +4562,14 @@
       return;
     }
     if (k === 'ready') { confirmedViewer = v; render(); }
-    else if (k === 'again') start();
+    else if (k === 'again') {
+      if (mode === 'online') {
+        lobby();
+        openPvpModal();
+      } else {
+        start();
+      }
+    }
     else if (k === 'menu') { activeTrial = null; lobby(); }
     else if (k === 'keep') act({ type: 'pass', player: v });
     else if (k === 'mulAll') act({ type: 'mulligan', player: v });

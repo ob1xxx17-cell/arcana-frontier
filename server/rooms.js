@@ -217,9 +217,11 @@ class RoomManager {
 
     try {
       const firstPlayer = (room.firstPlayer !== undefined) ? room.firstPlayer : (Math.random() < 0.5 ? 0 : 1);
+      const seed = Math.floor(Math.random() * 2147483647) + 1;
       room.state = E.createGame({
         deckA,
         deckB,
+        seed,
         firstPlayer,
         mode: 'pvp',
         config: {

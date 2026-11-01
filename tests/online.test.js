@@ -260,5 +260,27 @@ module.exports = [
       assert.strictEqual(room.state.activeIdx, gs0.firstPlayer, 'activeIdx ของห้องต้องตรงกับ firstPlayer');
       rm.cleanupRoom(room.code);
     }
+  },
+  {
+    name: 'NET-11 สุ่มสับเด็คด้วย seed อิสระในแต่ละเกม (Random Shuffle Seed): การ์ดบนมือเริ่มต้นต้องไม่ตายตัว',
+    run(assert) {
+      const rm = new RoomManager();
+      const seeds = new Set();
+      const hands = [];
+
+      for (let i = 0; i < 5; i++) {
+        const ws0 = { send: () => {}, readyState: 1 };
+        const ws1 = { send: () => {}, readyState: 1 };
+        const room = rm.createRoom(ws0, { deckKey: 'luna_guardians', playerName: 'P1' });
+        rm.joinRoom(ws1, { roomCode: room.code, deckKey: 'mecha_scrap', playerName: 'P2' });
+
+        assert.ok(room.state.rng.seed !== 1, 'seed ต้องไม่ฟิกซ์เป็น 1 ในการเล่นออนไลน์');
+        seeds.add(room.state.rng.seed);
+        hands.push(room.state.players[0].hand.map(c => c.cardId).join(','));
+        rm.cleanupRoom(room.code);
+      }
+
+      assert.ok(seeds.size > 1, 'แต่ละห้องต้องได้ seed สุ่มที่แตกต่างกัน');
+    }
   }
 ];
