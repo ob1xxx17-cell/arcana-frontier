@@ -1744,7 +1744,7 @@
       const countLabel = pulledList.length + ' ใบ';
       const hasRare = pulledList.some(item => {
         const c = item.card;
-        return c && (c.type === 'fusion' || c.type === 'grade4' || (c.atk && c.atk >= 2000));
+        return c && (c.type === 'fusion' || c.type === 'grade4' || c.secretRare || c.isExtra);
       });
 
       const overlay = document.createElement('div');
@@ -1772,8 +1772,9 @@
             '<div class="pack-inside-card-stack" id="packCardStack">' +
               '<div class="inside-card-phantom c3">✦</div>' +
               '<div class="inside-card-phantom c2">✦</div>' +
-              '<div class="inside-card-phantom c1 pack-sliding-front">' +
-                firstPulledHtml +
+              '<div class="inside-card-phantom c1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">' +
+                '<div style="font-size:2.4rem;color:#fef08a;text-shadow:0 0 16px rgba(254,240,138,0.9)">✦</div>' +
+                '<div style="font-size:0.95rem;letter-spacing:4px;font-weight:900;color:#fef08a;text-shadow:0 2px 6px rgba(0,0,0,0.8)">ARCANA</div>' +
               '</div>' +
             '</div>' +
             '<div class="pack-body-wrap">' +

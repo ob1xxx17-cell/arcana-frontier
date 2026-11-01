@@ -204,7 +204,8 @@ module.exports = [
       vm.createContext(sandbox);
 
       // โหลดตามลำดับแท็กจริงใน index.html
-      for (const src of scriptTags) {
+      for (const rawSrc of scriptTags) {
+        const src = rawSrc.split('?')[0];
         const fullPath = path.join(__dirname, '..', src);
         assert.ok(fs.existsSync(fullPath), `ไฟล์ตามแท็กต้องมีอยู่จริง: ${src}`);
         const code = fs.readFileSync(fullPath, 'utf8');
