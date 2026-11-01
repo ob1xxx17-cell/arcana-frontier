@@ -6,6 +6,7 @@
     "curr20": 200,
     "curr100": 5,
     "cards": [],
+    "unlockedDecks": [],
     "maxUses": null,
     "expiresAt": null,
     "usedBy": []
@@ -17,6 +18,7 @@
     "curr20": 150,
     "curr100": 3,
     "cards": [],
+    "unlockedDecks": [],
     "maxUses": null,
     "expiresAt": null,
     "usedBy": []
@@ -28,6 +30,52 @@
     "curr20": 300,
     "curr100": 2,
     "cards": [],
+    "unlockedDecks": [],
+    "maxUses": null,
+    "expiresAt": null,
+    "usedBy": []
+  },
+  {
+    "code": "MECHALUNA",
+    "title": "🤖🌙 ปลดล็อกเด็ค Mecha & Luna Guardians (VIP Master)",
+    "description": "ปลดล็อกเด็ค เมก้าสไตรก์, เมก้าสแครป และลูน่าการ์เดียนส์ พร้อมการ์ดทั้งหมดในเด็ค + แบงก์ 20 x 500 + แบงก์ 100 x 10",
+    "curr20": 500,
+    "curr100": 10,
+    "cards": [],
+    "unlockedDecks": [
+      "mecha_strike",
+      "mecha_scrap",
+      "luna_guardians"
+    ],
+    "maxUses": null,
+    "expiresAt": null,
+    "usedBy": []
+  },
+  {
+    "code": "LUNAGUARDIANS",
+    "title": "🌙 ปลดล็อกเด็ค Luna Guardians (ผู้พิทักษ์แห่งจันทรา)",
+    "description": "ปลดล็อกเด็ค ลูน่าการ์เดียนส์ พร้อมการ์ดทั้งหมดในเด็ค + แบงก์ 20 x 200",
+    "curr20": 200,
+    "curr100": 5,
+    "cards": [],
+    "unlockedDecks": [
+      "luna_guardians"
+    ],
+    "maxUses": null,
+    "expiresAt": null,
+    "usedBy": []
+  },
+  {
+    "code": "MECHASTRIKE",
+    "title": "🤖 ปลดล็อกเด็ค Mecha Strike & Scrap (จักรกลประกอบร่าง)",
+    "description": "ปลดล็อกเด็ค เมก้าสไตรก์ และ เมก้าสแครป พร้อมการ์ดทั้งหมดในเด็ค + แบงก์ 20 x 200",
+    "curr20": 200,
+    "curr100": 5,
+    "cards": [],
+    "unlockedDecks": [
+      "mecha_strike",
+      "mecha_scrap"
+    ],
     "maxUses": null,
     "expiresAt": null,
     "usedBy": []

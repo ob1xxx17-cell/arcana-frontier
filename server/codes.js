@@ -14,6 +14,7 @@ const INITIAL_CODES = [
     curr20: 200,
     curr100: 5,
     cards: [],
+    unlockedDecks: [],
     maxUses: null,
     expiresAt: null,
     usedBy: []
@@ -25,6 +26,7 @@ const INITIAL_CODES = [
     curr20: 150,
     curr100: 3,
     cards: [],
+    unlockedDecks: [],
     maxUses: null,
     expiresAt: null,
     usedBy: []
@@ -36,6 +38,43 @@ const INITIAL_CODES = [
     curr20: 300,
     curr100: 2,
     cards: [],
+    unlockedDecks: [],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
+  },
+  {
+    code: 'MECHALUNA',
+    title: '🤖🌙 ปลดล็อกเด็ค Mecha & Luna Guardians (VIP Master)',
+    description: 'ปลดล็อกเด็ค เมก้าสไตรก์, เมก้าสแครป และลูน่าการ์เดียนส์ พร้อมการ์ดทั้งหมดในเด็ค + แบงก์ 20 x 500 + แบงก์ 100 x 10',
+    curr20: 500,
+    curr100: 10,
+    cards: [],
+    unlockedDecks: ['mecha_strike', 'mecha_scrap', 'luna_guardians'],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
+  },
+  {
+    code: 'LUNAGUARDIANS',
+    title: '🌙 ปลดล็อกเด็ค Luna Guardians (ผู้พิทักษ์แห่งจันทรา)',
+    description: 'ปลดล็อกเด็ค ลูน่าการ์เดียนส์ พร้อมการ์ดทั้งหมดในเด็ค + แบงก์ 20 x 200',
+    curr20: 200,
+    curr100: 5,
+    cards: [],
+    unlockedDecks: ['luna_guardians'],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
+  },
+  {
+    code: 'MECHASTRIKE',
+    title: '🤖 ปลดล็อกเด็ค Mecha Strike & Scrap (จักรกลประกอบร่าง)',
+    description: 'ปลดล็อกเด็ค เมก้าสไตรก์ และ เมก้าสแครป พร้อมการ์ดทั้งหมดในเด็ค + แบงก์ 20 x 200',
+    curr20: 200,
+    curr100: 5,
+    cards: [],
+    unlockedDecks: ['mecha_strike', 'mecha_scrap'],
     maxUses: null,
     expiresAt: null,
     usedBy: []
@@ -77,10 +116,17 @@ class CodeManager {
               curr20: Number(item.curr20) || 0,
               curr100: Number(item.curr100) || 0,
               cards: Array.isArray(item.cards) ? item.cards : [],
+              unlockedDecks: Array.isArray(item.unlockedDecks) ? item.unlockedDecks : [],
               maxUses: item.maxUses || null,
               expiresAt: item.expiresAt || null,
               usedBy: Array.isArray(item.usedBy) ? item.usedBy : []
             });
+          }
+        }
+        // Auto-merge new initial codes if missing
+        for (const def of INITIAL_CODES) {
+          if (!this.codes.has(def.code.toUpperCase())) {
+            this.codes.set(def.code.toUpperCase(), JSON.parse(JSON.stringify(def)));
           }
         }
         console.log(`[CODES] Loaded ${this.codes.size} redeem code(s).`);
@@ -184,6 +230,27 @@ class CodeManager {
       acc.ownedCards = Array.from(currentCards);
     }
 
+    // Apply any unlocked decks if specified
+    if (entry.unlockedDecks && Array.isArray(entry.unlockedDecks) && entry.unlockedDecks.length > 0) {
+      acc.unlockedDecks = acc.unlockedDecks || [];
+      acc.ownedCards = acc.ownedCards || [];
+      const currentCards = new Set(acc.ownedCards);
+
+      entry.unlockedDecks.forEach(deckKey => {
+        if (!acc.unlockedDecks.includes(deckKey)) {
+          acc.unlockedDecks.push(deckKey);
+        }
+        const d = (globalThis.CG && globalThis.CG.cards) ? globalThis.CG.cards[deckKey] : null;
+        if (d) {
+          (d.main || []).forEach(c => currentCards.add(c.id));
+          (d.extra || []).forEach(c => currentCards.add(c.id));
+          (d.rarePool || []).forEach(c => currentCards.add(c.id));
+        }
+      });
+
+      acc.ownedCards = Array.from(currentCards);
+    }
+
     // Mark as used
     entry.usedBy.push(accIdKey);
     this.save();
@@ -198,12 +265,14 @@ class CodeManager {
         title: entry.title,
         curr20: entry.curr20 || 0,
         curr100: entry.curr100 || 0,
-        cards: entry.cards || []
+        cards: entry.cards || [],
+        unlockedDecks: entry.unlockedDecks || []
       },
       updatedAccount: {
         curr20: acc.curr20,
         curr100: acc.curr100,
-        ownedCards: acc.ownedCards
+        ownedCards: acc.ownedCards,
+        unlockedDecks: acc.unlockedDecks
       }
     };
   }

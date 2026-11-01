@@ -3039,7 +3039,25 @@
               const fallbackCodes = {
                 'WELCOME2026': { title: '🎁 ของขวัญต้อนรับผู้เล่นใหม่', curr20: 200, curr100: 5 },
                 'ARCANAFREE': { title: '✨ โค้ดฉลองเปิดทดสอบ Arcana Frontier', curr20: 150, curr100: 3 },
-                'LUNAGIFT': { title: '🌙 พลังแห่งจันทราผู้พิทักษ์', curr20: 300, curr100: 2 }
+                'LUNAGIFT': { title: '🌙 พลังแห่งจันทราผู้พิทักษ์', curr20: 300, curr100: 2 },
+                'MECHALUNA': {
+                  title: '🤖🌙 ปลดล็อกเด็ค Mecha & Luna Guardians (VIP Master)',
+                  curr20: 500,
+                  curr100: 10,
+                  unlockedDecks: ['mecha_strike', 'mecha_scrap', 'luna_guardians']
+                },
+                'LUNAGUARDIANS': {
+                  title: '🌙 ปลดล็อกเด็ค Luna Guardians (ผู้พิทักษ์แห่งจันทรา)',
+                  curr20: 200,
+                  curr100: 5,
+                  unlockedDecks: ['luna_guardians']
+                },
+                'MECHASTRIKE': {
+                  title: '🤖 ปลดล็อกเด็ค Mecha Strike & Scrap (จักรกลประกอบร่าง)',
+                  curr20: 200,
+                  curr100: 5,
+                  unlockedDecks: ['mecha_strike', 'mecha_scrap']
+                }
               };
               const item = fallbackCodes[rawCode];
               if (!item) {
@@ -3051,13 +3069,32 @@
                   result = { success: false, message: 'ไอดีนี้เคยแลกรับโค้ดนี้ไปแล้ว' };
                 } else {
                   Account.current.redeemedCodes.push(rawCode);
+                  if (item.unlockedDecks && Array.isArray(item.unlockedDecks)) {
+                    Account.current.unlockedDecks = Account.current.unlockedDecks || [];
+                    const ownedSet = getOwnedCards();
+                    item.unlockedDecks.forEach(dk => {
+                      if (!Account.current.unlockedDecks.includes(dk)) {
+                        Account.current.unlockedDecks.push(dk);
+                      }
+                      const d = CG.cards && CG.cards[dk];
+                      if (d) {
+                        (d.main || []).forEach(c => ownedSet.add(c.id));
+                        (d.extra || []).forEach(c => ownedSet.add(c.id));
+                        (d.rarePool || []).forEach(c => ownedSet.add(c.id));
+                      }
+                    });
+                    saveOwnedCards(ownedSet);
+                    Account.current.ownedCards = Array.from(ownedSet);
+                  }
                   result = {
                     success: true,
                     message: 'แลกรับสำเร็จ! ได้รับ ' + item.title,
                     reward: item,
                     updatedAccount: {
-                      curr20: (Number(CG.ui.curr20) || 0) + item.curr20,
-                      curr100: (Number(CG.ui.curr100) || 0) + item.curr100
+                      curr20: (Number(CG.ui.curr20) || 0) + (item.curr20 || 0),
+                      curr100: (Number(CG.ui.curr100) || 0) + (item.curr100 || 0),
+                      ownedCards: Account.current.ownedCards,
+                      unlockedDecks: Account.current.unlockedDecks
                     }
                   };
                 }
@@ -3072,8 +3109,14 @@
                 if (Account.current) {
                   Account.current.curr20 = result.updatedAccount.curr20;
                   Account.current.curr100 = result.updatedAccount.curr100;
+                  if (result.updatedAccount.unlockedDecks) {
+                    Account.current.unlockedDecks = result.updatedAccount.unlockedDecks;
+                  }
                   if (result.updatedAccount.ownedCards) {
                     Account.current.ownedCards = result.updatedAccount.ownedCards;
+                    const ownedSet = getOwnedCards();
+                    result.updatedAccount.ownedCards.forEach(cid => ownedSet.add(cid));
+                    saveOwnedCards(ownedSet);
                   }
                   Account.save();
                 }
@@ -3085,12 +3128,17 @@
               m.remove();
 
               // Show celebratory reward popup
+              const unlockedDecksList = (result.reward && result.reward.unlockedDecks && result.reward.unlockedDecks.length)
+                ? result.reward.unlockedDecks.map(dk => (CG.cards && CG.cards[dk] ? CG.cards[dk].name : dk)).join(' + ')
+                : '';
+
               const rewardHtml =
                 '<div style="text-align:center;padding:10px 0">' +
                   '<div style="font-size:3rem;margin-bottom:6px;animation:float 2s ease-in-out infinite">🎉</div>' +
                   '<h3 style="font-size:1.35rem;font-weight:900;color:#1e293b;margin:0 0 6px">แลกรับโค้ดสำเร็จ!</h3>' +
                   '<div style="font-size:0.92rem;font-weight:800;color:#7c3aed;margin-bottom:16px">' + V().esc((result.reward && result.reward.title) || rawCode) + '</div>' +
                   '<div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">' +
+                    (unlockedDecksList ? '<div style="width:100%;background:#fefce8;border:2px solid #eab308;padding:10px 14px;border-radius:10px;font-weight:900;color:#a16207;font-size:0.95rem;box-shadow:1.5px 2px 0 #2b1f1d">👑 ปลดล็อกเด็คพิเศษ: ' + V().esc(unlockedDecksList) + ' พร้อมการ์ดทั้งหมด!</div>' : '') +
                     (result.reward && result.reward.curr20 ? '<div style="background:#f0fdf4;border:2px solid #22c55e;padding:10px 18px;border-radius:10px;font-weight:900;color:#15803d;font-size:1.1rem;box-shadow:1.5px 2px 0 #2b1f1d">💵 +' + result.reward.curr20 + ' แบงก์ 20</div>' : '') +
                     (result.reward && result.reward.curr100 ? '<div style="background:#fef2f2;border:2px solid #ef4444;padding:10px 18px;border-radius:10px;font-weight:900;color:#b91c1c;font-size:1.1rem;box-shadow:1.5px 2px 0 #2b1f1d">🎫 +' + result.reward.curr100 + ' แบงก์ 100</div>' : '') +
                   '</div>' +
