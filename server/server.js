@@ -6,6 +6,7 @@ const vm = require('vm');
 const { WebSocketServer } = require('ws');
 const { RoomManager } = require('./rooms.js');
 const { accountManager } = require('./accounts.js');
+const { codeManager } = require('./codes.js');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.resolve(__dirname, '..');
@@ -62,7 +63,7 @@ function parseJsonBody(req, callback) {
   });
 }
 
-function renderStatusHtml(stats) {
+function renderStatusHtml(stats, codes) {
   const accountsHtml = stats.accounts.length === 0
     ? '<tr><td colspan="8" style="text-align:center;padding:24px;color:#94a3b8">ยังไม่มีไอดีลงทะเบียนในระบบ</td></tr>'
     : stats.accounts.map((a, i) => {
@@ -87,6 +88,25 @@ function renderStatusHtml(stats) {
         `;
       }).join('');
 
+  const codesHtml = (!codes || codes.length === 0)
+    ? '<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8">ยังไม่มีโค้ดในระบบ</td></tr>'
+    : codes.map((c, i) => {
+        return `
+          <tr style="border-bottom:1px solid #e2e8f0;transition:background 0.2s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+            <td style="padding:10px 12px;font-weight:900;color:#7c3aed">
+              <span style="background:#f5f3ff;border:1px solid #ddd6fe;padding:4px 10px;border-radius:6px;letter-spacing:1px">${escapeHtml(c.code)}</span>
+            </td>
+            <td style="padding:10px 12px;font-weight:800;color:#0f172a">
+              ${escapeHtml(c.title)}
+              <div style="font-size:0.8rem;color:#64748b;font-weight:500">${escapeHtml(c.description)}</div>
+            </td>
+            <td style="padding:10px 12px;font-weight:700;color:#16a34a">💵 +${c.curr20} / 🎫 +${c.curr100}</td>
+            <td style="padding:10px 12px;font-weight:700;color:#334155">${c.usedCount} ${c.maxUses ? '/ ' + c.maxUses : ''} ครั้ง</td>
+            <td style="padding:10px 12px"><span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:999px;font-weight:800;font-size:0.75rem">ใช้งานได้</span></td>
+          </tr>
+        `;
+      }).join('');
+
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -107,7 +127,7 @@ function renderStatusHtml(stats) {
   .stat-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); border: 2px solid #334155; }
   .stat-label { font-size: 0.9rem; font-weight: 700; color: #64748b; margin-bottom: 6px; }
   .stat-val { font-size: 2.2rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; justify-content: space-between; }
-  .panel { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
+  .panel { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); margin-bottom: 24px; }
   .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
   .panel-title { font-size: 1.3rem; font-weight: 900; color: #0f172a; margin: 0; }
   .btn-refresh { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
@@ -116,6 +136,9 @@ function renderStatusHtml(stats) {
   th { padding: 12px; background: #f8fafc; font-weight: 800; color: #475569; font-size: 0.85rem; border-bottom: 2px solid #cbd5e1; }
   .back-btn { color: #94a3b8; text-decoration: none; font-weight: 700; font-size: 0.9rem; transition: 0.2s; }
   .back-btn:hover { color: white; }
+  .input-create { padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; font-weight: 700; }
+  .btn-create { background: #7c3aed; color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.2s; }
+  .btn-create:hover { background: #6d28d9; }
 </style>
 </head>
 <body>
@@ -141,12 +164,53 @@ function renderStatusHtml(stats) {
       <div class="stat-label">👥 ไอดีที่สมัครทั้งหมด (Total Registered)</div>
       <div class="stat-val"><span>${stats.totalAccounts}</span> <span style="font-size:1.8rem">📜</span></div>
     </div>
+    <div class="stat-card" style="border-top:5px solid #8b5cf6">
+      <div class="stat-label">🎁 โค้ดรางวัลที่เปิดใช้งาน (Gift Codes)</div>
+      <div class="stat-val"><span>${codes.length}</span> <span style="font-size:1.8rem">🎟️</span></div>
+    </div>
   </div>
 
+  <!-- GIFT CODES PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">🎁 ระบบโค้ดของขวัญ (Gift Codes)</h2>
+    </div>
+
+    <!-- Create Code Form -->
+    <div style="background:#f8fafc;border:2px dashed #cbd5e1;border-radius:12px;padding:16px;margin-bottom:20px">
+      <div style="font-weight:900;font-size:1rem;color:#0f172a;margin-bottom:10px">➕ สร้างโค้ดแจกรางวัลใหม่ (Create New Code)</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="inpNewCode" class="input-create" placeholder="รหัสโค้ด เช่น LUNA2026" style="text-transform:uppercase;width:180px" />
+        <input type="number" id="inpNewCurr20" class="input-create" placeholder="แบงก์ 20 (ใบ)" style="width:130px" value="100" />
+        <input type="number" id="inpNewCurr100" class="input-create" placeholder="แบงก์ 100 (ใบ)" style="width:130px" value="2" />
+        <input type="text" id="inpNewTitle" class="input-create" placeholder="ชื่อของขวัญ / รายละเอียด" style="flex:1;min-width:200px" />
+        <button class="btn-create" onclick="createNewCode()">✨ สร้างโค้ดทันที</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>รหัสโค้ด (Code)</th>
+            <th>ชื่อของขวัญ / คำอธิบาย</th>
+            <th>ของรางวัล</th>
+            <th>จำนวนการใช้งาน</th>
+            <th>สถานะ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${codesHtml}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PLAYERS ACCOUNTS PANEL -->
   <div class="panel">
     <div class="panel-header">
       <h2 class="panel-title">📋 รายชื่อผู้เล่นทั้งหมดในเซิร์ฟเวอร์ (${stats.totalAccounts} ไอดี)</h2>
-      <div style="font-size:0.85rem;color:#64748b">อัปเดตอัตโนมัติทุก 5 วินาที</div>
+      <div style="font-size:0.85rem;color:#64748b">อัปเดตอัตโนมัติทุก 10 วินาที</div>
     </div>
     <div style="overflow-x:auto">
       <table>
@@ -170,8 +234,34 @@ function renderStatusHtml(stats) {
   </div>
 </div>
 <script>
-  // รีเฟรชข้อมูลทุก 5 วินาที
-  setTimeout(() => { location.reload(); }, 5000);
+  async function createNewCode() {
+    const code = document.getElementById('inpNewCode').value.trim().toUpperCase();
+    const curr20 = Number(document.getElementById('inpNewCurr20').value) || 0;
+    const curr100 = Number(document.getElementById('inpNewCurr100').value) || 0;
+    const title = document.getElementById('inpNewTitle').value.trim() || ('โค้ด ' + code);
+
+    if (!code) return alert('กรุณาระบุรหัสโค้ด');
+
+    try {
+      const res = await fetch('/api/code/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, curr20, curr100, title, description: 'แจกแบงก์ 20 x' + curr20 + ' และแบงก์ 100 x' + curr100 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('🎉 สร้างโค้ด \"' + code + '\" สำเร็จเรียบร้อย!');
+        location.reload();
+      } else {
+        alert('⚠ ' + data.message);
+      }
+    } catch (e) {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+  }
+
+  // รีเฟรชข้อมูลทุก 10 วินาที
+  setTimeout(() => { location.reload(); }, 10000);
 </script>
 </body>
 </html>`;
@@ -206,7 +296,8 @@ const server = http.createServer((req, res) => {
   // --- API: STATS & DASHBOARD ---
   if (pathname === '/status' || pathname === '/stats' || pathname === '/admin') {
     const stats = accountManager.getStats(wss, roomManager);
-    const html = renderStatusHtml(stats);
+    const codes = codeManager.getAllCodes();
+    const html = renderStatusHtml(stats, codes);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(html);
     return;
@@ -216,6 +307,42 @@ const server = http.createServer((req, res) => {
     const stats = accountManager.getStats(wss, roomManager);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify(stats));
+    return;
+  }
+
+  // --- API: REDEEM CODES ---
+  if (pathname === '/api/code/redeem' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err || !data.code || !data.accountId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'ข้อมูลไม่ครบถ้วน กรุณากรอกโค้ด' }));
+        return;
+      }
+      const result = codeManager.redeem(data.code, data.accountId);
+      res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(result));
+    });
+    return;
+  }
+
+  if (pathname === '/api/code/create' && req.method === 'POST') {
+    parseJsonBody(req, (err, data) => {
+      if (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Invalid JSON body' }));
+        return;
+      }
+      const result = codeManager.createCode(data);
+      res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(result));
+    });
+    return;
+  }
+
+  if (pathname === '/api/codes' && req.method === 'GET') {
+    const list = codeManager.getAllCodes();
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({ success: true, codes: list }));
     return;
   }
 

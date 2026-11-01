@@ -5277,6 +5277,13 @@ button.gold:hover:not(:disabled) {
 .wf-btn-mail:hover {
   background: #fef2f2;
 }
+.wf-btn-code {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
+.wf-btn-code:hover {
+  background: #f5f3ff;
+}
 .wf-mail-badge {
   position: absolute;
   top: -8px;

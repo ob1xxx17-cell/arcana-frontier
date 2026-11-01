@@ -1604,6 +1604,9 @@
           '<div style="font-weight:800;font-size:0.85rem;margin-bottom:4px">เด็คที่ใช้งานบ่อยที่สุด:</div>' +
           deckUsageHtml +
         '</div>' +
+        '<button id="btnProfileRedeemCode" style="width:100%;margin-top:8px;background:#fef9c3;border:2px solid #ca8a04;color:#854d0e;padding:10px;border-radius:8px;font-weight:900;font-size:0.9rem;cursor:pointer">' +
+          '🎁 ใส่โค้ดรับรางวัล (Redeem Code)' +
+        '</button>' +
         '<a href="/status" target="_blank" style="text-decoration:none;display:block;text-align:center;width:100%;margin-top:8px;background:#f0fdf4;border:2px solid #22c55e;color:#15803d;padding:10px;border-radius:8px;font-weight:900;font-size:0.9rem;box-sizing:border-box">' +
           '📊 ดูสถิติเซิร์ฟเวอร์ & ผู้เล่นทั้งหมด (Server Status)' +
         '</a>' +
@@ -1654,6 +1657,12 @@
             if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(acc.passcode);
             toast('📋 คัดลอก PIN กู้คืนบัญชีเรียบร้อย!');
             AudioFX.play('chime');
+            return;
+          }
+          if (e.target.closest('#btnProfileRedeemCode')) {
+            m.remove();
+            AudioFX.play('click');
+            openRedeemCodeModal();
             return;
           }
           if (e.target.closest('#btnProfileLogout')) {
@@ -2892,6 +2901,161 @@
       }
     }
 
+    // Modal: แลกรับโค้ดของขวัญ (Redeem Code)
+    function openRedeemCodeModal() {
+      const html =
+        '<div style="text-align:center;margin-bottom:14px">' +
+          '<div style="width:64px;height:64px;background:#fef3c7;border:2.5px solid #2b1f1d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 8px;box-shadow:1.5px 2px 0 #2b1f1d">🎁</div>' +
+          '<h3 style="margin:0;font-size:1.3rem;font-weight:900;color:#1e293b">แลกรับโค้ดของขวัญ (Redeem Code)</h3>' +
+          '<div style="font-size:0.85rem;color:#64748b;margin-top:4px">กรอกรหัสโค้ดเพื่อรับแบงก์ 20, แบงก์ 100 และของรางวัลพิเศษ!</div>' +
+        '</div>' +
+
+        '<div style="margin-bottom:14px">' +
+          '<input type="text" id="inpRedeemCode" maxlength="24" placeholder="กรอกรหัสโค้ดที่นี่ (เช่น WELCOME2026)" ' +
+            'style="width:100%;box-sizing:border-box;text-align:center;font-size:1.15rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;padding:12px;border:2.5px solid #2b1f1d;border-radius:10px;background:#fff;box-shadow:2px 3px 0 #2b1f1d" />' +
+        '</div>' +
+
+        '<button id="btnSubmitRedeemCode" class="gold" style="width:100%;padding:12px;font-size:1.05rem;font-weight:900;border-radius:10px;cursor:pointer;border:2.5px solid #2b1f1d;box-shadow:2px 3px 0 #2b1f1d">' +
+          '✨ ยืนยันการแลกรับรางวัล' +
+        '</button>' +
+
+        '<div style="margin-top:16px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:10px;padding:12px;font-size:0.82rem;color:#475569">' +
+          '<div style="font-weight:900;color:#0f172a;margin-bottom:6px">💡 โค้ดแจกฟรีสำหรับผู้เล่นใหม่ (แตะเพื่อคัดลอกใส่ช่อง):</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+            '<span class="code-quick-pill" data-code="WELCOME2026" style="background:#e0e7ff;color:#3730a3;border:1.5px solid #c7d2fe;padding:4px 10px;border-radius:6px;font-weight:800;cursor:pointer">WELCOME2026</span>' +
+            '<span class="code-quick-pill" data-code="ARCANAFREE" style="background:#fef3c7;color:#92400e;border:1.5px solid #fde68a;padding:4px 10px;border-radius:6px;font-weight:800;cursor:pointer">ARCANAFREE</span>' +
+            '<span class="code-quick-pill" data-code="LUNAGIFT" style="background:#f3e8ff;color:#6b21a8;border:1.5px solid #e9d5ff;padding:4px 10px;border-radius:6px;font-weight:800;cursor:pointer">LUNAGIFT</span>' +
+          '</div>' +
+        '</div>';
+
+      const m = showWfModal('🎁 แลกรับโค้ด (Redeem Code)', html);
+      if (m) {
+        const inp = m.querySelector('#inpRedeemCode');
+        if (inp) {
+          inp.focus();
+          inp.oninput = () => { inp.value = inp.value.toUpperCase(); };
+          inp.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+              const btn = m.querySelector('#btnSubmitRedeemCode');
+              if (btn) btn.click();
+            }
+          };
+        }
+
+        m.onclick = async (e) => {
+          const pill = e.target.closest('.code-quick-pill');
+          if (pill && inp) {
+            AudioFX.play('click');
+            inp.value = pill.dataset.code;
+            return;
+          }
+
+          if (e.target.closest('#btnSubmitRedeemCode')) {
+            const rawCode = inp ? inp.value.trim().toUpperCase() : '';
+            if (!rawCode) return toast('⚠ กรุณากรอกรหัสโค้ด');
+
+            const accId = (Account.current && Account.current.id) ? Account.current.id : 'guest';
+            toast('🔄 กำลังตรวจสอบโค้ด...');
+
+            // Call Server API first
+            let result = null;
+            if (typeof fetch !== 'undefined' && typeof window !== 'undefined' && window.location.protocol !== 'file:') {
+              try {
+                const resp = await fetch('/api/code/redeem', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ code: rawCode, accountId: accId })
+                });
+                result = await resp.json();
+              } catch (netErr) {
+                console.warn('[REDEEM] Server error, attempting fallback:', netErr);
+              }
+            }
+
+            // Local fallback if offline
+            if (!result) {
+              const fallbackCodes = {
+                'WELCOME2026': { title: '🎁 ของขวัญต้อนรับผู้เล่นใหม่', curr20: 200, curr100: 5 },
+                'ARCANAFREE': { title: '✨ โค้ดฉลองเปิดทดสอบ Arcana Frontier', curr20: 150, curr100: 3 },
+                'LUNAGIFT': { title: '🌙 พลังแห่งจันทราผู้พิทักษ์', curr20: 300, curr100: 2 }
+              };
+              const item = fallbackCodes[rawCode];
+              if (!item) {
+                result = { success: false, message: 'ไม่พบโค้ด "' + rawCode + '" หรือโค้ดไม่ถูกต้อง' };
+              } else {
+                Account.current = Account.current || {};
+                Account.current.redeemedCodes = Account.current.redeemedCodes || [];
+                if (Account.current.redeemedCodes.includes(rawCode)) {
+                  result = { success: false, message: 'ไอดีนี้เคยแลกรับโค้ดนี้ไปแล้ว' };
+                } else {
+                  Account.current.redeemedCodes.push(rawCode);
+                  result = {
+                    success: true,
+                    message: 'แลกรับสำเร็จ! ได้รับ ' + item.title,
+                    reward: item,
+                    updatedAccount: {
+                      curr20: (Number(CG.ui.curr20) || 0) + item.curr20,
+                      curr100: (Number(CG.ui.curr100) || 0) + item.curr100
+                    }
+                  };
+                }
+              }
+            }
+
+            if (result && result.success) {
+              AudioFX.play('fanfare');
+              if (result.updatedAccount) {
+                CG.ui.curr20 = result.updatedAccount.curr20;
+                CG.ui.curr100 = result.updatedAccount.curr100;
+                if (Account.current) {
+                  Account.current.curr20 = result.updatedAccount.curr20;
+                  Account.current.curr100 = result.updatedAccount.curr100;
+                  if (result.updatedAccount.ownedCards) {
+                    Account.current.ownedCards = result.updatedAccount.ownedCards;
+                  }
+                  Account.save();
+                }
+                const el20 = $('valCurr20'), el100 = $('valCurr100');
+                if (el20) el20.textContent = CG.ui.curr20;
+                if (el100) el100.textContent = CG.ui.curr100;
+              }
+
+              m.remove();
+
+              // Show celebratory reward popup
+              const rewardHtml =
+                '<div style="text-align:center;padding:10px 0">' +
+                  '<div style="font-size:3rem;margin-bottom:6px;animation:float 2s ease-in-out infinite">🎉</div>' +
+                  '<h3 style="font-size:1.35rem;font-weight:900;color:#1e293b;margin:0 0 6px">แลกรับโค้ดสำเร็จ!</h3>' +
+                  '<div style="font-size:0.92rem;font-weight:800;color:#7c3aed;margin-bottom:16px">' + V().esc((result.reward && result.reward.title) || rawCode) + '</div>' +
+                  '<div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">' +
+                    (result.reward && result.reward.curr20 ? '<div style="background:#f0fdf4;border:2px solid #22c55e;padding:10px 18px;border-radius:10px;font-weight:900;color:#15803d;font-size:1.1rem;box-shadow:1.5px 2px 0 #2b1f1d">💵 +' + result.reward.curr20 + ' แบงก์ 20</div>' : '') +
+                    (result.reward && result.reward.curr100 ? '<div style="background:#fef2f2;border:2px solid #ef4444;padding:10px 18px;border-radius:10px;font-weight:900;color:#b91c1c;font-size:1.1rem;box-shadow:1.5px 2px 0 #2b1f1d">🎫 +' + result.reward.curr100 + ' แบงก์ 100</div>' : '') +
+                  '</div>' +
+                  '<button id="btnCloseRewardModal" class="gold" style="padding:10px 32px;font-size:1rem;font-weight:900;border-radius:8px;cursor:pointer">ตกลง</button>' +
+                '</div>';
+              const rm = showWfModal('✨ รับของรางวัล', rewardHtml);
+              if (rm) {
+                rm.onclick = (re) => {
+                  if (re.target.closest('#btnCloseRewardModal') || re.target.closest('#btnModalClose') || re.target === rm) {
+                    rm.remove();
+                  }
+                };
+              }
+            } else {
+              AudioFX.play('cancel');
+              toast('⚠ ' + (result ? result.message : 'เกิดข้อผิดพลาดในการแลกรับโค้ด'));
+            }
+            return;
+          }
+
+          if (e.target.closest('#btnModalClose') || e.target === m) {
+            m.remove();
+          }
+        };
+      }
+    }
+
     // รายการเด็คในร้านค้า
     const shopPacks = [
       { key: 'luna_guardians', name: 'LUNA ผู้พิทักษ์จันทรา' },
@@ -2941,6 +3105,10 @@
               '<span>✉️</span>' +
               '<span>กล่องจดหมาย</span>' +
               (!CG.ui.mailClaimed ? '<span class="wf-mail-badge">2</span>' : '') +
+            '</button>' +
+            '<button class="wf-top-btn wf-btn-code" id="btnTopRedeem" title="ใส่โค้ดรับรางวัล (Redeem Code)">' +
+              '<span>🎁</span>' +
+              '<span>ใส่โค้ด</span>' +
             '</button>' +
             '<div class="wf-curr-badge wf-curr-green" id="btnCurrGreen" title="แบงก์ 20: ได้จากการเล่น ใช้สุ่มการ์ด">' +
               CG.ui.note20Html() + '<span class="curr-val" id="valCurr20">' + CG.ui.curr20 + '</span>' +
@@ -3034,6 +3202,7 @@
       if (e.target.closest('#btnTopFriend')) { AudioFX.play('click'); openFriendModal(); return; }
       if (e.target.closest('#btnTopNotice')) { AudioFX.play('click'); openNoticeModal(); return; }
       if (e.target.closest('#btnTopMail')) { AudioFX.play('click'); openMailModal(); return; }
+      if (e.target.closest('#btnTopRedeem')) { AudioFX.play('click'); openRedeemCodeModal(); return; }
       if (e.target.closest('#btnCurrGreen') || e.target.closest('#btnCurrRed')) { AudioFX.play('click'); openShopModal(shopPacks[shopPackIdx].key); return; }
       if (e.target.closest('#newsBillboard')) {
         AudioFX.play('click');

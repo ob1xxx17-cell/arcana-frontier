@@ -1,0 +1,35 @@
+[
+  {
+    "code": "WELCOME2026",
+    "title": "🎁 ของขวัญต้อนรับผู้เล่นใหม่",
+    "description": "รับ แบงก์ 20 จำนวน 200 ใบ + แบงก์ 100 จำนวน 5 ใบ",
+    "curr20": 200,
+    "curr100": 5,
+    "cards": [],
+    "maxUses": null,
+    "expiresAt": null,
+    "usedBy": []
+  },
+  {
+    "code": "ARCANAFREE",
+    "title": "✨ โค้ดฉลองเปิดทดสอบ Arcana Frontier",
+    "description": "รับ แบงก์ 20 จำนวน 150 ใบ + แบงก์ 100 จำนวน 3 ใบ",
+    "curr20": 150,
+    "curr100": 3,
+    "cards": [],
+    "maxUses": null,
+    "expiresAt": null,
+    "usedBy": []
+  },
+  {
+    "code": "LUNAGIFT",
+    "title": "🌙 พลังแห่งจันทราผู้พิทักษ์",
+    "description": "รับ แบงก์ 20 จำนวน 300 ใบ สำหรับสุ่มการ์ด",
+    "curr20": 300,
+    "curr100": 2,
+    "cards": [],
+    "maxUses": null,
+    "expiresAt": null,
+    "usedBy": []
+  }
+]
