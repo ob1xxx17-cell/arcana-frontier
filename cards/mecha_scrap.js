@@ -393,6 +393,13 @@
             "trigger": "ignition",
             "speed": 1,
             "cost": { "mana": 1 },
+            "condition": [
+              {
+                "op": "canFusionSummon",
+                "filter": { "tag": "mecha" },
+                "materialsFrom": ["hand", "monster"]
+              }
+            ],
             "do": [
               {
                 "op": "fusionSummon",
@@ -424,6 +431,13 @@
             "trigger": "ignition",
             "speed": 1,
             "cost": { "mana": 2 },
+            "condition": [
+              {
+                "op": "canFusionSummon",
+                "filter": { "tag": "mecha" },
+                "materialsFrom": ["grave"]
+              }
+            ],
             "do": [
               {
                 "op": "fusionSummon",
@@ -699,8 +713,8 @@
         "tags": ["mecha", "resonance"],
         "materials": "ดรอยด์ + เวิร์กเกอร์",
         "materialSlots": [
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 }
+          { "cardId": "scrap_droid" },
+          { "cardId": "scrap_worker" }
         ],
         "text": "[เมื่อลงสู่สนามสำเร็จ]: ชุบ mecha Lv1 จากสุสาน 1 ตัว (0 Arcana)",
         "effects": [
@@ -737,8 +751,8 @@
         "tags": ["mecha", "resonance"],
         "materials": "ดรอยด์ + แมกเน็ต",
         "materialSlots": [
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 }
+          { "cardId": "scrap_droid" },
+          { "cardId": "scrap_magnet" }
         ],
         "text": "[เมื่อทำลายยูนิตจากการต่อสู้]: จั่วการ์ด 1 ใบ",
         "effects": [
@@ -769,8 +783,8 @@
         "tags": ["mecha", "resonance"],
         "materials": "ไดนาโม + คอลเลคเตอร์",
         "materialSlots": [
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 }
+          { "cardId": "scrap_dynamo" },
+          { "cardId": "scrap_collector" }
         ],
         "text": "[กดใช้ขณะท่าป้องกัน, เทิร์นละ 1]: จ่าย 1 Arcana ลด ATK ศัตรู 1 ตัวลง 300 ถาวร",
         "effects": [
@@ -811,8 +825,8 @@
         "tags": ["mecha", "resonance"],
         "materials": "แมกเน็ต + เวิร์กเกอร์",
         "materialSlots": [
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 }
+          { "cardId": "scrap_magnet" },
+          { "cardId": "scrap_worker" }
         ],
         "text": "[เมื่อลงสู่สนามสำเร็จ]: ส่ง mecha Lv1 จากเด็ค 1 ใบลงสุสาน\n[กดใช้บนสนาม, เทิร์นละ 1, 0 Arcana]: ส่งตัวเองลงสุสาน แล้วอัญเชิญพิเศษ mecha Lv1 2 ตัวจากสุสาน",
         "effects": [
@@ -871,9 +885,9 @@
         "tags": ["mecha", "resonance"],
         "materials": "ดรอยด์ + แมกเน็ต + ไดนาโม",
         "materialSlots": [
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 }
+          { "cardId": "scrap_droid" },
+          { "cardId": "scrap_magnet" },
+          { "cardId": "scrap_dynamo" }
         ],
         "text": "[เมื่อลงสู่สนามสำเร็จ]: จ่าย 1 Arcana ทำลายยูนิตศัตรู 1 ตัว",
         "effects": [
@@ -907,9 +921,9 @@
         "tags": ["mecha", "resonance"],
         "materials": "เวิร์กเกอร์ + แมกเน็ต + คอลเลคเตอร์",
         "materialSlots": [
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 },
-          { "tag": "mecha", "level": 1 }
+          { "cardId": "scrap_worker" },
+          { "cardId": "scrap_magnet" },
+          { "cardId": "scrap_collector" }
         ],
         "text": "[กดใช้บนสนาม, เทิร์นละ 1]: จ่าย 2 Arcana + เนรเทศ mecha 2 ใบจากสุสาน ทำลายยูนิตศัตรู 1 ตัว",
         "effects": [

@@ -224,7 +224,8 @@ class RoomManager {
         config: {
           chainMode: true,
           autoChoose: false,
-          interactiveChoice: true
+          interactiveChoice: true,
+          interactiveFusion: true
         }
       });
 

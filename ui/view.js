@@ -245,7 +245,11 @@
             const FXc = CG.effects;
             if (eff && FXc && FXc.checkCanActivate && !FXc.checkCanActivate(state, eff, ctx)) {
               const hasGraveOp = (eff.do || []).some(step => step.from === 'grave' || (step.target && step.target.zone === 'grave') || (Array.isArray(step.from) && step.from.length === 1 && step.from[0] === 'grave'));
-              if (hasGraveOp) {
+              const hasFusionOp = (eff.do || []).some(step => step.op === 'fusionSummon') || (eff.condition || []).some(cond => cond.op === 'canFusionSummon');
+              if (hasFusionOp) {
+                const isFromGrave = (eff.do || []).some(step => [].concat(step.materialsFrom || []).includes('grave')) || (eff.condition || []).some(cond => [].concat(cond.materialsFrom || []).includes('grave'));
+                reason = isFromGrave ? 'ไม่มีวัตถุดิบที่ตรงตามสูตรฟิวชั่นในสุสาน' : 'ไม่มีวัตถุดิบที่ตรงตามสูตรฟิวชั่นในมือ/สนาม';
+              } else if (hasGraveOp) {
                 reason = s.errors.NO_TARGET_IN_GRAVE || 'ไม่มีการ์ดเป้าหมายในสุสาน';
               } else {
                 reason = s.errors.CONDITION_FAILED || 'เงื่อนไขการใช้ไม่ครบถ้วน';
@@ -758,7 +762,13 @@
             const p = state.players[viewer];
             if (p && p.mana < cost) reason = s.errors.NOT_ENOUGH_MANA;
             else if (state.phase !== 'main1' && state.phase !== 'main2') reason = s.errors.WRONG_PHASE;
-            else reason = 'เงื่อนไขยังไม่ครบ';
+            const hasFusion = (eff.do || []).some(step => step.op === 'fusionSummon') || (eff.condition || []).some(cond => cond.op === 'canFusionSummon');
+            if (hasFusion) {
+              const isGrave = (eff.do || []).some(step => [].concat(step.materialsFrom || []).includes('grave')) || (eff.condition || []).some(cond => [].concat(cond.materialsFrom || []).includes('grave'));
+              reason = isGrave ? 'ไม่มีวัตถุดิบที่ตรงตามสูตรฟิวชั่นในสุสาน' : 'ไม่มีวัตถุดิบที่ตรงตามสูตรฟิวชั่นในมือ/สนาม';
+            } else {
+              reason = 'เงื่อนไขยังไม่ครบ';
+            }
           }
         }
         const cellClass = 'detail-effect-cell' + (isUsable ? ' usable' : '');
@@ -823,6 +833,34 @@
           else if (sel.kind === 'field' && myP.monsters[sel.slot] && myP.monsters[sel.slot].uid === cardInst.uid) isMatchingSel = true;
           else if (sel.kind === 'spell' && myP.spells[sel.slot] && myP.spells[sel.slot].uid === cardInst.uid) isMatchingSel = true;
           else if (sel.kind === 'extra' && myP.extra[sel.idx] && myP.extra[sel.idx].uid === cardInst.uid) isMatchingSel = true;
+        }
+      }
+      if (!isMatchingSel && !isOpponent) {
+        const myP = state && state.players ? state.players[viewer] : null;
+        if (myP) {
+          const hIdx = myP.hand ? myP.hand.findIndex(c => c && c.uid === cardInst.uid) : -1;
+          if (hIdx >= 0) {
+            sel = { kind: 'hand', idx: hIdx };
+            isMatchingSel = true;
+          } else {
+            const mIdx = myP.monsters ? myP.monsters.findIndex(m => m && m.uid === cardInst.uid) : -1;
+            if (mIdx >= 0) {
+              sel = { kind: 'field', slot: mIdx };
+              isMatchingSel = true;
+            } else {
+              const spIdx = myP.spells ? myP.spells.findIndex(sp => sp && sp.uid === cardInst.uid) : -1;
+              if (spIdx >= 0) {
+                sel = { kind: 'spell', slot: spIdx };
+                isMatchingSel = true;
+              } else {
+                const exIdx = myP.extra ? myP.extra.findIndex(c => c && c.uid === cardInst.uid) : -1;
+                if (exIdx >= 0) {
+                  sel = { kind: 'extra', idx: exIdx };
+                  isMatchingSel = true;
+                }
+              }
+            }
+          }
         }
       }
       const menuActions = isMatchingSel ? V.getMenuActions(state, viewer, sel, legalActions) : [];
@@ -926,12 +964,17 @@
           if (dis) btns += '<button class="cmd-cell disabled" data-reason="' + esc(dis.reason || '') + '">' + esc(dis.label) + '</button>';
         }
       } else if (isMatchingSel && sel.kind === 'extra') {
-        const canExtra = menuActions.find(x => x.type === 'extraSummon' && x.enabled);
-        if (canExtra) {
-          btns += '<button class="cmd-cell enabled" data-act="callExtra:' + sel.idx + '">' + esc(a.extraSummon) + '</button>';
+        if (d.type === 'fusion') {
+          const recipeText = d.materials || (d.materialSlots ? d.materialSlots.map(s => s.cardId || s.tag).join(' + ') : '');
+          btns += '<button class="cmd-cell disabled" data-reason="อัญเชิญผ่านการ์ดสเปลฟิวชั่น (เช่น สแครป ฟิวชั่น) โดยใช้วัตถุดิบ: ' + esc(recipeText) + '">🌀 Resonance Fusion (อัญเชิญด้วยสเปล)</button>';
         } else {
-          const dis = menuActions.find(x => x.type === 'extraSummon' && !x.enabled);
-          if (dis) btns += '<button class="cmd-cell disabled" data-reason="' + esc(dis.reason || '') + '">' + esc(a.extraSummon) + '</button>';
+          const canExtra = menuActions.find(x => x.type === 'extraSummon' && x.enabled);
+          if (canExtra) {
+            btns += '<button class="cmd-cell enabled" data-act="callExtra:' + sel.idx + '">' + esc(a.extraSummon) + '</button>';
+          } else {
+            const dis = menuActions.find(x => x.type === 'extraSummon' && !x.enabled);
+            if (dis) btns += '<button class="cmd-cell disabled" data-reason="' + esc(dis.reason || '') + '">' + esc(a.extraSummon) + '</button>';
+          }
         }
       }
 

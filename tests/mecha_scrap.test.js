@@ -118,7 +118,7 @@ module.exports = [
       const s = game({
         turn: 3, activeIdx: 0, phase: 'main1',
         p0: {
-          monsters: { 0: 'scrap_dynamo', 1: 'scrap_droid' },
+          monsters: { 0: 'scrap_dynamo', 1: 'scrap_collector' },
           hand: ['scrap_fusion'],
           deck: ['scrap_worker'],
           extra: ['scrap_sentinel'],
