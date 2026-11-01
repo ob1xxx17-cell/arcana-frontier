@@ -186,6 +186,7 @@
 
     const res = DB.saveCustomDeck(activeDeck);
     if (res.ok) {
+      if (CG.cards) CG.cards[activeDeck.key] = activeDeck;
       toast('💾 บันทึกเด็ค "' + activeDeck.name + '" เรียบร้อยแล้ว!');
       loadDeckToEdit(activeDeck.key);
       renderModal();
@@ -195,25 +196,28 @@
   }
 
   function createNewDeck() {
-    const newDeck = DB.createTemplateDeck('เด็คสร้างเอง', null);
-    newDeck.name = 'เด็คใหม่ ' + (DB.loadCustomDecks().length + 1);
-    newDeck.main = [];
-    newDeck.extra = [];
+    const count = DB.loadCustomDecks().length + 1;
+    // ใช้เด็คปัจจุบันเป็นโครงร่างเริ่มต้น หรือสร้างใหม่
+    const baseKey = (activeDeck && activeDeck.key) ? activeDeck.key : null;
+    const newDeck = DB.createTemplateDeck('เด็คของฉัน ' + count, baseKey);
+    newDeck.isCustom = true;
+    if (CG.cards) CG.cards[newDeck.key] = newDeck;
     activeDeck = newDeck;
     activeKey = newDeck.key;
     renderModal();
-    toast('✨ สร้างเด็คใหม่ (เด็คว่างเปล่า) เรียบร้อย! แตะการ์ดจากคลังฝั่งขวาเพื่อเพิ่มเข้าเด็คได้เลย');
+    toast('✨ สร้างเด็คใหม่ "' + newDeck.name + '" สำเร็จ! สามารถแก้ไขและเปลี่ยนการ์ดได้ตามใจชอบ');
   }
 
   function cloneCurrentDeck() {
     if (!activeDeck) return;
-    const clone = DB.createTemplateDeck(activeDeck.name + ' (ฉบับแก้ไข)', null);
-    clone.main = (activeDeck.main || []).map(c => Object.assign({}, c));
-    clone.extra = (activeDeck.extra || []).map(c => Object.assign({}, c));
+    const count = DB.loadCustomDecks().length + 1;
+    const clone = DB.createTemplateDeck(activeDeck.name + ' (ฉบับแก้ไข ' + count + ')', activeDeck.key);
+    clone.isCustom = true;
+    if (CG.cards) CG.cards[clone.key] = clone;
     activeDeck = clone;
     activeKey = clone.key;
     renderModal();
-    toast('📋 คัดลอกเด็คเรียบร้อย คุณสามารถปรับแต่งและบันทึกได้เลย');
+    toast('📋 คัดลอกเด็ค "' + clone.name + '" เรียบร้อย คุณสามารถปรับแต่งและบันทึกได้เลย');
   }
 
   function deleteCurrentDeck() {
@@ -272,6 +276,19 @@
     const unlocked = (acc && Array.isArray(acc.unlockedDecks) && acc.unlockedDecks.length)
       ? acc.unlockedDecks
       : null;
+
+    // โหลดเด็ค Custom ทั้งหมดที่บันทึกไว้เข้าสู่ cards
+    const savedCustom = DB.loadCustomDecks();
+    if (Array.isArray(savedCustom)) {
+      savedCustom.forEach(cd => {
+        if (cd && cd.key) cards[cd.key] = cd;
+      });
+    }
+
+    // ถ้ามี activeDeck ที่กำลังสร้างใหม่หรือแก้ไขอยู่ ให้แน่ใจว่าอยู่ใน cards เสมอ
+    if (activeDeck && activeDeck.key) {
+      cards[activeDeck.key] = activeDeck;
+    }
 
     // เลือกเฉพาะเด็คที่ปลดล็อกแล้ว หรือเด็ค Custom
     const allKeys = Object.keys(cards);
@@ -514,6 +531,7 @@
             '<button class="db-tool-btn" id="dbBtnNew">➕ เด็คใหม่</button>' +
             '<button class="db-tool-btn" id="dbBtnClone">📑 คัดลอก</button>' +
             (isCustom ? '<button class="db-tool-btn danger" id="dbBtnDel">🗑️ ลบเด็ค</button>' : '') +
+            (isCustom ? '<button class="db-tool-btn" id="dbBtnClear" title="ล้างการ์ดทั้งหมดเพื่อเริ่มใส่ใหม่จากเด็คว่าง">🧹 ล้างการ์ดในเด็ค</button>' : '') +
           '</div>' +
         '</div>' +
         '<div class="db-header-right">' +
@@ -698,6 +716,17 @@
       // Delete
       if (e.target.closest('#dbBtnDel')) {
         deleteCurrentDeck();
+        return;
+      }
+      // Clear
+      if (e.target.closest('#dbBtnClear')) {
+        if (!activeDeck || !activeDeck.isCustom) return;
+        if (confirm('ต้องการล้างการ์ดทั้งหมดออกจากเด็คเพื่อเริ่มใส่ใหม่ใช่หรือไม่?')) {
+          activeDeck.main = [];
+          activeDeck.extra = [];
+          renderModal();
+          toast('🧹 ล้างการ์ดในเด็คเรียบร้อยแล้ว แตะการ์ดฝั่งขวาเพื่อเพิ่มการ์ดใหม่ได้เลย');
+        }
         return;
       }
 
