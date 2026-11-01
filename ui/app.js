@@ -673,6 +673,10 @@
       } catch (_) {}
 
       if (this.current) {
+        if (!this.current.level) this.current.level = 1;
+        if (!this.current.stats) {
+          this.current.stats = { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
+        }
         CG.ui.curr20 = this.current.curr20 !== undefined ? this.current.curr20 : 100;
         CG.ui.curr100 = this.current.curr100 !== undefined ? this.current.curr100 : 1;
         CG.ui.mailClaimed = !!this.current.mailClaimed;
@@ -682,6 +686,46 @@
 
     isLoggedIn() {
       return !!(this.current && this.current.id);
+    },
+
+    recordMatchResult(st, v) {
+      if (!this.current) return;
+      if (!this.current.stats) {
+        this.current.stats = { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
+      }
+      const s = this.current.stats;
+      const isDraw = st.winner === 'draw';
+      const isWin = !isDraw && (st.winner === v);
+
+      if (isWin) {
+        s.wins = (s.wins || 0) + 1;
+        s.currentStreak = (s.currentStreak || 0) + 1;
+        if (s.currentStreak > (s.maxStreak || 0)) {
+          s.maxStreak = s.currentStreak;
+        }
+      } else if (!isDraw) {
+        s.losses = (s.losses || 0) + 1;
+        s.currentStreak = 0;
+      }
+
+      // Track max damage dealt by player v
+      let matchMaxDmg = 0;
+      (st.log || []).forEach(ev => {
+        if (ev.type === 'lpChange' && ev.delta < 0 && ev.player !== v) {
+          const dmg = Math.abs(ev.delta);
+          if (dmg > matchMaxDmg) matchMaxDmg = dmg;
+        }
+      });
+      if (matchMaxDmg > (s.maxDmg || 0)) {
+        s.maxDmg = matchMaxDmg;
+      }
+
+      // Track deck usage
+      if (!s.deckUsage) s.deckUsage = {};
+      const playedDeck = deckA || (this.current.unlockedDecks && this.current.unlockedDecks[0]) || 'dinosaur';
+      s.deckUsage[playedDeck] = (s.deckUsage[playedDeck] || 0) + 1;
+
+      this.save();
     },
 
     save() {
@@ -1325,8 +1369,31 @@
     }
 
     function openProfileModal(initialTab = 'info') {
-      const acc = Account.current;
+      const acc = Account.current || {};
       const isLogin = (initialTab === 'login');
+
+      const stats = acc.stats || { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
+      const wins = stats.wins || 0;
+      const losses = stats.losses || 0;
+      const totalGames = wins + losses;
+      const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) + '%' : '0.0%';
+      const maxDmg = (stats.maxDmg || 0).toLocaleString();
+      const maxStreak = stats.maxStreak || 0;
+
+      const deckUsageEntries = Object.entries(stats.deckUsage || {}).sort((a, b) => b[1] - a[1]);
+      let deckUsageHtml = '';
+      if (deckUsageEntries.length === 0 || totalGames === 0) {
+        deckUsageHtml = '<div style="font-size:0.8rem;color:#94a3b8;font-style:italic">ยังไม่มีประวัติการต่อสู้ (0 นัด)</div>';
+      } else {
+        deckUsageHtml = deckUsageEntries.map(([dk, count]) => {
+          const pct = Math.round((count / totalGames) * 100);
+          const deckInfo = CG.cards && CG.cards[dk];
+          const deckName = deckInfo ? deckInfo.name : dk;
+          const icon = dk === 'dinosaur' ? '🦖 ' : (dk === 'aquila' ? '🦅 ' : (dk === 'mecha_strike' ? '🤖 ' : '🎴 '));
+          return '<div style="font-size:0.8rem;margin-bottom:2px;display:flex;justify-content:space-between"><span>' + icon + V().esc(deckName) + '</span><span style="font-weight:700">' + pct + '% (' + count + ' นัด)</span></div>';
+        }).join('');
+      }
+
       const html = 
         '<div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:2px solid #2b1f1d;padding-bottom:8px">' +
           '<button id="tabProfileInfo" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:' + (isLogin ? '#e2e8f0' : '#fef08a') + ';box-shadow:1.5px 2px 0 #2b1f1d">👤 ข้อมูลผู้เล่น & สถิติ</button>' +
@@ -1338,23 +1405,23 @@
           '<div style="text-align:center;margin-bottom:14px">' +
             '<div style="width:68px;height:68px;border-radius:50%;background:#fef08a;border:3px solid #2b1f1d;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 6px">👤</div>' +
             '<div style="display:flex;align-items:center;justify-content:center;gap:6px">' +
-              '<h3 id="txtProfileNickname" style="margin:0;font-size:1.3rem;font-weight:900">' + V().esc(acc.nickname) + '</h3>' +
+              '<h3 id="txtProfileNickname" style="margin:0;font-size:1.3rem;font-weight:900">' + V().esc(acc.nickname || 'ผู้ท้าชิงนิรนาม') + '</h3>' +
               '<button id="btnEditNickname" title="แก้ไขชื่อผู้เล่น" style="background:#f1f5f9;border:1.5px solid #2b1f1d;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.8rem">✏️</button>' +
             '</div>' +
             '<div id="boxEditNickname" style="display:none;margin-top:8px">' +
               '<div style="display:flex;gap:6px;max-width:260px;margin:0 auto">' +
-                '<input type="text" id="inpNewNickname" maxlength="14" value="' + V().esc(acc.nickname) + '" style="flex:1;padding:4px 8px;border:2px solid #2b1f1d;border-radius:6px;font-weight:700;font-size:0.85rem" />' +
+                '<input type="text" id="inpNewNickname" maxlength="14" value="' + V().esc(acc.nickname || 'ผู้ท้าชิงนิรนาม') + '" style="flex:1;padding:4px 8px;border:2px solid #2b1f1d;border-radius:6px;font-weight:700;font-size:0.85rem" />' +
                 '<button id="btnSaveNickname" class="gold" style="padding:4px 10px;font-size:0.85rem">บันทึก</button>' +
               '</div>' +
             '</div>' +
-            '<div style="color:#64748b;font-size:0.82rem;margin-top:2px">Level ' + acc.level + ' • ' + V().esc(acc.rank) + '</div>' +
+            '<div style="color:#64748b;font-size:0.82rem;margin-top:2px">Level ' + (acc.level || 1) + ' • ' + V().esc(acc.rank || '🥉 Bronze I') + '</div>' +
           '</div>' +
 
           // ID and Passcode Cards
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">' +
             '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:8px;padding:10px;box-shadow:1.5px 2px 0 #2b1f1d">' +
               '<div style="font-size:0.72rem;color:#64748b;font-weight:800">ID ประจำตัว:</div>' +
-              '<div style="font-size:1.1rem;font-weight:900;color:#1e293b;letter-spacing:1px;margin:2px 0 6px">' + V().esc(acc.id) + '</div>' +
+              '<div style="font-size:1.1rem;font-weight:900;color:#1e293b;letter-spacing:1px;margin:2px 0 6px">' + V().esc(acc.id || 'AF-00000') + '</div>' +
               '<button id="btnCopyProfileId" style="width:100%;background:#fef08a;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:900;font-size:0.75rem;cursor:pointer">📋 คัดลอก ID</button>' +
             '</div>' +
             '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:8px;padding:10px;box-shadow:1.5px 2px 0 #2b1f1d">' +
@@ -1368,19 +1435,18 @@
           '</div>' +
 
           '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#166534;margin-bottom:12px;line-height:1.4">' +
-            '💡 <strong>เคล็ดลับสำคัญ:</strong> บันทึก <strong>ID (' + V().esc(acc.id) + ')</strong> และ <strong>PIN</strong> นี้ไว้ เมื่อเปลี่ยนอุปกรณ์หรือเปิดเว็บใหม่ สามารถนำมากรอกในแท็บ <strong>"เข้าสู่ระบบ"</strong> เพื่อเล่นไอดีเดิม ข้อมูลเหรียญและการ์ดจะกลับมาครบถ้วน!' +
+            '💡 <strong>เคล็ดลับสำคัญ:</strong> บันทึก <strong>ID (' + V().esc(acc.id || '') + ')</strong> และ <strong>PIN</strong> นี้ไว้ เมื่อเปลี่ยนอุปกรณ์หรือเปิดเว็บใหม่ สามารถนำมากรอกในแท็บ <strong>"เข้าสู่ระบบ"</strong> เพื่อเล่นไอดีเดิม ข้อมูลเหรียญและการ์ดจะกลับมาครบถ้วน!' +
           '</div>' +
 
           // Stats row
           '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:12px">' +
-            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">อัตราชนะ</div><div style="font-size:1.15rem;font-weight:900;color:#15803d">68.0%</div><div style="font-size:0.68rem;color:#94a3b8">34W / 16L</div></div>' +
-            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ดาเมจสูงสุด</div><div style="font-size:1.15rem;font-weight:900;color:#b91c1c">4,200</div><div style="font-size:0.68rem;color:#94a3b8">FP ใน 1 ตา</div></div>' +
-            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ชนะต่อเนื่อง</div><div style="font-size:1.15rem;font-weight:900;color:#d97706">7 WIN</div><div style="font-size:0.68rem;color:#94a3b8">สตรีคสูงสุด</div></div>' +
+            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">อัตราชนะ</div><div style="font-size:1.15rem;font-weight:900;color:#15803d">' + winRate + '</div><div style="font-size:0.68rem;color:#94a3b8">' + wins + 'W / ' + losses + 'L</div></div>' +
+            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ดาเมจสูงสุด</div><div style="font-size:1.15rem;font-weight:900;color:#b91c1c">' + maxDmg + '</div><div style="font-size:0.68rem;color:#94a3b8">FP ใน 1 ตา</div></div>' +
+            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ชนะต่อเนื่อง</div><div style="font-size:1.15rem;font-weight:900;color:#d97706">' + maxStreak + ' WIN</div><div style="font-size:0.68rem;color:#94a3b8">สตรีคสูงสุด</div></div>' +
           '</div>' +
           '<div style="border-top:2px solid #e2e8f0;padding-top:10px;margin-bottom:10px">' +
             '<div style="font-weight:800;font-size:0.85rem;margin-bottom:4px">เด็คที่ใช้งานบ่อยที่สุด:</div>' +
-            '<div style="font-size:0.8rem;margin-bottom:2px;display:flex;justify-content:space-between"><span>🦖 อภิมหาไดโนเสาร์</span><span style="font-weight:700">68% (34 นัด)</span></div>' +
-            '<div style="font-size:0.8rem;display:flex;justify-content:space-between"><span>🦅 กองทัพโรมันอควิลา</span><span style="font-weight:700">32% (16 นัด)</span></div>' +
+            deckUsageHtml +
           '</div>' +
           '<button id="btnProfileLogout" style="width:100%;margin-top:8px;background:#fee2e2;border:2px solid #b91c1c;color:#b91c1c;padding:10px;border-radius:8px;font-weight:900;font-size:0.9rem;cursor:pointer">🚪 ออกจากระบบ (Logout)</button>' +
         '</div>' +
@@ -2586,7 +2652,7 @@
             '<div class="wf-profile-box" id="btnProfile" title="แตะเพื่อดูสถิติและโปรไฟล์">' +
               '<div class="wf-avatar-circle">' +
                 '<span>👤</span>' +
-                '<small>Lv.14</small>' +
+                '<small>Lv.' + ((Account.current && Account.current.level) || 1) + '</small>' +
               '</div>' +
               '<div class="wf-profile-meta">' +
                 '<div class="wf-profile-name">' + V().esc((Account.current && Account.current.nickname) || 'ผู้ท้าชิงนิรนาม') + '</div>' +
@@ -3105,6 +3171,7 @@
         endSoundPlayed = true;
         if (st.winner === v) AudioFX.play('fanfare');
         else if (st.winner !== 'draw') AudioFX.play('defeat');
+        try { Account.recordMatchResult(st, v); } catch (_) {}
       }
       h = buildCinematicGameOver(st, v);
     } else if (mode === 'pvp' && confirmedViewer !== v) {

@@ -1034,7 +1034,8 @@
       const isLowFp = p.lp <= 2500;
       const isBot = st.mode === 'bot' && idx === 1;
       const avatarIcon = isBot ? '🤖' : '👤';
-      const levelText = isBot ? 'Lv.AI' : 'Lv.14';
+      const userLevel = (CG.account && CG.account.current && CG.account.current.level) || 1;
+      const levelText = isBot ? 'Lv.AI' : ('Lv.' + userLevel);
       const idText = isBot ? 'ID: BOT-AI' : ((CG.account && CG.account.current && CG.account.current.id) ? ('ID: ' + CG.account.current.id) : 'ID: AF-88294');
 
       return '<div class="sketch-panel-stack ' + (act ? 'active' : '') + (isOpponent ? ' is-opp' : ' is-self') + '">' +
