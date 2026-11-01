@@ -3026,7 +3026,7 @@
                 const resp = await fetch('/api/code/redeem', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ code: rawCode, accountId: accId })
+                  body: JSON.stringify({ code: rawCode, accountId: accId, accountData: Account.current })
                 });
                 result = await resp.json();
               } catch (netErr) {
@@ -3034,8 +3034,8 @@
               }
             }
 
-            // Local fallback if offline
-            if (!result) {
+            // Local fallback if offline or account needs local resolution
+            if (!result || (result && !result.success && result.message && result.message.includes('ไม่พบ'))) {
               const fallbackCodes = {
                 'WELCOME2026': { title: '🎁 ของขวัญต้อนรับผู้เล่นใหม่', curr20: 200, curr100: 5 },
                 'ARCANAFREE': { title: '✨ โค้ดฉลองเปิดทดสอบ Arcana Frontier', curr20: 150, curr100: 3 },

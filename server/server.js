@@ -313,12 +313,12 @@ const server = http.createServer((req, res) => {
   // --- API: REDEEM CODES ---
   if (pathname === '/api/code/redeem' && req.method === 'POST') {
     parseJsonBody(req, (err, data) => {
-      if (err || !data.code || !data.accountId) {
+      if (err || !data || !data.code) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'ข้อมูลไม่ครบถ้วน กรุณากรอกโค้ด' }));
         return;
       }
-      const result = codeManager.redeem(data.code, data.accountId);
+      const result = codeManager.redeem(data.code, data.accountId, data.accountData);
       res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(result));
     });

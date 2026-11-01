@@ -188,11 +188,12 @@ class CodeManager {
     return { success: true, code: newCode };
   }
 
-  redeem(rawCode, accountId) {
-    if (!rawCode || !accountId) {
-      return { success: false, message: 'ข้อมูลไม่ครบถ้วน กรุณากรอกโค้ดและไอดีผู้เล่น' };
+  redeem(rawCode, accountId, accountData = null) {
+    if (!rawCode) {
+      return { success: false, message: 'กรุณากรอกรหัสโค้ด' };
     }
 
+    const cleanAccId = (accountId || 'player').trim();
     const code = rawCode.trim().toUpperCase();
     const entry = this.codes.get(code);
 
@@ -200,7 +201,7 @@ class CodeManager {
       return { success: false, message: `ไม่พบโค้ด "${code}" ในระบบ หรือโค้ดไม่ถูกต้อง` };
     }
 
-    const accIdKey = accountId.toLowerCase();
+    const accIdKey = cleanAccId.toLowerCase();
     if (entry.usedBy.includes(accIdKey)) {
       return { success: false, message: 'ไอดีนี้เคยแลกรับโค้ดนี้ไปแล้ว (ใช้ได้ 1 ครั้งต่อไอดี)' };
     }
@@ -213,10 +214,34 @@ class CodeManager {
       return { success: false, message: 'โค้ดนี้ถูกใช้งานครบตามจำนวนจำกัดแล้ว' };
     }
 
-    // Apply reward to account
-    const acc = accountManager.getAccount(accountId);
+    // Apply reward to account (auto-provision if missing from server memory)
+    let acc = accountManager.getAccount(cleanAccId);
     if (!acc) {
-      return { success: false, message: 'ไม่พบบัญชีผู้เล่นในระบบ' };
+      const now = Date.now();
+      acc = {
+        id: cleanAccId,
+        username: cleanAccId,
+        email: cleanAccId,
+        password: (accountData && accountData.password) || '',
+        passcode: (accountData && accountData.passcode) || '',
+        nickname: (accountData && accountData.nickname) || cleanAccId,
+        level: (accountData && accountData.level) || 1,
+        rank: (accountData && accountData.rank) || '🥉 Bronze I',
+        curr20: (accountData && typeof accountData.curr20 === 'number') ? accountData.curr20 : 100,
+        curr100: (accountData && typeof accountData.curr100 === 'number') ? accountData.curr100 : 1,
+        starterDeckChosen: (accountData && accountData.starterDeckChosen) || null,
+        unlockedDecks: (accountData && Array.isArray(accountData.unlockedDecks)) ? accountData.unlockedDecks : [],
+        onboarded: true,
+        mailClaimed: !!(accountData && accountData.mailClaimed),
+        ownedCards: (accountData && Array.isArray(accountData.ownedCards)) ? accountData.ownedCards : [],
+        stats: (accountData && accountData.stats) ? accountData.stats : { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} },
+        trialsProgress: (accountData && accountData.trialsProgress) ? accountData.trialsProgress : {},
+        createdAt: (accountData && accountData.createdAt) || now,
+        lastLoginAt: now
+      };
+      accountManager.accounts.set(accIdKey, acc);
+      accountManager.save();
+      console.log(`[CODES] Auto-provisioned missing account "${cleanAccId}" during redeem`);
     }
 
     acc.curr20 = (Number(acc.curr20) || 0) + (entry.curr20 || 0);
