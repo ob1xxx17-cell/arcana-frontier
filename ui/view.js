@@ -20,7 +20,7 @@
     state.players.forEach(p => { ['deck', 'hand', 'extra', 'grave', 'removed', 'monsters', 'spells'].forEach(z => p[z].forEach(add)); add(p.fieldSpell); });
     return m;
   };
-  V.pname = (state, i) => (i === 0 ? ((CG.account && CG.account.current && CG.account.current.nickname) ? CG.account.current.nickname : S().app.p1) : (state.mode === 'bot' ? S().app.bot : S().app.p2));
+  V.pname = (state, i) => (i === 0 ? ((CG.account && CG.account.current && CG.account.current.nickname) ? CG.account.current.nickname : S().app.p1) : (state.players && state.players[1] && state.players[1].name && state.players[1].name !== 'P2' ? state.players[1].name : (state.mode === 'bot' ? S().app.bot : S().app.p2)));
 
   function fill(t, o) { return t.replace(/\{(\w+)\}/g, (_, k) => (o[k] == null ? '' : o[k])); }
 

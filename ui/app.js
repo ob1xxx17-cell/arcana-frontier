@@ -8,6 +8,7 @@
   const cfg = (CG.ui.cfg = Object.assign({ botDelayMs: 550 }, CG.ui.cfg));
 
   let state = null, mode = 'bot', deckA = null, deckB = null;
+  function isBotMatch() { return mode !== 'online'; }
   let activeTrial = null;
   let sel = null, handSel = new Set(), timer = null, confirmedViewer = null, seed = 1;
   let evBuf = [];
@@ -385,7 +386,7 @@
     CG.ui.timers.lastTick = now;
 
     const b = botToAct();
-    const activeP = (mode === 'bot' && (botBusy || b !== null)) ? 1 : state.activeIdx;
+    const activeP = (isBotMatch() && (botBusy || b !== null)) ? 1 : state.activeIdx;
     if (activeP === 0) CG.ui.timers.p0 += dt;
     else if (activeP === 1) CG.ui.timers.p1 += dt;
 
@@ -3297,7 +3298,26 @@
     endSoundPlayed = false;
     cleanupDragVisuals();
     seed = (Math.random() * 1e9) | 0;
-    state = E().createGame({ deckA, deckB, seed, mode, config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true } });
+    state = E().createGame({
+      deckA,
+      deckB,
+      seed,
+      mode: (mode === 'online' ? 'pvp' : 'bot'),
+      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true }
+    });
+    if (isBotMatch() && state && state.players) {
+      if (state.players[0]) {
+        state.players[0].name = (Account.current && Account.current.nickname) ? Account.current.nickname : 'Player 1';
+      }
+      if (state.players[1]) {
+        if (activeTrial && activeTrial.chapterDeck && CG.cards[activeTrial.chapterDeck]) {
+          const d = CG.cards[activeTrial.chapterDeck];
+          state.players[1].name = 'บอส ' + (d.name || 'AI');
+        } else {
+          state.players[1].name = 'บอท AI';
+        }
+      }
+    }
     // หากผู้เล่นครอบครองการ์ด Secret Rare ลูน่า ให้เปลี่ยนการ์ด luna_leader ในเด็คเป็นการ์ด Secret Rare (alt-art)
     try {
       const owned = getOwnedCards();
@@ -3351,10 +3371,10 @@
     if (mode === 'online') {
       return (CG.network && CG.network.playerIndex != null) ? CG.network.playerIndex : 0;
     }
-    return mode === 'bot' ? 0 : actor();
+    return 0; // ในโหมดเล่นคนเดียว/ด่านทดสอบ/บอท ผู้เล่นจริงคือ Player 0 เสมอ ไม่มีการสลับจอ 2 คน
   }
   function botToAct() {
-    if (mode !== 'bot' || state.ended) return null;
+    if (!isBotMatch() || state.ended) return null;
     if (state.phase === 'mulligan') return state.players[1].flags.mulliganDone ? null : 1;
     return actor() === 1 ? 1 : null;
   }
@@ -3376,7 +3396,7 @@
       legal,
       handSel,
       speed: currentSpeed,
-      botBusy: (mode === 'bot' && (botBusy || botToAct() !== null)),
+      botBusy: (isBotMatch() && (botBusy || botToAct() !== null)),
       botBanner: botBannerText,
       botBannerFade,
       cardHl,
@@ -3681,8 +3701,6 @@
         try { Account.recordMatchResult(st, v); } catch (_) {}
       }
       h = buildCinematicGameOver(st, v);
-    } else if (mode === 'pvp' && confirmedViewer !== v) {
-      h = '<div class="overlay handoff"><div class="modal"><h2>' + a.handoff + '</h2><div class="big">' + V().esc(V().pname(st, v)) + '</div><button class="gold" data-ov="ready">' + a.handoffReady + '</button></div></div>';
     } else if (st.phase === 'mulligan' && !p.flags.mulliganDone) {
       h = '<div class="overlay"><div class="modal"><h2>' + a.mulliganTitle + ' — ' + V().esc(V().pname(st, v)) + '</h2><p>' + a.mulliganHint + '</p>' + handCards() +
         '<div class="row" style="justify-content:center"><button class="primary" data-ov="mulSel" ' + (handSel.size ? '' : 'disabled') + '>' + a.mulliganSwapSel + '</button><button data-ov="mulAll">' + a.mulliganSwapAll + '</button><button class="gold" data-ov="keep">' + a.mulliganKeep + '</button></div></div></div>';
@@ -4618,7 +4636,7 @@
           spellSlot = e.target.closest('[data-spell-slot]'),
           fz = e.target.closest('[data-zone2="field"]');
 
-    const isMyTurn = (state.activeIdx === v && (mode !== 'bot' || (botToAct() === null && !botBusy)) && !state.pending && state.phase !== 'mulligan');
+    const isMyTurn = (state.activeIdx === v && (!isBotMatch() || (botToAct() === null && !botBusy)) && !state.pending && state.phase !== 'mulligan');
 
     // ตรวจสอบการคลิกช่องสนามหรือการ์ดเพื่อเปิดดูการ์ดเต็มใบ (Inspect Modal)
     // 1) ช่องของฝ่ายตรงข้าม (มอนสเตอร์)
