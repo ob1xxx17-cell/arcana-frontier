@@ -8,6 +8,7 @@
   const cfg = (CG.ui.cfg = Object.assign({ botDelayMs: 550 }, CG.ui.cfg));
 
   let state = null, mode = 'bot', deckA = null, deckB = null;
+  let activeTrial = null;
   let sel = null, handSel = new Set(), timer = null, confirmedViewer = null, seed = 1;
   let evBuf = [];
   let pendingSel = new Set();  // 5D: ดัชนีที่ผู้เล่นเลือกใน pending picker
@@ -703,6 +704,37 @@
         if (s.currentStreak > (s.maxStreak || 0)) {
           s.maxStreak = s.currentStreak;
         }
+
+        // หากเป็นการประลองในโหมดด่านทดสอบ (Trial)
+        if (activeTrial) {
+          if (activeTrial.reward20) {
+            CG.ui.curr20 = (CG.ui.curr20 || 0) + activeTrial.reward20;
+          }
+          if (activeTrial.reward100) {
+            CG.ui.curr100 = (CG.ui.curr100 || 0) + activeTrial.reward100;
+          }
+          if (!this.current.trialsProgress) this.current.trialsProgress = {};
+          const curProg = this.current.trialsProgress[activeTrial.chapterDeck] || 0;
+          if (activeTrial.stageIdx > curProg) {
+            this.current.trialsProgress[activeTrial.chapterDeck] = activeTrial.stageIdx;
+          }
+          // ปลดล็อกเด็คเมื่อผ่านด่าน 3
+          if (activeTrial.stageIdx === 3 && activeTrial.unlockDeck) {
+            const unDeck = activeTrial.unlockDeck;
+            if (!this.current.unlockedDecks) this.current.unlockedDecks = [];
+            if (!this.current.unlockedDecks.includes(unDeck)) {
+              this.current.unlockedDecks.push(unDeck);
+            }
+            const d = CG.cards && CG.cards[unDeck];
+            if (d) {
+              const owned = getOwnedCards();
+              (d.main || []).forEach(c => owned.add(c.id));
+              (d.extra || []).forEach(c => owned.add(c.id));
+              saveOwnedCards(owned);
+            }
+            activeTrial.justUnlocked = unDeck;
+          }
+        }
       } else if (!isDraw) {
         s.losses = (s.losses || 0) + 1;
         s.currentStreak = 0;
@@ -802,6 +834,7 @@
             mailClaimed: false,
             ownedCards: [],
             stats: { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} },
+            trialsProgress: {},
             createdAt: Date.now()
           };
 
@@ -1554,25 +1587,40 @@
     function pullGachaPack(deckKey, count) {
       const d = CG.cards && CG.cards[deckKey];
       if (!d) return [];
-      const allCards = [].concat(d.main || [], d.extra || []);
+      const mainCards = d.main || [];
+      const extraCards = d.extra || [];
       const rarePool = d.rarePool || [];
+      const allCards = [].concat(mainCards, extraCards, rarePool);
       const owned = getOwnedCards();
       const pulled = [];
 
       for (let i = 0; i < count; i++) {
-        const unownedList = allCards.filter(c => !owned.has(c.id));
+        const isGuaranteedSlot = (count === 10 && i === count - 1);
         let picked;
-        // Secret rare card chance from rarePool
-        const rareChance = (count === 10 && i === count - 1) ? 0.35 : 0.12;
-        if (rarePool.length > 0 && Math.random() < rareChance) {
-          picked = rarePool[(Math.random() * rarePool.length) | 0];
-        } else if (count === 10 && i === count - 1 && d.extra && d.extra.length > 0) {
-          picked = d.extra[(Math.random() * d.extra.length) | 0];
-        } else if (unownedList.length > 0 && Math.random() < 0.65) {
-          picked = unownedList[(Math.random() * unownedList.length) | 0];
+        const roll = Math.random();
+
+        if (isGuaranteedSlot) {
+          // ใบที่ 10 ของการสุ่ม 10 ซอง: การันตี Extra Deck (หรือ Secret Rare 5.0%)
+          if (rarePool.length > 0 && roll < 0.05) {
+            picked = rarePool[(Math.random() * rarePool.length) | 0];
+          } else if (extraCards.length > 0) {
+            picked = extraCards[(Math.random() * extraCards.length) | 0];
+          } else {
+            picked = allCards[(Math.random() * allCards.length) | 0];
+          }
         } else {
-          picked = allCards[(Math.random() * allCards.length) | 0];
+          // สุ่มปกติ: Secret Rare 1.5% (0.015), Extra Deck 10.0% (0.10), Main Deck 88.5%
+          if (rarePool.length > 0 && roll < 0.015) {
+            picked = rarePool[(Math.random() * rarePool.length) | 0];
+          } else if (extraCards.length > 0 && roll < 0.115) {
+            picked = extraCards[(Math.random() * extraCards.length) | 0];
+          } else {
+            picked = mainCards.length > 0
+              ? mainCards[(Math.random() * mainCards.length) | 0]
+              : allCards[(Math.random() * allCards.length) | 0];
+          }
         }
+
         const isNew = !owned.has(picked.id);
         if (isNew) {
           owned.add(picked.id);
@@ -1971,6 +2019,83 @@
       };
     }
 
+    function openGachaRatesModal(deckKey) {
+      const d = CG.cards && CG.cards[deckKey];
+      if (!d) return;
+      const mainCards = d.main || [];
+      const extraCards = d.extra || [];
+      const rarePool = d.rarePool || [];
+
+      // คำนวณ % เรทรวม
+      const secretRateTotal = rarePool.length > 0 ? 1.5 : 0;
+      const extraRateTotal = 10.0;
+      const mainRateTotal = 100.0 - secretRateTotal - extraRateTotal;
+
+      const secretRatePerCard = rarePool.length ? (secretRateTotal / rarePool.length).toFixed(3) : '0.000';
+      const extraRatePerCard = extraCards.length ? (extraRateTotal / extraCards.length).toFixed(3) : '0.000';
+      const mainRatePerCard = mainCards.length ? (mainRateTotal / mainCards.length).toFixed(3) : '0.000';
+
+      const renderCardRow = (c, rateStr, rarityLabel, rarityColor) => {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border:1.5px solid #e2e8f0;border-radius:6px;margin-bottom:6px">' +
+          '<div style="display:flex;align-items:center;gap:10px">' +
+            '<span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:900;color:#fff;background:' + rarityColor + '">' + rarityLabel + '</span>' +
+            '<span style="font-weight:800;font-size:0.9rem;color:#1e293b">' + V().esc(c.name) + '</span>' +
+            (c.level ? '<span style="font-size:0.75rem;color:#64748b">Lv.' + c.level + '</span>' : '') +
+          '</div>' +
+          '<div style="font-weight:900;font-size:0.95rem;color:#0f172a">' + rateStr + '%</div>' +
+        '</div>';
+      };
+
+      let contentHtml = '<div style="max-height:65vh;overflow-y:auto;padding-right:4px">';
+
+      // Badges
+      contentHtml += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;text-align:center">' +
+        '<div style="background:#fef3c7;border:1.5px solid #d97706;border-radius:8px;padding:8px">' +
+          '<div style="font-size:0.75rem;font-weight:800;color:#92400e">🌟 การ์ดลับ Secret</div>' +
+          '<div style="font-size:1.15rem;font-weight:900;color:#b45309">' + secretRateTotal.toFixed(1) + '%</div>' +
+          '<div style="font-size:0.7rem;color:#b45309">10x การันตี: 5%</div>' +
+        '</div>' +
+        '<div style="background:#ede9fe;border:1.5px solid #8b5cf6;border-radius:8px;padding:8px">' +
+          '<div style="font-size:0.75rem;font-weight:800;color:#6d28d9">🌀 Extra Deck (Apex/Fusion)</div>' +
+          '<div style="font-size:1.15rem;font-weight:900;color:#7c3aed">' + extraRateTotal.toFixed(1) + '%</div>' +
+          '<div style="font-size:0.7rem;color:#7c3aed">10x การันตี: 95%</div>' +
+        '</div>' +
+        '<div style="background:#f1f5f9;border:1.5px solid #94a3b8;border-radius:8px;padding:8px">' +
+          '<div style="font-size:0.75rem;font-weight:800;color:#475569">⚔️ Main Deck ทั่วไป</div>' +
+          '<div style="font-size:1.15rem;font-weight:900;color:#334155">' + mainRateTotal.toFixed(1) + '%</div>' +
+          '<div style="font-size:0.7rem;color:#64748b">มอนสเตอร์/สเปล</div>' +
+        '</div>' +
+      '</div>';
+
+      if (rarePool.length > 0) {
+        contentHtml += '<div style="font-weight:900;font-size:0.85rem;color:#92400e;margin:10px 0 6px">🌟 การ์ดลับประจำซอง (Secret Rare - ' + secretRateTotal + '%)</div>';
+        rarePool.forEach(c => {
+          contentHtml += renderCardRow(c, secretRatePerCard, 'SECRET', '#d97706');
+        });
+      }
+
+      if (extraCards.length > 0) {
+        contentHtml += '<div style="font-weight:900;font-size:0.85rem;color:#6d28d9;margin:12px 0 6px">🌀 Extra Deck (Apex & Fusion - ' + extraRateTotal + '%)</div>';
+        extraCards.forEach(c => {
+          contentHtml += renderCardRow(c, extraRatePerCard, 'EXTRA', '#7c3aed');
+        });
+      }
+
+      if (mainCards.length > 0) {
+        contentHtml += '<div style="font-weight:900;font-size:0.85rem;color:#334155;margin:12px 0 6px">⚔️ Main Deck (เด็คหลัก - ' + mainRateTotal + '%)</div>';
+        mainCards.forEach(c => {
+          contentHtml += renderCardRow(c, mainRatePerCard, c.type === 'spell' ? 'SPELL' : 'MAIN', '#475569');
+        });
+      }
+
+      contentHtml += '</div>';
+
+      const rm = showWfModal('📊 อัตราการออกของการ์ด: ' + V().esc(d.name), contentHtml);
+      if (rm) rm.onclick = (e) => {
+        if (e.target.closest('#btnModalClose') || e.target === rm) rm.remove();
+      };
+    }
+
     let currentShopDeck = 'mecha_strike';
     function openShopModal(deckKey) {
       if (deckKey) currentShopDeck = deckKey;
@@ -2017,6 +2142,10 @@
               '<div class="fanned-card fan-center" data-fanned-idx="1" style="cursor:pointer" title="แตะเพื่ออ่านเอฟเฟกต์เต็ม">' + centerCardHtml + '</div>' +
             '</div>' +
             '<div class="shop-deck-name-tag">' + V().esc(curDeck.name) + '</div>' +
+            '<div class="shop-rates-bar" id="btnShopRates" style="cursor:pointer;margin:0 auto 12px;padding:6px 12px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.8rem;color:#334155;display:flex;align-items:center;justify-content:space-between;max-width:420px;box-shadow:1px 2px 0 #cbd5e1" title="แตะเพื่อดูรายชื่อและการคำนวณโอกาสได้การ์ดแต่ละใบ">' +
+              '<span>📊 <strong>เรทการสุ่ม:</strong> 🌟 ลับ 1.5% · 🌀 Extra 10% · ⚔️ ทั่วไป 88.5%</span>' +
+              '<span style="color:#b45309;font-weight:900;text-decoration:underline">ดูเรท 🔍</span>' +
+            '</div>' +
             '<div class="shop-sketch-actions">' +
               '<button class="shop-buy-btn" data-gacha="' + currentShopDeck + ':1">' +
                 '<strong>1 ครั้ง</strong>' +
@@ -2032,6 +2161,10 @@
 
       const m = showWfModal('', html, 'shop-full-container');
       if (m) m.onclick = (e) => {
+        if (e.target.closest('#btnShopRates')) {
+          openGachaRatesModal(currentShopDeck);
+          return;
+        }
         const tabBtn = e.target.closest('[data-shopdeck]');
         if (tabBtn) {
           m.remove();
@@ -2394,28 +2527,118 @@
     }
 
     function openTrialsModal() {
-      const html = 
-        '<div style="display:flex;flex-direction:column;gap:10px">' +
-          '<div style="padding:12px;background:#fff;border:2px solid #2b1f1d;border-radius:8px;display:flex;justify-content:space-between;align-items:center">' +
-            '<div><div style="font-weight:800;font-size:0.9rem">บทที่ 1: กฎการอัญเชิญและการสังเวย</div><div style="font-size:0.75rem;color:#64748b">เรียนรู้การลงมอนสเตอร์ปกติและการ Tribute</div></div>' +
-            '<button class="wf-gacha-btn" id="btnTry1">เริ่มทดสอบ ▶</button>' +
-          '</div>' +
-          '<div style="padding:12px;background:#fff;border:2px solid #2b1f1d;border-radius:8px;display:flex;justify-content:space-between;align-items:center">' +
-            '<div><div style="font-weight:800;font-size:0.9rem">บทที่ 2: ระบบรวมร่าง Resonance Fusion</div><div style="font-size:0.75rem;color:#64748b">ทดลองรวมร่างมอนสเตอร์ Extra Deck</div></div>' +
-            '<button class="wf-gacha-btn" id="btnTry2">เริ่มทดสอบ ▶</button>' +
-          '</div>' +
-          '<div style="padding:12px;background:#fff;border:2px solid #2b1f1d;border-radius:8px;display:flex;justify-content:space-between;align-items:center">' +
-            '<div><div style="font-weight:800;font-size:0.9rem">บทที่ 3: ปริศนา 1 เทิร์นปิดเกม (Lethal)</div><div style="font-size:0.75rem;color:#64748b">คิดคำนวณ Damage เพื่อชนะในเทิร์นเดียว</div></div>' +
-            '<button class="wf-gacha-btn gold-btn" id="btnTry3">เริ่มทดสอบ ▶</button>' +
-          '</div>' +
-        '</div>';
-      const m = showWfModal('🎯 แบบทดสอบและโหมดฝึกสอน (Trials)', html);
+      const chosen = (Account.current && Account.current.starterDeckChosen) || (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks[0]) || 'dinosaur';
+      const allStarters = [
+        { key: 'dinosaur', name: 'ไดโนเสาร์จอมพลัง (Dinosaur)', icon: '🦖', boss: 'ไทแรนโนซอรัส จอมราชันย์' },
+        { key: 'aquila', name: 'กองทัพโรมันอควิลา (Roman Aquila)', icon: '🦅', boss: 'จักรพรรดิออเรเลียน' },
+        { key: 'mecha_strike', name: 'เมก้าสไตรก์ (Mecha Strike)', icon: '🤖', boss: 'คอสมิก โอเมก้า' }
+      ];
+      // 2 ด่านใหญ่ คือ 2 เด็คที่ไม่ได้เลือกไปตอนเริ่มต้น
+      let chapters = allStarters.filter(s => s.key !== chosen);
+      if (chapters.length === 0) {
+        chapters = allStarters.slice(0, 2);
+      }
+
+      const tp = (Account.current && Account.current.trialsProgress) || {};
+      const unlocked = (Account.current && Account.current.unlockedDecks) || [chosen];
+
+      let html = '<div style="max-height:72vh;overflow-y:auto;padding-right:4px">';
+      html += '<div style="margin-bottom:12px;background:#fef3c7;border:2px solid #b45309;border-radius:8px;padding:10px 14px;font-size:0.83rem;color:#92400e;line-height:1.4">' +
+        '⚔️ <strong>ด่านทดสอบบทเรียนนักดวล (PvE Trials):</strong><br>' +
+        'เอาชนะบอทในแต่ละด่านเพื่อรับเงินรางวัล และเมื่อชนะครบทั้ง 3 ด่านจะ <strong>ปลดล็อกเด็คใหม่</strong> พร้อมการ์ดทั้งหมดเข้าสู่คลังทันที!' +
+      '</div>';
+
+      chapters.forEach((chap, cIdx) => {
+        const cNum = cIdx + 1;
+        const progress = tp[chap.key] || 0;
+        const isUnlocked = unlocked.includes(chap.key) || progress >= 3;
+
+        html += '<div style="background:#fff;border:2.5px solid #2b1f1d;border-radius:10px;padding:12px;margin-bottom:16px;box-shadow:3px 3px 0 #2b1f1d">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:2px dashed #cbd5e1;padding-bottom:8px">' +
+            '<div>' +
+              '<div style="font-size:1.05rem;font-weight:900;color:#1e293b">' + chap.icon + ' ด่านใหญ่ ' + cNum + ': บททดสอบ' + V().esc(chap.name) + '</div>' +
+              '<div style="font-size:0.75rem;color:#64748b">บอสใหญ่: ' + V().esc(chap.boss) + '</div>' +
+            '</div>' +
+            '<div>' +
+              (isUnlocked
+                ? '<span style="font-size:0.75rem;font-weight:900;background:#dcfce7;color:#15803d;padding:4px 8px;border-radius:6px;border:1.5px solid #16a34a">👑 ปลดล็อกเด็คแล้ว</span>'
+                : '<span style="font-size:0.75rem;font-weight:900;background:#fef2f2;color:#b91c1c;padding:4px 8px;border-radius:6px;border:1.5px solid #ef4444">🔒 ชนะครบเพื่อปลดล็อกเด็ค</span>'
+              ) +
+            '</div>' +
+          '</div>';
+
+        // 3 ด่านย่อย
+        const stages = [
+          { idx: 1, name: 'ด่าน ' + cNum + '-1: ผู้ฝึกยุทธ์', diff: 'easy', diffLabel: 'ง่าย', reward20: 30, reward100: 0 },
+          { idx: 2, name: 'ด่าน ' + cNum + '-2: นายกองพิทักษ์', diff: 'normal', diffLabel: 'ปานกลาง', reward20: 60, reward100: 0 },
+          { idx: 3, name: 'ด่าน ' + cNum + '-3: บอสใหญ่ ' + chap.boss, diff: 'hard', diffLabel: 'บอส (ยาก)', reward20: 100, reward100: 1, unlock: true }
+        ];
+
+        html += '<div style="display:flex;flex-direction:column;gap:8px">';
+        stages.forEach(stg => {
+          const isCleared = progress >= stg.idx;
+          const isLocked = stg.idx > 1 && progress < (stg.idx - 1);
+
+          let bg = isCleared ? '#f0fdf4' : (isLocked ? '#f8fafc' : '#ffffff');
+          let border = isCleared ? '#86efac' : (isLocked ? '#cbd5e1' : '#2b1f1d');
+
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;background:' + bg + ';border:2px solid ' + border + ';border-radius:8px;padding:10px 12px">' +
+            '<div>' +
+              '<div style="display:flex;align-items:center;gap:6px">' +
+                '<span style="font-weight:900;font-size:0.9rem;color:' + (isLocked ? '#94a3b8' : '#1e293b') + '">' + V().esc(stg.name) + '</span>' +
+                '<span style="font-size:0.7rem;font-weight:800;padding:2px 6px;border-radius:4px;background:' + (stg.diff === 'easy' ? '#e0f2fe' : (stg.diff === 'normal' ? '#fef3c7' : '#fee2e2')) + ';color:' + (stg.diff === 'easy' ? '#0369a1' : (stg.diff === 'normal' ? '#92400e' : '#b91c1c')) + '">' + stg.diffLabel + '</span>' +
+              '</div>' +
+              '<div style="font-size:0.75rem;color:#64748b;margin-top:2px;display:flex;align-items:center;gap:6px">' +
+                '<span>รางวัล:</span>' +
+                '<span style="color:#15803d;font-weight:800">💵 +' + stg.reward20 + ' แบงก์ 20</span>' +
+                (stg.reward100 ? '<span style="color:#b91c1c;font-weight:800">💶 +' + stg.reward100 + ' แบงก์ 100</span>' : '') +
+                (stg.unlock ? '<span style="color:#b45309;font-weight:900">👑 +ปลดล็อกเด็ค!</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div>';
+
+          if (isLocked) {
+            html += '<button disabled style="padding:6px 14px;border:2px solid #cbd5e1;background:#e2e8f0;color:#94a3b8;border-radius:6px;font-weight:800;font-size:0.8rem">🔒 ต้องผ่านด่าน ' + cNum + '-' + (stg.idx - 1) + '</button>';
+          } else {
+            const btnClass = isCleared ? 'wf-gacha-btn' : (stg.unlock ? 'wf-gacha-btn gold-btn' : 'wf-gacha-btn');
+            const btnText = isCleared ? 'ท้าดวลอีกครั้ง ⚔️' : (stg.unlock ? 'ท้าดวลบอส 👑' : 'ท้าดวล ⚔️');
+            html += '<button class="' + btnClass + '" data-trial-start="' + chap.key + ':' + stg.idx + ':' + stg.diff + '" style="font-size:0.82rem;padding:7px 14px">' + btnText + '</button>';
+          }
+
+          html += '</div></div>';
+        });
+
+        html += '</div></div>';
+      });
+
+      html += '</div>';
+
+      const m = showWfModal('🎯 ด่านทดสอบบทเรียนนักดวล (PvE Trials)', html, '', { maxWidth: '580px' });
       if (m) m.onclick = (e) => {
-        if (e.target.closest('#btnTry1') || e.target.closest('#btnTry2') || e.target.closest('#btnTry3')) {
+        const btn = e.target.closest('[data-trial-start]');
+        if (btn) {
+          const [cKey, stageIdxStr, diff] = btn.dataset.trialStart.split(':');
+          const sIdx = parseInt(stageIdxStr, 10);
+          activeTrial = {
+            chapterDeck: cKey,
+            stageIdx: sIdx,
+            diff: diff,
+            reward20: sIdx === 1 ? 30 : (sIdx === 2 ? 60 : 100),
+            reward100: sIdx === 3 ? 1 : 0,
+            unlockDeck: sIdx === 3 ? cKey : null
+          };
           m.remove();
-          mode = 'bot';
+          mode = 'trial';
+          currentDifficulty = diff;
+          deckB = cKey;
+          // Ensure deckA is the player's starter or current unlocked deck
+          const keys = Object.keys(CG.cards || {});
+          const pUnlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
+          if (!deckA || !pUnlocked.includes(deckA)) deckA = pUnlocked[0];
           start();
-        } else if (e.target.closest('#btnModalClose') || e.target === m) {
+          return;
+        }
+        if (e.target.closest('#btnModalClose') || e.target === m) {
           m.remove();
         }
       };
@@ -3069,6 +3292,23 @@
             '<div class="sb-val lp-val">' + winnerLp.toLocaleString() + ' <small>LP</small></div>' +
           '</div>' +
         '</div>' +
+
+        (activeTrial && isWin ? (
+          '<div style="background:#fef3c7;border:2px solid #b45309;border-radius:10px;padding:12px;margin:14px 0 6px;text-align:center;box-shadow:2px 3px 0 #b45309">' +
+            '<div style="font-weight:900;font-size:1.05rem;color:#92400e;margin-bottom:6px">🎁 ได้รับรางวัลพิชิตด่านทดสอบ!</div>' +
+            '<div style="display:flex;justify-content:center;gap:12px;font-weight:900;font-size:0.95rem">' +
+              '<span style="color:#15803d">💵 +' + activeTrial.reward20 + ' แบงก์ 20</span>' +
+              (activeTrial.reward100 ? '<span style="color:#b91c1c">💶 +' + activeTrial.reward100 + ' แบงก์ 100</span>' : '') +
+            '</div>' +
+            (activeTrial.justUnlocked ? (
+              '<div style="margin-top:8px;padding-top:8px;border-top:1.5px dashed #d97706;font-size:0.85rem;color:#78350f">' +
+                '🎉 <strong>ปลดล็อกเด็คใหม่สำเร็จ:</strong><br>' +
+                '<span style="font-weight:900;color:#b45309;font-size:1rem">👑 ' + V().esc((CG.cards && CG.cards[activeTrial.justUnlocked] && CG.cards[activeTrial.justUnlocked].name) || activeTrial.justUnlocked) + '</span><br>' +
+                '<span style="font-size:0.75rem;color:#64748b">การ์ดทั้งหมดของเด็คนี้ถูกเพิ่มเข้าสู่คลังของคุณเรียบร้อยแล้ว!</span>' +
+              '</div>'
+            ) : '') +
+          '</div>'
+        ) : '') +
 
         '<div class="cinematic-action-row">' +
           '<button class="gold btn-duel-again" data-ov="again">🔁 ' + a.playAgain + '</button>' +
@@ -3867,7 +4107,7 @@
     }
     if (k === 'ready') { confirmedViewer = v; render(); }
     else if (k === 'again') start();
-    else if (k === 'menu') lobby();
+    else if (k === 'menu') { activeTrial = null; lobby(); }
     else if (k === 'keep') act({ type: 'pass', player: v });
     else if (k === 'mulAll') act({ type: 'mulligan', player: v });
     else if (k === 'mulSel') { const p = state.players[v]; act({ type: 'mulligan', player: v, indices: p.hand.map((c, i) => handSel.has(c.uid) ? i : -1).filter(i => i >= 0) }); }
