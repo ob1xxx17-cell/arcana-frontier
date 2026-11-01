@@ -21,6 +21,8 @@
   let searchQuery = '';
   let inspectCardDef = null;
   let onSaveCallback = null;
+  let lastRenderedTab = null;
+  let lastRenderedDeckKey = null;
 
   function initDeckBuilder() {
     if (!DB) return;
@@ -244,6 +246,25 @@
       modal.className = 'overlay deck-builder-overlay';
       modal.style.zIndex = '95';
       document.body.appendChild(modal);
+    }
+
+    // เก็บตำแหน่ง Scroll เดิมของทั้งสองฝั่ง (เด็คฝั่งซ้าย และ แคตตาล็อกการ์ดฝั่งขวา) ป้องกันไม่ให้เด้งขึ้นบนสุดเวลาบวก/ลบการ์ด
+    let deckScrollTop = 0;
+    let catalogScrollTop = 0;
+    const oldDeckScroll = modal.querySelector('.db-deck-scroll');
+    if (oldDeckScroll) deckScrollTop = oldDeckScroll.scrollTop;
+    const oldCatalogScroll = modal.querySelector('.db-catalog-grid');
+    if (oldCatalogScroll) catalogScrollTop = oldCatalogScroll.scrollTop;
+
+    // หากมีการเปลี่ยนแท็บประเภทการ์ด หรือสลับเด็ค ให้เริ่มเลื่อนจากบนสุด
+    if (lastRenderedTab !== activeTab) {
+      catalogScrollTop = 0;
+      lastRenderedTab = activeTab;
+    }
+    if (lastRenderedDeckKey !== activeKey) {
+      deckScrollTop = 0;
+      catalogScrollTop = 0;
+      lastRenderedDeckKey = activeKey;
     }
 
     const cards = CG.cards || {};
@@ -573,6 +594,22 @@
       // ZOOM PREVIEW MODAL
       (inspectCardDef ? renderZoomModal(inspectCardDef) : '') +
     '</div>';
+
+    // คืนค่าตำแหน่ง Scroll เดิมทันที เพื่อให้หน้าจอไม่เด้งขึ้นบนสุดเวลาผู้เล่นกดเพิ่ม/ลดการ์ด
+    const newDeckScroll = modal.querySelector('.db-deck-scroll');
+    if (newDeckScroll && deckScrollTop > 0) {
+      newDeckScroll.scrollTop = deckScrollTop;
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => { if (newDeckScroll) newDeckScroll.scrollTop = deckScrollTop; });
+      }
+    }
+    const newCatalogScroll = modal.querySelector('.db-catalog-grid');
+    if (newCatalogScroll && catalogScrollTop > 0) {
+      newCatalogScroll.scrollTop = catalogScrollTop;
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => { if (newCatalogScroll) newCatalogScroll.scrollTop = catalogScrollTop; });
+      }
+    }
 
     attachModalEvents(modal);
   }
