@@ -461,6 +461,30 @@
     return best || (pool[0] ? E.findCard(pool[0].cardId || pool[0].id) : null);
   }
 
+  function isDeckUnlocked(deckKey) {
+    if (!deckKey) return false;
+    const d = (CG.cards || {})[deckKey];
+    if (d && (d.isCustom || deckKey.startsWith('custom_'))) return true;
+    const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length)
+      ? Account.current.unlockedDecks
+      : Object.keys(CG.cards || {}).slice(0, 1);
+    return unlocked.includes(deckKey);
+  }
+
+  function renderDeckSelectOptions(currentSelected) {
+    if (CG.deckBuilder && CG.deckBuilder.syncToCGCards) CG.deckBuilder.syncToCGCards();
+    const keys = Object.keys(CG.cards || {});
+    return keys.map(k => {
+      const d = CG.cards[k];
+      if (!d) return '';
+      const isCustom = !!(d.isCustom || k.startsWith('custom_'));
+      const isUnlocked = isDeckUnlocked(k);
+      const isSel = (currentSelected === k);
+      const prefix = isUnlocked ? (isCustom ? '🛠️ [เด็คจัดเอง] ' : '👑 ') : '🔒 [ล็อก] ';
+      return '<option value="' + k + '" ' + (isSel ? 'selected' : '') + (!isUnlocked ? ' disabled style="color:#94a3b8"' : '') + '>' + prefix + V().esc(d.name) + '</option>';
+    }).join('');
+  }
+
   function showRulesModal() {
     const root = $('overlayRoot');
     if (!root) return;
@@ -1407,8 +1431,9 @@
     $('game').classList.add('hidden'); $('lobby').classList.remove('hidden'); $('overlayRoot').innerHTML = '';
     if (CG.deckBuilder && CG.deckBuilder.syncToCGCards) CG.deckBuilder.syncToCGCards();
     const keys = Object.keys(CG.cards || {}); const a = S().app;
-    const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
-    if (!deckA || !unlocked.includes(deckA)) deckA = unlocked[0];
+    if (!deckA || !isDeckUnlocked(deckA)) {
+      deckA = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks[0]) || keys[0];
+    }
     if (!deckB || !CG.cards[deckB]) deckB = keys.find(k => k !== deckA) || keys[0];
 
     const curA = CG.cards[deckA] || {};
@@ -2336,12 +2361,7 @@
 
     function openBotModal() {
       const keys = Object.keys(CG.cards || {});
-      const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
-      const deckOpts = keys.map(k => {
-        const d = CG.cards[k];
-        const isUnlocked = unlocked.includes(k);
-        return '<option value="' + k + '" ' + (deckA === k ? 'selected' : '') + (!isUnlocked ? ' disabled style="color:#94a3b8"' : '') + '>' + (isUnlocked ? '👑 ' : '🔒 [ล็อก] ') + V().esc(d.name) + '</option>';
-      }).join('');
+      const deckOpts = renderDeckSelectOptions(deckA);
 
       const html = 
         '<div style="margin-bottom:14px">' +
@@ -2393,12 +2413,7 @@
 
     function openPvpModal() {
       const keys = Object.keys(CG.cards || {});
-      const unlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
-      const deckOpts = keys.map(k => {
-        const d = CG.cards[k];
-        const isUnlocked = unlocked.includes(k);
-        return '<option value="' + k + '" ' + (deckA === k ? 'selected' : '') + (!isUnlocked ? ' disabled style="color:#94a3b8"' : '') + '>' + (isUnlocked ? '👑 ' : '🔒 [ล็อก] ') + V().esc(d.name) + '</option>';
-      }).join('');
+      const deckOpts = renderDeckSelectOptions(deckA);
 
       let savedName = (Account.current && Account.current.nickname) ? Account.current.nickname : ('ผู้ท้าชิง ' + Math.floor(100 + Math.random() * 900));
 
@@ -2452,12 +2467,13 @@
         if (nameInp && pName) Account.setNickname(pName);
         try { localStorage.setItem('arcana_player_name', pName); } catch (_) {}
 
+        const curCustomDeck = (CG.cards && CG.cards[deckA] && CG.cards[deckA].isCustom) ? CG.cards[deckA] : null;
+
         if (e.target.closest('#btnQuickMatch')) {
           if (!CG.network) return toast('ระบบออนไลน์ไม่พร้อมใช้งาน');
           toast('🔄 กำลังเชื่อมต่อระบบจับคู่ออนไลน์...');
           try {
             await CG.network.connect();
-            const curCustomDeck = (CG.cards && CG.cards[deckA] && CG.cards[deckA].isCustom) ? CG.cards[deckA] : null;
             CG.network.quickMatch({ deckKey: deckA, playerName: pName, customDeck: curCustomDeck });
             showQuickMatchWaitingModal();
           } catch (err) {
@@ -2468,7 +2484,7 @@
           toast('🔄 กำลังเชื่อมต่อไปยังเซิร์ฟเวอร์...');
           try {
             await CG.network.connect();
-            CG.network.createRoom({ deckKey: deckA, playerName: pName });
+            CG.network.createRoom({ deckKey: deckA, playerName: pName, customDeck: curCustomDeck });
             showWaitingModal();
           } catch (err) {
             toast('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + (err.message || 'Server Offline'));
@@ -2481,7 +2497,7 @@
           toast('🔄 กำลังเข้าร่วมห้อง ' + code + '...');
           try {
             await CG.network.connect();
-            CG.network.joinRoom({ roomCode: code, deckKey: deckA, playerName: pName });
+            CG.network.joinRoom({ roomCode: code, deckKey: deckA, playerName: pName, customDeck: curCustomDeck });
           } catch (err) {
             toast('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
           }
@@ -2818,10 +2834,12 @@
           mode = 'trial';
           currentDifficulty = diff;
           deckB = cKey;
-          // Ensure deckA is the player's starter or current unlocked deck
-          const keys = Object.keys(CG.cards || {});
-          const pUnlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
-          if (!deckA || !pUnlocked.includes(deckA)) deckA = pUnlocked[0];
+          // Ensure deckA is unlocked
+          if (!deckA || !isDeckUnlocked(deckA)) {
+            const keys = Object.keys(CG.cards || {});
+            const pUnlocked = (Account.current && Account.current.unlockedDecks && Account.current.unlockedDecks.length) ? Account.current.unlockedDecks : [keys[0]];
+            deckA = pUnlocked[0];
+          }
           start();
           return;
         }
@@ -3329,7 +3347,14 @@
       if (e.target.closest('#btnProfile')) { AudioFX.play('click'); openProfileModal(); return; }
       if (e.target.closest('#btnShop')) { openShopModal(shopPacks[shopPackIdx].key); return; }
       if (e.target.closest('#btnNavDeck')) {
-        if (CG.ui.deckBuilder) CG.ui.deckBuilder.open(deckA, () => lobby());
+        if (CG.ui.deckBuilder) {
+          CG.ui.deckBuilder.open(deckA, (chosenKey) => {
+            if (chosenKey && CG.cards && CG.cards[chosenKey]) {
+              deckA = chosenKey;
+            }
+            lobby();
+          });
+        }
         return;
       }
       if (e.target.closest('#btnNavCodex')) { openCodexModal(); return; }

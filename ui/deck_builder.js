@@ -58,7 +58,7 @@
   function closeDeckBuilder() {
     const el = $('deckBuilderModal');
     if (el) el.remove();
-    if (onSaveCallback) onSaveCallback();
+    if (onSaveCallback) onSaveCallback(activeKey);
   }
 
   function loadDeckToEdit(key) {

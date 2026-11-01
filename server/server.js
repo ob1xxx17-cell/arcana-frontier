@@ -470,7 +470,8 @@ wss.on('connection', (ws, req) => {
         case 'createRoom':
           roomManager.createRoom(ws, {
             deckKey: msg.deckKey,
-            playerName: msg.playerName
+            playerName: msg.playerName,
+            customDeck: msg.customDeck
           });
           break;
 
@@ -478,7 +479,8 @@ wss.on('connection', (ws, req) => {
           roomManager.joinRoom(ws, {
             roomCode: msg.roomCode,
             deckKey: msg.deckKey,
-            playerName: msg.playerName
+            playerName: msg.playerName,
+            customDeck: msg.customDeck
           });
           break;
 

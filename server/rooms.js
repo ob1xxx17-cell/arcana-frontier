@@ -95,7 +95,7 @@ class RoomManager {
     this.send(ws, { type: 'quickMatchCancelled' });
   }
 
-  createRoom(ws, { deckKey = 'luna_guardians', playerName = 'Player 1', firstPlayer = undefined }) {
+  createRoom(ws, { deckKey = 'luna_guardians', playerName = 'Player 1', firstPlayer = undefined, customDeck = null }) {
     // If ws was already in a room or queue, remove old association
     this.cancelQuickMatch(ws);
     this.leaveCurrentRoom(ws);
@@ -113,6 +113,7 @@ class RoomManager {
           id: 'p0_' + Math.random().toString(36).slice(2, 8),
           ws,
           deckKey,
+          customDeck: customDeck || null,
           name: playerName.slice(0, 16) || 'Player 1',
           connected: true,
           disconnectTimer: null

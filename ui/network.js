@@ -175,21 +175,23 @@
       if (this.status === 'in_queue') this.status = 'connected';
     }
 
-    createRoom({ deckKey, playerName }) {
+    createRoom({ deckKey, playerName, customDeck }) {
       this.playerName = playerName || 'Player 1';
       this.send({
         type: 'createRoom',
         deckKey,
+        customDeck: customDeck || null,
         playerName: this.playerName
       });
     }
 
-    joinRoom({ roomCode, deckKey, playerName }) {
+    joinRoom({ roomCode, deckKey, playerName, customDeck }) {
       this.playerName = playerName || 'Player 2';
       this.send({
         type: 'joinRoom',
         roomCode,
         deckKey,
+        customDeck: customDeck || null,
         playerName: this.playerName
       });
     }
