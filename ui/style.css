@@ -979,6 +979,7 @@ button.gold:hover:not(:disabled) {
 .mana-fill { background: linear-gradient(90deg, #9333ea 0%, #c084fc 100%); box-shadow: 0 0 8px var(--arcana-glow); }
 
 @keyframes pulse { 0%{ transform: scale(1); } 50%{ transform: scale(1.08); } 100%{ transform: scale(1); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* เส้นแบ่งกึ่งกลางสนาม: ช่องสนามแชร์ และ เหรียญเฟสทรงกลมด้านขวา */
 .center-field-divider {

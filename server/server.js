@@ -455,6 +455,18 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({ type: 'presence', onlineCount: wss.clients.size }));
           break;
 
+        case 'quickMatch':
+          roomManager.queueQuickMatch(ws, {
+            deckKey: msg.deckKey,
+            playerName: msg.playerName,
+            customDeck: msg.customDeck
+          });
+          break;
+
+        case 'cancelQuickMatch':
+          roomManager.cancelQuickMatch(ws);
+          break;
+
         case 'createRoom':
           roomManager.createRoom(ws, {
             deckKey: msg.deckKey,

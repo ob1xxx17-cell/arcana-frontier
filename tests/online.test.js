@@ -183,5 +183,60 @@ module.exports = [
       assert.strictEqual(room.state.pending, null, 'pending ต้องถูกเคลียร์สำเร็จ');
       rm.cleanupRoom(room.code);
     }
+  },
+  {
+    name: 'NET-08 ระบบสุ่มจับคู่ (Quick Match): ผู้เล่นคนแรกเข้าคิวรอ และผู้เล่นคนที่สองจับคู่ทันทีเริ่มเกม',
+    run(assert) {
+      const rm = new RoomManager();
+      const p0Messages = [];
+      const p1Messages = [];
+      const ws0 = { send: (msg) => p0Messages.push(JSON.parse(msg)), readyState: 1 };
+      const ws1 = { send: (msg) => p1Messages.push(JSON.parse(msg)), readyState: 1 };
+
+      // P0 กดสุ่มจับคู่
+      rm.queueQuickMatch(ws0, { deckKey: 'luna_guardians', playerName: 'DuelistA' });
+      assert.strictEqual(rm.matchQueue.length, 1);
+      assert.strictEqual(p0Messages[0].type, 'quickMatchWaiting');
+
+      // P1 กดสุ่มจับคู่ -> ระบบต้องจับคู่กับ P0 ทันที
+      rm.queueQuickMatch(ws1, { deckKey: 'mecha_scrap', playerName: 'DuelistB' });
+      assert.strictEqual(rm.matchQueue.length, 0, 'คิวต้องว่างเพราะจับคู่สำเร็จแล้ว');
+
+      // ทั้งสองฝ่ายต้องได้รับ gameStart
+      const gameStartP0 = p0Messages.find(m => m.type === 'gameStart');
+      const gameStartP1 = p1Messages.find(m => m.type === 'gameStart');
+
+      assert.ok(gameStartP0, 'P0 ต้องได้รับ gameStart');
+      assert.ok(gameStartP1, 'P1 ต้องได้รับ gameStart');
+      assert.strictEqual(gameStartP0.playerIndex, 0);
+      assert.strictEqual(gameStartP1.playerIndex, 1);
+      assert.strictEqual(gameStartP0.opponentName, 'DuelistB');
+      assert.strictEqual(gameStartP1.opponentName, 'DuelistA');
+
+      rm.cleanupRoom(gameStartP0.roomCode);
+    }
+  },
+  {
+    name: 'NET-09 ระบบสุ่มจับคู่: การยกเลิกค้นหาและการตัดการเชื่อมต่อออกจากคิว',
+    run(assert) {
+      const rm = new RoomManager();
+      const p0Messages = [];
+      const ws0 = { send: (msg) => p0Messages.push(JSON.parse(msg)), readyState: 1 };
+
+      // เข้าคิว
+      rm.queueQuickMatch(ws0, { deckKey: 'luna_guardians', playerName: 'DuelistA' });
+      assert.strictEqual(rm.matchQueue.length, 1);
+
+      // กดยกเลิก
+      rm.cancelQuickMatch(ws0);
+      assert.strictEqual(rm.matchQueue.length, 0);
+      assert.strictEqual(p0Messages[p0Messages.length - 1].type, 'quickMatchCancelled');
+
+      // เข้าคิวอีกครั้งแล้วตัดการเชื่อมต่อ
+      rm.queueQuickMatch(ws0, { deckKey: 'luna_guardians', playerName: 'DuelistA' });
+      assert.strictEqual(rm.matchQueue.length, 1);
+      rm.handleDisconnect(ws0);
+      assert.strictEqual(rm.matchQueue.length, 0, 'เมื่อ disconnect ต้องหลุดออกจากคิว');
+    }
   }
 ];

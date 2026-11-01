@@ -9,6 +9,7 @@ class RoomManager {
   constructor() {
     this.rooms = new Map(); // roomCode -> room
     this.wsToRoom = new Map(); // ws -> { room, playerIndex }
+    this.matchQueue = []; // array of { ws, deckKey, playerName, customDeck, queuedAt }
   }
 
   generateRoomCode() {
@@ -20,8 +21,83 @@ class RoomManager {
     return String(Math.floor(1000 + Math.random() * 9000));
   }
 
+  queueQuickMatch(ws, { deckKey = 'luna_guardians', playerName = 'Player', customDeck = null }) {
+    // ออกจากห้องเดิมและคิวเดิมก่อน
+    this.leaveCurrentRoom(ws);
+    this.matchQueue = this.matchQueue.filter(e => e.ws !== ws && e.ws && e.ws.readyState === 1);
+
+    // ตรวจสอบว่ามีผู้เล่นอื่นกำลังรออยู่หรือไม่
+    const opponentIdx = this.matchQueue.findIndex(e => e.ws !== ws && e.ws && e.ws.readyState === 1);
+    if (opponentIdx !== -1) {
+      const opponent = this.matchQueue.splice(opponentIdx, 1)[0];
+      const roomCode = this.generateRoomCode();
+      const p1Name = (playerName || 'Player 2').slice(0, 16);
+
+      const room = {
+        code: roomCode,
+        createdAt: Date.now(),
+        state: null,
+        turnTimer: null,
+        turnTimeRemaining: TURN_TIMEOUT_SEC,
+        players: [
+          {
+            id: 'p0_' + Math.random().toString(36).slice(2, 8),
+            ws: opponent.ws,
+            deckKey: opponent.deckKey,
+            customDeck: opponent.customDeck,
+            name: opponent.playerName,
+            connected: true,
+            disconnectTimer: null
+          },
+          {
+            id: 'p1_' + Math.random().toString(36).slice(2, 8),
+            ws,
+            deckKey,
+            customDeck,
+            name: p1Name,
+            connected: true,
+            disconnectTimer: null
+          }
+        ]
+      };
+
+      this.rooms.set(roomCode, room);
+      this.wsToRoom.set(opponent.ws, { room, playerIndex: 0 });
+      this.wsToRoom.set(ws, { room, playerIndex: 1 });
+
+      console.log(`[QUICKMATCH] Matched room ${roomCode}: ${opponent.playerName} vs ${p1Name}`);
+      this.startGame(room);
+      return;
+    }
+
+    // ยังไม่มีคนรอ เข้าคิวรอสุ่ม
+    this.matchQueue.push({
+      ws,
+      deckKey,
+      customDeck,
+      playerName: (playerName || 'Player').slice(0, 16),
+      queuedAt: Date.now()
+    });
+
+    this.send(ws, {
+      type: 'quickMatchWaiting',
+      queueLength: this.matchQueue.length
+    });
+    console.log(`[QUICKMATCH] ${playerName} entered queue. Queue length: ${this.matchQueue.length}`);
+  }
+
+  cancelQuickMatch(ws) {
+    const prev = this.matchQueue.length;
+    this.matchQueue = this.matchQueue.filter(e => e.ws !== ws);
+    if (this.matchQueue.length !== prev) {
+      console.log(`[QUICKMATCH] Player left queue. Queue length: ${this.matchQueue.length}`);
+    }
+    this.send(ws, { type: 'quickMatchCancelled' });
+  }
+
   createRoom(ws, { deckKey = 'luna_guardians', playerName = 'Player 1' }) {
-    // If ws was already in a room, remove old association
+    // If ws was already in a room or queue, remove old association
+    this.cancelQuickMatch(ws);
     this.leaveCurrentRoom(ws);
 
     const roomCode = this.generateRoomCode();
@@ -58,7 +134,8 @@ class RoomManager {
     return room;
   }
 
-  joinRoom(ws, { roomCode, deckKey = 'mecha_scrap', playerName = 'Player 2' }) {
+  joinRoom(ws, { roomCode, deckKey = 'mecha_scrap', playerName = 'Player 2', customDeck = null }) {
+    this.cancelQuickMatch(ws);
     this.leaveCurrentRoom(ws);
 
     const code = (roomCode || '').trim().toUpperCase();
@@ -104,6 +181,7 @@ class RoomManager {
       id: 'p1_' + Math.random().toString(36).slice(2, 8),
       ws,
       deckKey,
+      customDeck,
       name: playerName.slice(0, 16) || 'Player 2',
       connected: true,
       disconnectTimer: null
@@ -132,8 +210,8 @@ class RoomManager {
       return;
     }
 
-    const deckA = globalThis.CG.cards[room.players[0].deckKey] || globalThis.CG.cards.luna_guardians;
-    const deckB = globalThis.CG.cards[room.players[1].deckKey] || globalThis.CG.cards.mecha_scrap;
+    const deckA = (room.players[0] && room.players[0].customDeck) || globalThis.CG.cards[room.players[0].deckKey] || globalThis.CG.cards.luna_guardians;
+    const deckB = (room.players[1] && room.players[1].customDeck) || globalThis.CG.cards[room.players[1].deckKey] || globalThis.CG.cards.mecha_scrap;
 
     try {
       room.state = E.createGame({
@@ -324,6 +402,7 @@ class RoomManager {
   }
 
   handleDisconnect(ws) {
+    this.cancelQuickMatch(ws);
     const session = this.wsToRoom.get(ws);
     if (!session) return;
     const { room, playerIndex } = session;

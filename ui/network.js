@@ -94,6 +94,17 @@
             if (el) el.textContent = this.onlineCount;
           }
           break;
+
+        case 'quickMatchWaiting':
+          this.status = 'in_queue';
+          this.emit('quickMatchWaiting', msg);
+          break;
+
+        case 'quickMatchCancelled':
+          if (this.status === 'in_queue') this.status = 'connected';
+          this.emit('quickMatchCancelled', msg);
+          break;
+
         case 'roomCreated':
           this.status = 'in_room';
           this.roomCode = msg.roomCode;
@@ -147,6 +158,21 @@
         default:
           console.warn('[NET] Unhandled message:', msg);
       }
+    }
+
+    quickMatch({ deckKey, playerName, customDeck }) {
+      this.playerName = playerName || 'Player';
+      this.send({
+        type: 'quickMatch',
+        deckKey,
+        playerName: this.playerName,
+        customDeck
+      });
+    }
+
+    cancelQuickMatch() {
+      this.send({ type: 'cancelQuickMatch' });
+      if (this.status === 'in_queue') this.status = 'connected';
     }
 
     createRoom({ deckKey, playerName }) {

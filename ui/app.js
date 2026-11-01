@@ -2414,7 +2414,15 @@
             '</select>' +
           '</div>' +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-bottom:12px">' +
+          '<div style="background:#fff;border:2.5px solid #6366f1;border-radius:10px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 10px rgba(99,102,241,0.12)">' +
+            '<div>' +
+              '<div style="font-size:2rem;margin-bottom:2px">⚡</div>' +
+              '<div style="font-weight:900;font-size:1.05rem;color:#312e81;margin-bottom:4px">สุ่มจับคู่ออนไลน์</div>' +
+              '<div style="font-size:0.75rem;color:#4338ca;line-height:1.3">สุ่มจับคู่ดวลกับผู้เล่นอื่นที่กำลังกดเล่นอยู่ทันที ไม่ต้องมีเลขห้อง</div>' +
+            '</div>' +
+            '<button class="wf-modal-action-btn" id="btnQuickMatch" style="margin-top:12px;font-size:0.9rem;padding:10px;background:#c7d2fe;color:#1e1b4b;border-color:#4338ca">⚡ สุ่มดวลทันที</button>' +
+          '</div>' +
           '<div style="background:#fff;border:2.5px solid #2b1f1d;border-radius:10px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:space-between">' +
             '<div>' +
               '<div style="font-size:2rem;margin-bottom:2px">🏠</div>' +
@@ -2434,7 +2442,7 @@
           '</div>' +
         '</div>';
 
-      const m = showWfModal('⚔️ ดวลออนไลน์ (Online PVP)', html);
+      const m = showWfModal('⚔️ ดวลออนไลน์ (Online PVP)', html, '', { maxWidth: '680px' });
       if (m) m.onclick = async (e) => {
         const selD = m.querySelector('#selPvpDeck');
         if (selD) deckA = selD.value;
@@ -2443,7 +2451,18 @@
         if (nameInp && pName) Account.setNickname(pName);
         try { localStorage.setItem('arcana_player_name', pName); } catch (_) {}
 
-        if (e.target.closest('#btnCreateOnlineRoom')) {
+        if (e.target.closest('#btnQuickMatch')) {
+          if (!CG.network) return toast('ระบบออนไลน์ไม่พร้อมใช้งาน');
+          toast('🔄 กำลังเชื่อมต่อระบบจับคู่ออนไลน์...');
+          try {
+            await CG.network.connect();
+            const curCustomDeck = (CG.cards && CG.cards[deckA] && CG.cards[deckA].isCustom) ? CG.cards[deckA] : null;
+            CG.network.quickMatch({ deckKey: deckA, playerName: pName, customDeck: curCustomDeck });
+            showQuickMatchWaitingModal();
+          } catch (err) {
+            toast('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + (err.message || 'Server Offline'));
+          }
+        } else if (e.target.closest('#btnCreateOnlineRoom')) {
           if (!CG.network) return toast('ระบบออนไลน์ไม่พร้อมใช้งาน');
           toast('🔄 กำลังเชื่อมต่อไปยังเซิร์ฟเวอร์...');
           try {
@@ -2469,6 +2488,48 @@
           m.remove();
         }
       };
+
+      function showQuickMatchWaitingModal() {
+        if (m) m.remove();
+        let elapsedSec = 0;
+        const waitHtml = 
+          '<div style="text-align:center;padding:16px 8px">' +
+            '<div style="position:relative;width:80px;height:80px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center">' +
+              '<div style="position:absolute;inset:0;border:3px dashed #6366f1;border-radius:50%;animation:spin 4s linear infinite"></div>' +
+              '<div style="position:absolute;inset:6px;background:#eef2ff;border-radius:50%"></div>' +
+              '<span style="font-size:2.2rem;position:relative;animation:pulse 1.2s infinite">⚡</span>' +
+            '</div>' +
+            '<div style="font-weight:900;font-size:1.25rem;color:#1e1b4b;margin-bottom:6px">กำลังค้นหาคู่ดวลออนไลน์...</div>' +
+            '<div style="font-size:0.85rem;color:#4338ca;margin-bottom:14px">ระบบกำลังจับคู่กับผู้เล่นคนอื่นที่กดเล่นอยู่ในขณะนี้</div>' +
+            '<div id="qmTimerBox" style="font-size:1.6rem;font-weight:900;color:#312e81;font-family:monospace;margin-bottom:18px;background:#f5f3ff;border:2px solid #c7d2fe;border-radius:8px;display:inline-block;padding:4px 18px">00:00</div>' +
+            '<div>' +
+              '<button class="wf-modal-action-btn" id="btnCancelQuickMatch" style="background:#fee2e2;color:#991b1b;border-color:#b91c1c;padding:8px 22px;font-size:0.9rem">✕ ยกเลิกการค้นหา</button>' +
+            '</div>' +
+          '</div>';
+
+        const qmModal = showWfModal('⚡ จับคู่ออนไลน์ (Quick Match)', waitHtml);
+        
+        const timerInterval = setInterval(() => {
+          elapsedSec++;
+          const min = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+          const sec = String(elapsedSec % 60).padStart(2, '0');
+          const tb = document.getElementById('qmTimerBox');
+          if (tb) tb.textContent = min + ':' + sec;
+        }, 1000);
+
+        function cleanup() {
+          clearInterval(timerInterval);
+          if (qmModal) qmModal.remove();
+        }
+
+        if (qmModal) qmModal.onclick = (e) => {
+          if (e.target.closest('#btnCancelQuickMatch') || e.target.closest('#btnModalClose') || e.target === qmModal) {
+            cleanup();
+            if (CG.network) CG.network.cancelQuickMatch();
+            toast('ยกเลิกการค้นหาคู่ดวลแล้ว');
+          }
+        };
+      }
 
       function showWaitingModal() {
         if (m) m.remove();
