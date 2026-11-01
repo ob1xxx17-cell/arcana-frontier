@@ -216,7 +216,8 @@
                 "filter": {
                   "tag": "mecha",
                   "levelMin": 1,
-                  "levelMax": 1
+                  "levelMax": 1,
+                  "excludeId": "mecha_prism"
                 },
                 "count": 1
               }

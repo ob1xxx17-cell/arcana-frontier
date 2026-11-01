@@ -4599,19 +4599,34 @@
     else if (k.startsWith('pendSlot:')) { act({ type: 'respond', player: v, choice: [Number(k.slice(9))] }); }
     else if (k.startsWith('pickIdx:')) {
       const idx = Number(k.slice(8));
-      if (pendingSel.has(idx)) {
-        pendingSel.delete(idx);
+      const pd = state.pending;
+      if (pd && pd.max === 1) {
+        if (pendingSel.has(idx)) {
+          pendingSel.delete(idx);
+        } else {
+          pendingSel.clear();
+          pendingSel.add(idx);
+        }
       } else {
-        pendingSel.add(idx);
-        const pd = state.pending;
-        if (pd && pendingSel.size > pd.max) {
-          const arr = Array.from(pendingSel);
-          pendingSel.delete(arr[0]);
+        if (pendingSel.has(idx)) {
+          pendingSel.delete(idx);
+        } else {
+          if (pd && pendingSel.size >= pd.max) {
+            toast('เลือกครบ ' + pd.max + ' ใบแล้ว (แตะใบเดิมเพื่อยกเลิกก่อนเปลี่ยน)');
+            return;
+          }
+          pendingSel.add(idx);
         }
       }
       render();
     }
     else if (k === 'pendConfirm') {
+      const pd = state.pending;
+      if (pd && (pendingSel.size < (pd.min !== undefined ? pd.min : 1) || pendingSel.size > (pd.max !== undefined ? pd.max : 1))) {
+        const countText = pd.min === pd.max ? (pd.min + ' ใบ') : (pd.min + ' ถึง ' + pd.max + ' ใบ');
+        toast('กรุณาเลือกให้ถูกต้องตามจำนวน (' + countText + ')');
+        return;
+      }
       const choice = Array.from(pendingSel).sort((a, b) => a - b);
       act({ type: 'respond', player: v, choice });
     }

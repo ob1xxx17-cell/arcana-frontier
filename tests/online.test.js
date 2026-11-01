@@ -282,5 +282,36 @@ module.exports = [
 
       assert.ok(seeds.size > 1, 'แต่ละห้องต้องได้ seed สุ่มที่แตกต่างกัน');
     }
+  },
+  {
+    name: 'NET-12 ปริซึม (Mecha Prism): เอฟเฟกต์จำกัดเลือก 1 ใบและคัดกรองชื่ออื่น (ไม่รวม mecha_prism)',
+    run(assert) {
+      const E = globalThis.CG.engine;
+      const state = E.createGame({ deckA: 'mecha_strike', deckB: 'aquila', mode: 'pvp', seed: 42 });
+      const p0 = state.players[0];
+      const prismDef = E.findCard('mecha_prism');
+      p0.monsters[0] = E.newInstance(state, prismDef, 0);
+      p0.mana = 5;
+      state.activeIdx = 0;
+      state.phase = 'main1';
+
+      const actRes = E.applyAction(state, { type: 'activateEffect', player: 0, slot: 0, effectId: 'prism_summon' });
+      assert.ok(actRes && actRes.ok, 'กดใช้เอฟเฟกต์ปริซึมสำเร็จ');
+      assert.ok(state.pending, 'ต้องเปิด pending ให้เลือกการ์ด');
+      assert.strictEqual(state.pending.min, 1);
+      assert.strictEqual(state.pending.max, 1);
+      assert.ok(!state.pending.options.some(o => o.cardId === 'mecha_prism'), 'ตัวเลือกต้องไม่รวม mecha_prism');
+
+      // เลือกเกิน 1 ตัวต้องถูกปฏิเสธ
+      const badRes = E.applyAction(state, { type: 'respond', player: 0, choice: [0, 1] });
+      assert.strictEqual(badRes.ok, false);
+      assert.strictEqual(badRes.error, 'INVALID_CHOICE');
+
+      // เลือก 1 ตัวต้องสำเร็จ
+      const goodRes = E.applyAction(state, { type: 'respond', player: 0, choice: [0] });
+      assert.ok(goodRes && goodRes.ok);
+      assert.strictEqual(state.pending, null);
+      assert.ok(p0.monsters[0] !== null, 'มอนสเตอร์ตัวใหม่ต้องถูกอัญเชิญลงสนาม');
+    }
   }
 ];

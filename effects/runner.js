@@ -72,6 +72,18 @@
         return false;
       }
     }
+    if (f.excludeId) {
+      const ex = [].concat(f.excludeId);
+      if (ex.includes(inst.cardId) || ex.includes(def.id) || ex.includes(def.baseCardId)) return false;
+    }
+    if (f.excludeCardId) {
+      const ex = [].concat(f.excludeCardId);
+      if (ex.includes(inst.cardId) || ex.includes(def.id) || ex.includes(def.baseCardId)) return false;
+    }
+    if (f.otherName && ctx && ctx.source) {
+      const sdef = E.cardOf(ctx.source) || {};
+      if (inst.cardId === ctx.source.cardId || (def.name && sdef.name && def.name === sdef.name)) return false;
+    }
     if (f.type && def.type !== f.type) return false;
     const lvl = inst.level !== undefined ? inst.level : def.level;
     if (f.level !== undefined && lvl !== f.level) return false;
