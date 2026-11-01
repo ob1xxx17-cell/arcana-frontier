@@ -9,11 +9,20 @@
     if (!deck) throw new Error('UNKNOWN_DECK:' + deckKey);
     const cfg = state.config;
     const main = [];
-    for (const def of deck.main) for (let i = 0; i < (def.count || 1); i++) main.push(E.newInstance(state, def, idx));
+    for (const rawDef of (deck.main || [])) {
+      const fullDef = (rawDef && rawDef.type && rawDef.name) ? rawDef : (E.findCard(rawDef && (rawDef.id || rawDef.cardId)) || rawDef);
+      for (let i = 0; i < (rawDef.count || 1); i++) {
+        main.push(E.newInstance(state, fullDef, idx));
+      }
+    }
     E.shuffle(main, state.rng);
+    const extra = (deck.extra || []).map(rawDef => {
+      const fullDef = (rawDef && rawDef.type && rawDef.name) ? rawDef : (E.findCard(rawDef && (rawDef.id || rawDef.cardId)) || rawDef);
+      return E.newInstance(state, fullDef, idx);
+    });
     return {
       idx, name, deckKey, lp: cfg.startLp, mana: cfg.startMana,
-      deck: main, hand: [], extra: deck.extra.map(def => E.newInstance(state, def, idx)),
+      deck: main, hand: [], extra,
       grave: [], removed: [],
       monsters: new Array(cfg.monsterSlots).fill(null),
       spells: new Array(cfg.spellSlots).fill(null),

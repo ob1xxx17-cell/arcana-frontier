@@ -118,3 +118,66 @@ t('DECK-06: สร้าง บันทึก ซิงค์ และลบ�
   DB.deleteCustomDeck(template.key);
   assert.ok(!globalThis.CG.cards[template.key], 'ต้องถูกลบออกจาก CG.cards แล้ว');
 });
+
+t('DECK-07: การจัดเด็ค Custom ต้องเก็บสถิติและเอฟเฟกต์การ์ดครบถ้วน และไม่ทำให้การ์ดในเด็คระบบสูญเสียเอฟเฟกต์', (assert) => {
+  const DB = globalThis.CG.deckBuilder;
+  const E = globalThis.CG.engine;
+
+  // ตรวจสอบข้อมูลตั้งต้นของการ์ด mecha_lion
+  const originalLion = E.findCard('mecha_lion');
+  assert.ok(originalLion, 'ต้องพบ mecha_lion ในระบบ');
+  assert.equal(originalLion.atk, 1200, 'mecha_lion ต้องมี ATK 1200');
+  assert.equal(originalLion.def, 800, 'mecha_lion ต้องมี DEF 800');
+  assert.ok(Array.isArray(originalLion.effects) && originalLion.effects.length > 0, 'mecha_lion ต้องมีเอฟเฟกต์');
+
+  // สร้างเด็ค Custom ที่มีการ์ดที่เป็นเพียง stub { id, count }
+  const customDeck = {
+    key: 'custom_test_hydration_' + Date.now(),
+    name: 'เด็คทดสอบสถิติและเอฟเฟกต์',
+    isCustom: true,
+    main: [
+      { id: 'mecha_lion', count: 3 },
+      { id: 'mecha_falcon', count: 3 }
+    ],
+    extra: []
+  };
+
+  // เติมการ์ดไดโนเสาร์ให้ครบ 40 ใบ
+  const dinoCards = globalThis.CG.cards.dinosaur.main;
+  for (const c of dinoCards) {
+    if (customDeck.main.length >= 40) break;
+    customDeck.main.push({ id: c.id, count: c.count || 1 });
+  }
+
+  // บันทึกเด็ค Custom
+  const saveRes = DB.saveCustomDeck(customDeck);
+  assert.ok(saveRes.ok, 'บันทึกเด็ค Custom สำเร็จ: ' + (saveRes.errors ? saveRes.errors.join(', ') : ''));
+
+  // E.findCard ต้องไม่ถูกข้อมูล stub เขียนทับ
+  const cachedLion = E.findCard('mecha_lion');
+  assert.equal(cachedLion.atk, 1200, 'E.findCard(mecha_lion) ต้องยังมี ATK 1200 หลังซิงค์เด็ค custom');
+  assert.equal(cachedLion.def, 800, 'E.findCard(mecha_lion) ต้องยังมี DEF 800');
+  assert.ok(cachedLion.effects && cachedLion.effects.length > 0, 'E.findCard(mecha_lion) ต้องยังมีเอฟเฟกต์');
+
+  // สร้างเกมด้วยเด็ค Custom
+  const state = E.createGame({
+    deckA: customDeck.key,
+    deckB: 'dinosaur',
+    seed: 12345
+  });
+
+  const p1 = state.players[0];
+  const allCards = p1.hand.concat(p1.deck);
+  const lionInst = allCards.find(c => c.cardId === 'mecha_lion');
+  assert.ok(lionInst, 'ต้องมีการ์ด mecha_lion ในเด็คผู้เล่น');
+  assert.equal(lionInst.baseAtk, 1200, 'Instance ของ mecha_lion ต้องมี baseAtk 1200');
+  assert.equal(lionInst.baseDef, 800, 'Instance ของ mecha_lion ต้องมี baseDef 800');
+  assert.equal(lionInst.level, 1, 'Instance ของ mecha_lion ต้องมี level 1');
+
+  // เอฟเฟกต์ของการ์ดต้องอ่านได้ผ่าน E.cardOf
+  const defOfInst = E.cardOf(lionInst);
+  assert.ok(defOfInst.effects && defOfInst.effects.length > 0, 'E.cardOf(lionInst) ต้องมีเอฟเฟกต์ครบถ้วน');
+
+  // ทำความสะอาด
+  DB.deleteCustomDeck(customDeck.key);
+});

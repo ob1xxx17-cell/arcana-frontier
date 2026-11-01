@@ -49,7 +49,20 @@
   let cache = null, cacheN = -1;
   function buildIndex() {
     const idx = {}; const decks = CG.cards || {};
-    for (const k of Object.keys(decks)) for (const c of (decks[k].main || []).concat(decks[k].extra || []).concat(decks[k].rarePool || [])) idx[c.id] = c;
+    // 1. นำเข้าการ์ดจากเด็คระบบก่อนเสมอ เพื่อป้องกันไม่ให้ข้อมูลเด็คจัดเองมาเขียนทับสถิติหรือเอฟเฟกต์การ์ดแม่แบบ
+    for (const k of Object.keys(decks)) {
+      if (decks[k] && (decks[k].isCustom || k.startsWith('custom_'))) continue;
+      for (const c of (decks[k].main || []).concat(decks[k].extra || []).concat(decks[k].rarePool || [])) {
+        if (c && c.id) idx[c.id] = c;
+      }
+    }
+    // 2. ถ้ามีการ์ดในเด็ค custom ที่ไม่อยู่ในเด็คระบบ ให้นำเข้าเฉพาะใบที่มี name และ type สมบูรณ์
+    for (const k of Object.keys(decks)) {
+      if (!decks[k] || (!decks[k].isCustom && !k.startsWith('custom_'))) continue;
+      for (const c of (decks[k].main || []).concat(decks[k].extra || []).concat(decks[k].rarePool || [])) {
+        if (c && c.id && !idx[c.id] && c.name && c.type) idx[c.id] = c;
+      }
+    }
     cache = idx; cacheN = Object.keys(decks).length;
   }
   E.findCard = function (id) {
@@ -61,11 +74,14 @@
 
   // ---- CardInstance ----
   E.newInstance = function (state, def, ownerIdx) {
-    const mon = def.type !== 'spell';
+    const fullDef = (def && def.name && def.type) ? def : (E.findCard(def && (def.id || def.cardId)) || def || {});
+    const mon = fullDef.type !== 'spell';
     return {
-      uid: state.nextUid++, cardId: def.id, owner: ownerIdx, controller: ownerIdx,
+      uid: state.nextUid++, cardId: fullDef.id || (def && def.id), owner: ownerIdx, controller: ownerIdx,
       faceDown: false, position: 'atk',
-      level: mon ? def.level : null, baseAtk: mon ? def.atk : null, baseDef: mon ? def.def : null,
+      level: mon ? (fullDef.level != null ? fullDef.level : 1) : null,
+      baseAtk: mon ? (fullDef.atk != null ? fullDef.atk : 0) : null,
+      baseDef: mon ? (fullDef.def != null ? fullDef.def : 0) : null,
       atkMod: 0, defMod: 0, tempAtkMod: 0, tempDefMod: 0, under: [],
       flags: { summonedTurn: null, canAttack: true, attackedThisTurn: false, positionChangedThisTurn: false, setTurn: null }
     };

@@ -72,8 +72,8 @@
       key: src.key,
       name: src.name,
       isCustom: !!src.isCustom,
-      main: (src.main || []).map(c => Object.assign({}, c)),
-      extra: (src.extra || []).map(c => Object.assign({}, c))
+      main: (src.main || []).map(c => Object.assign({}, DB.findCardDef(c.id) || {}, c)),
+      extra: (src.extra || []).map(c => Object.assign({}, DB.findCardDef(c.id) || {}, c))
     };
   }
 
@@ -134,7 +134,7 @@
     if (item) {
       item.count = (item.count || 1) + 1;
     } else {
-      list.push({ id: cardDef.id, count: 1 });
+      list.push(Object.assign({}, cardDef, { count: 1 }));
     }
 
     renderModal();
@@ -186,7 +186,7 @@
 
     const res = DB.saveCustomDeck(activeDeck);
     if (res.ok) {
-      if (CG.cards) CG.cards[activeDeck.key] = activeDeck;
+      if (CG.cards) CG.cards[activeDeck.key] = res.deck || activeDeck;
       toast('💾 บันทึกเด็ค "' + activeDeck.name + '" เรียบร้อยแล้ว!');
       loadDeckToEdit(activeDeck.key);
       renderModal();

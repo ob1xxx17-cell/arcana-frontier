@@ -35,7 +35,7 @@
     if (Array.isArray(scope)) {
       keys = scope;
     } else if (scope === 'all') {
-      keys = Object.keys(cards);
+      keys = Object.keys(cards).filter(k => cards[k] && !cards[k].isCustom && !k.startsWith('custom_'));
     } else {
       keys = ['dinosaur', 'aquila'];
     }
@@ -68,7 +68,7 @@
 
     // 2. ถ้าไม่พบ ให้ค้นจากทุกเด็คที่มีใน CG.cards (เช่น mecha_strike, mecha_scrap, luna_guardians, ฯลฯ)
     for (const [k, d] of Object.entries(cards)) {
-      if (!d || typeof d !== 'object' || k === 'dinosaur' || k === 'aquila') continue;
+      if (!d || typeof d !== 'object' || k === 'dinosaur' || k === 'aquila' || d.isCustom || k.startsWith('custom_')) continue;
       if (Array.isArray(d.main)) {
         const m = d.main.find(c => c && c.id === cardId);
         if (m) return Object.assign({}, m, { isExtra: false, archetype: k });
@@ -247,6 +247,14 @@
     const decks = DB.loadCustomDecks();
     const idx = decks.findIndex(d => d.key === deck.key);
     deck.isCustom = true;
+    deck.main = (deck.main || []).map(c => {
+      const full = DB.findCardDef(c.id);
+      return full ? Object.assign({}, full, c) : Object.assign({}, c);
+    });
+    deck.extra = (deck.extra || []).map(c => {
+      const full = DB.findCardDef(c.id);
+      return full ? Object.assign({}, full, c) : Object.assign({}, c);
+    });
     if (idx >= 0) {
       decks[idx] = deck;
     } else {
@@ -272,7 +280,20 @@
     const decks = DB.loadCustomDecks();
     CG.cards = CG.cards || {};
     decks.forEach(d => {
-      CG.cards[d.key] = d;
+      if (!d || !d.key) return;
+      const hydratedMain = (d.main || []).map(c => {
+        const full = DB.findCardDef(c.id);
+        return full ? Object.assign({}, full, c) : Object.assign({}, c);
+      });
+      const hydratedExtra = (d.extra || []).map(c => {
+        const full = DB.findCardDef(c.id);
+        return full ? Object.assign({}, full, c) : Object.assign({}, c);
+      });
+      CG.cards[d.key] = Object.assign({}, d, {
+        isCustom: true,
+        main: hydratedMain,
+        extra: hydratedExtra
+      });
     });
   };
 
