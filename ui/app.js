@@ -1600,19 +1600,21 @@
         const roll = Math.random();
 
         if (isGuaranteedSlot) {
-          // ใบที่ 10 ของการสุ่ม 10 ซอง: การันตี Extra Deck (หรือ Secret Rare 5.0%)
-          if (rarePool.length > 0 && roll < 0.05) {
+          // ใบที่ 10 ของการสุ่ม 10 ซอง: โอกาสได้ Secret Rare 2.0%, Extra Deck 18.0%, การ์ดเด็คหลัก 80.0%
+          if (rarePool.length > 0 && roll < 0.02) {
             picked = rarePool[(Math.random() * rarePool.length) | 0];
-          } else if (extraCards.length > 0) {
+          } else if (extraCards.length > 0 && roll < 0.20) {
             picked = extraCards[(Math.random() * extraCards.length) | 0];
           } else {
-            picked = allCards[(Math.random() * allCards.length) | 0];
+            picked = mainCards.length > 0
+              ? mainCards[(Math.random() * mainCards.length) | 0]
+              : allCards[(Math.random() * allCards.length) | 0];
           }
         } else {
-          // สุ่มปกติ: Secret Rare 1.5% (0.015), Extra Deck 10.0% (0.10), Main Deck 88.5%
-          if (rarePool.length > 0 && roll < 0.015) {
+          // สุ่มปกติ: Secret Rare 0.5% (0.005), Extra Deck 3.5% (0.035), Main Deck 96.0%
+          if (rarePool.length > 0 && roll < 0.005) {
             picked = rarePool[(Math.random() * rarePool.length) | 0];
-          } else if (extraCards.length > 0 && roll < 0.115) {
+          } else if (extraCards.length > 0 && roll < 0.04) {
             picked = extraCards[(Math.random() * extraCards.length) | 0];
           } else {
             picked = mainCards.length > 0
@@ -1918,7 +1920,7 @@
       let cardsHtml = '';
       pulledList.forEach((item, idx) => {
         const c = item.card;
-        const isRare = c.rare || (c.id && c.id.endsWith('_rare')) || c.type === 'fusion' || c.type === 'grade4' || (c.atk && c.atk >= 2000);
+        const isRare = !!(c.rare || (c.id && c.id.endsWith('_rare')) || c.type === 'fusion' || c.type === 'grade4');
         const cardFaceHtml = V().cardHtml(c, { reveal: true });
         cardsHtml += 
           '<div class="gacha-card-slot ' + (isRare ? 'is-rare' : '') + '" data-slot-idx="' + idx + '">' +
@@ -2026,9 +2028,9 @@
       const extraCards = d.extra || [];
       const rarePool = d.rarePool || [];
 
-      // คำนวณ % เรทรวม
-      const secretRateTotal = rarePool.length > 0 ? 1.5 : 0;
-      const extraRateTotal = 10.0;
+      // คำนวณ % เรทรวม (Secret Rare 0.5%, Extra Deck 3.5%, Main Deck 96.0%)
+      const secretRateTotal = rarePool.length > 0 ? 0.5 : 0;
+      const extraRateTotal = 3.5;
       const mainRateTotal = 100.0 - secretRateTotal - extraRateTotal;
 
       const secretRatePerCard = rarePool.length ? (secretRateTotal / rarePool.length).toFixed(3) : '0.000';
@@ -2053,17 +2055,17 @@
         '<div style="background:#fef3c7;border:1.5px solid #d97706;border-radius:8px;padding:8px">' +
           '<div style="font-size:0.75rem;font-weight:800;color:#92400e">🌟 การ์ดลับ Secret</div>' +
           '<div style="font-size:1.15rem;font-weight:900;color:#b45309">' + secretRateTotal.toFixed(1) + '%</div>' +
-          '<div style="font-size:0.7rem;color:#b45309">10x การันตี: 5%</div>' +
+          '<div style="font-size:0.7rem;color:#b45309">10x การันตี: 2.0%</div>' +
         '</div>' +
         '<div style="background:#ede9fe;border:1.5px solid #8b5cf6;border-radius:8px;padding:8px">' +
           '<div style="font-size:0.75rem;font-weight:800;color:#6d28d9">🌀 Extra Deck (Apex/Fusion)</div>' +
           '<div style="font-size:1.15rem;font-weight:900;color:#7c3aed">' + extraRateTotal.toFixed(1) + '%</div>' +
-          '<div style="font-size:0.7rem;color:#7c3aed">10x การันตี: 95%</div>' +
+          '<div style="font-size:0.7rem;color:#7c3aed">10x การันตี: 18.0%</div>' +
         '</div>' +
         '<div style="background:#f1f5f9;border:1.5px solid #94a3b8;border-radius:8px;padding:8px">' +
           '<div style="font-size:0.75rem;font-weight:800;color:#475569">⚔️ Main Deck ทั่วไป</div>' +
           '<div style="font-size:1.15rem;font-weight:900;color:#334155">' + mainRateTotal.toFixed(1) + '%</div>' +
-          '<div style="font-size:0.7rem;color:#64748b">มอนสเตอร์/สเปล</div>' +
+          '<div style="font-size:0.7rem;color:#64748b">10x การันตี: 80.0%</div>' +
         '</div>' +
       '</div>';
 
@@ -2128,6 +2130,7 @@
             '<div>' +
               '<div class="shop-sketch-title-box">ร้านค้า</div>' +
               '<div class="shop-sketch-deck-list">' + tabsHtml + '</div>' +
+              '<button class="shop-deck-tab-btn" id="btnShopRatesLeft" style="background:#fef08a;margin-top:14px;font-size:0.85rem;padding:9px 12px;font-weight:900;width:100%" title="ดูเปอร์เซ็นต์โอกาสได้การ์ด">📊 ดูเปอร์เซ็นต์ (Rates) 🔍</button>' +
             '</div>' +
             '<div class="shop-currency-mini">' +
               '<span style="display:inline-flex;align-items:center;gap:6px;color:#15803d;font-weight:900">' + CG.ui.note20Html('mini') + ' <span id="shopValCurr20">' + CG.ui.curr20 + '</span></span>' +
@@ -2142,10 +2145,10 @@
               '<div class="fanned-card fan-center" data-fanned-idx="1" style="cursor:pointer" title="แตะเพื่ออ่านเอฟเฟกต์เต็ม">' + centerCardHtml + '</div>' +
             '</div>' +
             '<div class="shop-deck-name-tag">' + V().esc(curDeck.name) + '</div>' +
-            '<div class="shop-rates-bar" id="btnShopRates" style="cursor:pointer;margin:0 auto 12px;padding:6px 12px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.8rem;color:#334155;display:flex;align-items:center;justify-content:space-between;max-width:420px;box-shadow:1px 2px 0 #cbd5e1" title="แตะเพื่อดูรายชื่อและการคำนวณโอกาสได้การ์ดแต่ละใบ">' +
-              '<span>📊 <strong>เรทการสุ่ม:</strong> 🌟 ลับ 1.5% · 🌀 Extra 10% · ⚔️ ทั่วไป 88.5%</span>' +
+            '<button class="shop-rates-bar" id="btnShopRates" style="cursor:pointer;margin:0 auto 12px;padding:8px 14px;background:#fef08a;border:2.5px solid #2b1f1d;border-radius:8px;font-size:0.85rem;color:#1e293b;display:flex;align-items:center;justify-content:space-between;width:100%;max-width:420px;box-shadow:2px 2px 0 #2b1f1d;font-weight:900" title="แตะเพื่อดูรายชื่อและการคำนวณโอกาสได้การ์ดแต่ละใบ">' +
+              '<span>📊 <strong>เรทการสุ่ม:</strong> 🌟 ลับ 0.5% · 🌀 Extra 3.5% · ⚔️ ทั่วไป 96%</span>' +
               '<span style="color:#b45309;font-weight:900;text-decoration:underline">ดูเรท 🔍</span>' +
-            '</div>' +
+            '</button>' +
             '<div class="shop-sketch-actions">' +
               '<button class="shop-buy-btn" data-gacha="' + currentShopDeck + ':1">' +
                 '<strong>1 ครั้ง</strong>' +
@@ -2161,7 +2164,7 @@
 
       const m = showWfModal('', html, 'shop-full-container');
       if (m) m.onclick = (e) => {
-        if (e.target.closest('#btnShopRates')) {
+        if (e.target.closest('#btnShopRates') || e.target.closest('#btnShopRatesLeft')) {
           openGachaRatesModal(currentShopDeck);
           return;
         }

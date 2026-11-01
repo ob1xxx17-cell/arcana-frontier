@@ -6026,6 +6026,7 @@ button.gold:hover:not(:disabled) {
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 460px;
+  max-height: 90vh;
 }
 .shop-sketch-left {
   background: #fdfbf7;
@@ -6085,13 +6086,15 @@ button.gold:hover:not(:disabled) {
 }
 
 .shop-sketch-right {
-  padding: 24px 28px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   position: relative;
   background: #fbf7ee;
+  overflow-y: auto;
+  max-height: 90vh;
 }
 .shop-sketch-close {
   position: absolute;
