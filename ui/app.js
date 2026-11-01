@@ -1368,9 +1368,8 @@
       }
     }
 
-    function openProfileModal(initialTab = 'info') {
+    function openProfileModal() {
       const acc = Account.current || {};
-      const isLogin = (initialTab === 'login');
 
       const stats = acc.stats || { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
       const wins = stats.wins || 0;
@@ -1395,113 +1394,59 @@
       }
 
       const html = 
-        '<div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:2px solid #2b1f1d;padding-bottom:8px">' +
-          '<button id="tabProfileInfo" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:' + (isLogin ? '#e2e8f0' : '#fef08a') + ';box-shadow:1.5px 2px 0 #2b1f1d">👤 ข้อมูลผู้เล่น & สถิติ</button>' +
-          '<button id="tabProfileLogin" class="profile-tab-btn" style="flex:1;padding:8px 12px;border:2px solid #2b1f1d;border-radius:8px;font-weight:900;font-size:0.88rem;cursor:pointer;background:' + (isLogin ? '#fef08a' : '#e2e8f0') + ';box-shadow:1.5px 2px 0 #2b1f1d">🔐 เข้าสู่ระบบ / กู้คืนไอดี</button>' +
+        '<div style="text-align:center;margin-bottom:14px">' +
+          '<div style="width:68px;height:68px;border-radius:50%;background:#fef08a;border:3px solid #2b1f1d;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 6px">👤</div>' +
+          '<div style="display:flex;align-items:center;justify-content:center;gap:6px">' +
+            '<h3 id="txtProfileNickname" style="margin:0;font-size:1.3rem;font-weight:900">' + V().esc(acc.nickname || 'ผู้ท้าชิงนิรนาม') + '</h3>' +
+            '<button id="btnEditNickname" title="แก้ไขชื่อผู้เล่น" style="background:#f1f5f9;border:1.5px solid #2b1f1d;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.8rem">✏️</button>' +
+          '</div>' +
+          '<div id="boxEditNickname" style="display:none;margin-top:8px">' +
+            '<div style="display:flex;gap:6px;max-width:260px;margin:0 auto">' +
+              '<input type="text" id="inpNewNickname" maxlength="14" value="' + V().esc(acc.nickname || 'ผู้ท้าชิงนิรนาม') + '" style="flex:1;padding:4px 8px;border:2px solid #2b1f1d;border-radius:6px;font-weight:700;font-size:0.85rem" />' +
+              '<button id="btnSaveNickname" class="gold" style="padding:4px 10px;font-size:0.85rem">บันทึก</button>' +
+            '</div>' +
+          '</div>' +
+          '<div style="color:#64748b;font-size:0.82rem;margin-top:2px">Level ' + (acc.level || 1) + ' • ' + V().esc(acc.rank || '🥉 Bronze I') + '</div>' +
         '</div>' +
 
-        // SECTION 1: PROFILE INFO & STATS
-        '<div id="secProfileInfo" style="' + (isLogin ? 'display:none' : 'display:block') + '">' +
-          '<div style="text-align:center;margin-bottom:14px">' +
-            '<div style="width:68px;height:68px;border-radius:50%;background:#fef08a;border:3px solid #2b1f1d;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 6px">👤</div>' +
-            '<div style="display:flex;align-items:center;justify-content:center;gap:6px">' +
-              '<h3 id="txtProfileNickname" style="margin:0;font-size:1.3rem;font-weight:900">' + V().esc(acc.nickname || 'ผู้ท้าชิงนิรนาม') + '</h3>' +
-              '<button id="btnEditNickname" title="แก้ไขชื่อผู้เล่น" style="background:#f1f5f9;border:1.5px solid #2b1f1d;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.8rem">✏️</button>' +
-            '</div>' +
-            '<div id="boxEditNickname" style="display:none;margin-top:8px">' +
-              '<div style="display:flex;gap:6px;max-width:260px;margin:0 auto">' +
-                '<input type="text" id="inpNewNickname" maxlength="14" value="' + V().esc(acc.nickname || 'ผู้ท้าชิงนิรนาม') + '" style="flex:1;padding:4px 8px;border:2px solid #2b1f1d;border-radius:6px;font-weight:700;font-size:0.85rem" />' +
-                '<button id="btnSaveNickname" class="gold" style="padding:4px 10px;font-size:0.85rem">บันทึก</button>' +
-              '</div>' +
-            '</div>' +
-            '<div style="color:#64748b;font-size:0.82rem;margin-top:2px">Level ' + (acc.level || 1) + ' • ' + V().esc(acc.rank || '🥉 Bronze I') + '</div>' +
+        // ID and Passcode Cards
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">' +
+          '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:8px;padding:10px;box-shadow:1.5px 2px 0 #2b1f1d">' +
+            '<div style="font-size:0.72rem;color:#64748b;font-weight:800">ID ประจำตัว:</div>' +
+            '<div style="font-size:1.1rem;font-weight:900;color:#1e293b;letter-spacing:1px;margin:2px 0 6px">' + V().esc(acc.id || 'AF-00000') + '</div>' +
+            '<button id="btnCopyProfileId" style="width:100%;background:#fef08a;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:900;font-size:0.75rem;cursor:pointer">📋 คัดลอก ID</button>' +
           '</div>' +
-
-          // ID and Passcode Cards
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">' +
-            '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:8px;padding:10px;box-shadow:1.5px 2px 0 #2b1f1d">' +
-              '<div style="font-size:0.72rem;color:#64748b;font-weight:800">ID ประจำตัว:</div>' +
-              '<div style="font-size:1.1rem;font-weight:900;color:#1e293b;letter-spacing:1px;margin:2px 0 6px">' + V().esc(acc.id || 'AF-00000') + '</div>' +
-              '<button id="btnCopyProfileId" style="width:100%;background:#fef08a;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:900;font-size:0.75rem;cursor:pointer">📋 คัดลอก ID</button>' +
-            '</div>' +
-            '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:8px;padding:10px;box-shadow:1.5px 2px 0 #2b1f1d">' +
-              '<div style="font-size:0.72rem;color:#64748b;font-weight:800">PIN กู้คืนบัญชี:</div>' +
-              '<div id="txtProfilePin" style="font-size:1.1rem;font-weight:900;color:#1e293b;letter-spacing:2px;margin:2px 0 6px">••••••</div>' +
-              '<div style="display:flex;gap:4px">' +
-                '<button id="btnToggleProfilePin" style="flex:1;background:#f1f5f9;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:800;font-size:0.75rem;cursor:pointer">👁️ ดู</button>' +
-                '<button id="btnCopyProfilePin" style="flex:1;background:#fef08a;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:900;font-size:0.75rem;cursor:pointer">📋 ก็อป</button>' +
-              '</div>' +
+          '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:8px;padding:10px;box-shadow:1.5px 2px 0 #2b1f1d">' +
+            '<div style="font-size:0.72rem;color:#64748b;font-weight:800">PIN กู้คืนบัญชี:</div>' +
+            '<div id="txtProfilePin" style="font-size:1.1rem;font-weight:900;color:#1e293b;letter-spacing:2px;margin:2px 0 6px">••••••</div>' +
+            '<div style="display:flex;gap:4px">' +
+              '<button id="btnToggleProfilePin" style="flex:1;background:#f1f5f9;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:800;font-size:0.75rem;cursor:pointer">👁️ ดู</button>' +
+              '<button id="btnCopyProfilePin" style="flex:1;background:#fef08a;border:1.5px solid #2b1f1d;padding:4px;border-radius:5px;font-weight:900;font-size:0.75rem;cursor:pointer">📋 ก็อป</button>' +
             '</div>' +
           '</div>' +
-
-          '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#166534;margin-bottom:12px;line-height:1.4">' +
-            '💡 <strong>เคล็ดลับสำคัญ:</strong> บันทึก <strong>ID (' + V().esc(acc.id || '') + ')</strong> และ <strong>PIN</strong> นี้ไว้ เมื่อเปลี่ยนอุปกรณ์หรือเปิดเว็บใหม่ สามารถนำมากรอกในแท็บ <strong>"เข้าสู่ระบบ"</strong> เพื่อเล่นไอดีเดิม ข้อมูลเหรียญและการ์ดจะกลับมาครบถ้วน!' +
-          '</div>' +
-
-          // Stats row
-          '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:12px">' +
-            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">อัตราชนะ</div><div style="font-size:1.15rem;font-weight:900;color:#15803d">' + winRate + '</div><div style="font-size:0.68rem;color:#94a3b8">' + wins + 'W / ' + losses + 'L</div></div>' +
-            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ดาเมจสูงสุด</div><div style="font-size:1.15rem;font-weight:900;color:#b91c1c">' + maxDmg + '</div><div style="font-size:0.68rem;color:#94a3b8">FP ใน 1 ตา</div></div>' +
-            '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ชนะต่อเนื่อง</div><div style="font-size:1.15rem;font-weight:900;color:#d97706">' + maxStreak + ' WIN</div><div style="font-size:0.68rem;color:#94a3b8">สตรีคสูงสุด</div></div>' +
-          '</div>' +
-          '<div style="border-top:2px solid #e2e8f0;padding-top:10px;margin-bottom:10px">' +
-            '<div style="font-weight:800;font-size:0.85rem;margin-bottom:4px">เด็คที่ใช้งานบ่อยที่สุด:</div>' +
-            deckUsageHtml +
-          '</div>' +
-          '<button id="btnProfileLogout" style="width:100%;margin-top:8px;background:#fee2e2;border:2px solid #b91c1c;color:#b91c1c;padding:10px;border-radius:8px;font-weight:900;font-size:0.9rem;cursor:pointer">🚪 ออกจากระบบ (Logout)</button>' +
         '</div>' +
 
-        // SECTION 2: LOGIN & RESTORE ACCOUNT
-        '<div id="secProfileLogin" style="' + (isLogin ? 'display:block' : 'display:none') + '">' +
-          '<div style="background:#fff;border:2.5px solid #2b1f1d;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:2px 3px 0 #2b1f1d">' +
-            '<div style="font-weight:900;font-size:1.05rem;color:#1e293b;margin-bottom:4px">🔐 เข้าสู่ระบบด้วยไอดีเดิม (Restore Account)</div>' +
-            '<div style="font-size:0.78rem;color:#64748b;margin-bottom:10px">กรอก Account ID และ PIN 6 หลักที่คุณบันทึกไว้ เพื่อดึงข้อมูลเดิมกลับมา:</div>' +
-            '<div style="margin-bottom:8px">' +
-              '<label style="display:block;font-size:0.75rem;font-weight:800;margin-bottom:2px">Account ID:</label>' +
-              '<input type="text" id="inpRestoreId" placeholder="เช่น AF-88294" style="width:100%;padding:8px;border:2px solid #2b1f1d;border-radius:6px;font-size:0.95rem;font-weight:800;letter-spacing:1px;text-transform:uppercase" />' +
-            '</div>' +
-            '<div style="margin-bottom:12px">' +
-              '<label style="display:block;font-size:0.75rem;font-weight:800;margin-bottom:2px">PIN กู้คืนบัญชี (6 หลัก):</label>' +
-              '<input type="password" id="inpRestorePin" placeholder="เช่น 123456" maxlength="6" style="width:100%;padding:8px;border:2px solid #2b1f1d;border-radius:6px;font-size:0.95rem;font-weight:800;letter-spacing:2px" />' +
-            '</div>' +
-            '<button id="btnDoRestoreLogin" class="gold" style="width:100%;padding:10px;font-weight:900;font-size:0.95rem">🔓 ยืนยันการเข้าสู่ระบบ</button>' +
-          '</div>' +
+        '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#166534;margin-bottom:12px;line-height:1.4">' +
+          '💡 <strong>เคล็ดลับสำคัญ:</strong> บันทึก <strong>ID (' + V().esc(acc.id || '') + ')</strong> และ <strong>PIN</strong> นี้ไว้ เมื่อเปลี่ยนอุปกรณ์หรือเปิดเว็บใหม่ สามารถนำมากรอกในแท็บ <strong>"เข้าสู่ระบบ"</strong> เพื่อเล่นไอดีเดิม' +
+        '</div>' +
 
-          '<div style="background:#fff;border:2px solid #2b1f1d;border-radius:10px;padding:12px;margin-bottom:12px">' +
-            '<div style="font-weight:900;font-size:0.95rem;margin-bottom:4px">➕ สลับสร้างไอดีใหม่ (New Guest ID)</div>' +
-            '<div style="font-size:0.78rem;color:#64748b;margin-bottom:8px">สร้างบัญชีผู้เล่นใหม่เพื่อเริ่มเล่นตั้งแต่ต้น (ระบบจะบันทึกไอดีปัจจุบันไว้ในเครื่อง)</div>' +
-            '<button id="btnDoCreateGuest" style="background:#f1f5f9;border:2px solid #2b1f1d;padding:8px 12px;border-radius:6px;font-weight:800;font-size:0.85rem;cursor:pointer">➕ สร้างไอดีใหม่ทันที</button>' +
-          '</div>' +
+        // Stats row
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:12px">' +
+          '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">อัตราชนะ</div><div style="font-size:1.15rem;font-weight:900;color:#15803d">' + winRate + '</div><div style="font-size:0.68rem;color:#94a3b8">' + wins + 'W / ' + losses + 'L</div></div>' +
+          '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ดาเมจสูงสุด</div><div style="font-size:1.15rem;font-weight:900;color:#b91c1c">' + maxDmg + '</div><div style="font-size:0.68rem;color:#94a3b8">FP ใน 1 ตา</div></div>' +
+          '<div style="padding:8px;background:#fff;border:2px solid #2b1f1d;border-radius:8px"><div style="font-size:0.72rem;color:#64748b">ชนะต่อเนื่อง</div><div style="font-size:1.15rem;font-weight:900;color:#d97706">' + maxStreak + ' WIN</div><div style="font-size:0.68rem;color:#94a3b8">สตรีคสูงสุด</div></div>' +
+        '</div>' +
+        '<div style="border-top:2px solid #e2e8f0;padding-top:10px;margin-bottom:12px">' +
+          '<div style="font-weight:800;font-size:0.85rem;margin-bottom:4px">เด็คที่ใช้งานบ่อยที่สุด:</div>' +
+          deckUsageHtml +
+        '</div>' +
+        '<button id="btnProfileLogout" style="width:100%;margin-top:8px;background:#fee2e2;border:2px solid #b91c1c;color:#b91c1c;padding:12px;border-radius:8px;font-weight:900;font-size:0.95rem;cursor:pointer">' +
+          '🚪 ออกจากระบบ (Logout)' +
+        '</button>';
 
-          '<div style="display:flex;gap:8px">' +
-            '<button id="btnExportJson" style="flex:1;background:#fff;border:1.5px solid #2b1f1d;padding:8px;border-radius:6px;font-weight:800;font-size:0.78rem;cursor:pointer">📤 สำรองข้อมูล JSON</button>' +
-            '<button id="btnImportJson" style="flex:1;background:#fff;border:1.5px solid #2b1f1d;padding:8px;border-radius:6px;font-weight:800;font-size:0.78rem;cursor:pointer">📥 กู้คืนจาก JSON</button>' +
-          '</div>' +
-        '</div>';
-
-      const m = showWfModal('👤 โปรไฟล์และจัดการบัญชีผู้เล่น', html);
+      const m = showWfModal('👤 ข้อมูลผู้เล่นและสถิติ', html);
       if (m) {
         m.onclick = (e) => {
-          if (e.target.closest('#tabProfileInfo')) {
-            const s1 = m.querySelector('#secProfileInfo'), s2 = m.querySelector('#secProfileLogin');
-            const t1 = m.querySelector('#tabProfileInfo'), t2 = m.querySelector('#tabProfileLogin');
-            if (s1) s1.style.display = 'block';
-            if (s2) s2.style.display = 'none';
-            if (t1) t1.style.background = '#fef08a';
-            if (t2) t2.style.background = '#e2e8f0';
-            AudioFX.play('click');
-            return;
-          }
-          if (e.target.closest('#tabProfileLogin')) {
-            const s1 = m.querySelector('#secProfileInfo'), s2 = m.querySelector('#secProfileLogin');
-            const t1 = m.querySelector('#tabProfileInfo'), t2 = m.querySelector('#tabProfileLogin');
-            if (s1) s1.style.display = 'none';
-            if (s2) s2.style.display = 'block';
-            if (t1) t1.style.background = '#e2e8f0';
-            if (t2) t2.style.background = '#fef08a';
-            AudioFX.play('click');
-            return;
-          }
           if (e.target.closest('#btnEditNickname')) {
             const box = m.querySelector('#boxEditNickname');
             if (box) box.style.display = (box.style.display === 'none' ? 'block' : 'none');
@@ -1544,57 +1489,11 @@
             AudioFX.play('chime');
             return;
           }
-          if (e.target.closest('#btnDoRestoreLogin')) {
-            const inpId = m.querySelector('#inpRestoreId');
-            const inpPin = m.querySelector('#inpRestorePin');
-            const res = Account.login(inpId ? inpId.value : '', inpPin ? inpPin.value : '');
-            if (res.success) {
-              toast('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + res.account.nickname + ' (' + res.account.id + ')');
-              AudioFX.play('chime');
-              m.remove();
-              lobby();
-            } else {
-              toast('⚠ ' + res.message);
-              AudioFX.play('cancel');
-            }
-            return;
-          }
-          if (e.target.closest('#btnDoCreateGuest')) {
-            const newAcc = Account.switchNewGuest();
-            toast('✨ สร้างไอดีใหม่สำเร็จ! ID: ' + newAcc.id);
-            AudioFX.play('chime');
-            m.remove();
-            lobby();
-            return;
-          }
-          if (e.target.closest('#btnExportJson')) {
-            const json = JSON.stringify(Account.current, null, 2);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(json);
-              toast('📋 คัดลอกข้อมูลสำรอง JSON ลงคลิปบอร์ดแล้ว!');
-            } else {
-              prompt('ข้อมูลสำรอง JSON ของคุณ (คัดลอกเก็บไว้):', json);
-            }
-            return;
-          }
-          if (e.target.closest('#btnImportJson')) {
-            const code = prompt('วางโค้ดสำรองข้อมูล JSON ของคุณ:');
-            if (!code) return;
-            const res = Account.importBackup(code);
-            if (res.success) {
-              toast('✅ นำเข้าข้อมูลสำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
-              AudioFX.play('chime');
-              m.remove();
-              lobby();
-            } else {
-              toast('⚠ ' + res.message);
-            }
-            return;
-          }
           if (e.target.closest('#btnProfileLogout')) {
             m.remove();
             Account.logout();
             toast('🚪 ออกจากระบบเรียบร้อยแล้ว');
+            AudioFX.play('click');
             return;
           }
           if (e.target.closest('#btnModalClose') || e.target === m) m.remove();
@@ -2657,13 +2556,9 @@
               '<div class="wf-profile-meta">' +
                 '<div class="wf-profile-name">' + V().esc((Account.current && Account.current.nickname) || 'ผู้ท้าชิงนิรนาม') + '</div>' +
                 '<div class="wf-profile-id">ID: ' + V().esc((Account.current && Account.current.id) || 'AF-88294') + '</div>' +
-                '<div style="font-size:0.65rem;color:#b45309;font-weight:800;margin-top:1px">แตะดู PIN / ล็อกอิน 🔑</div>' +
+                '<div style="font-size:0.65rem;color:#64748b;font-weight:700;margin-top:1px">แตะเพื่อดูสถิติและโปรไฟล์</div>' +
               '</div>' +
             '</div>' +
-            '<button class="wf-top-btn wf-btn-login" id="btnTopLogin" title="เข้าสู่ระบบด้วยไอดีเดิม หรือสลับบัญชี">' +
-              '<span>🔐</span>' +
-              '<span>เข้าสู่ระบบ</span>' +
-            '</button>' +
           '</div>' +
 
           // TOP ACTIONS & CURRENCIES (บนขวา)
@@ -2786,8 +2681,7 @@
         if (en) AudioFX.play('chime');
         return;
       }
-      if (e.target.closest('#btnTopLogin')) { AudioFX.play('click'); openProfileModal('login'); return; }
-      if (e.target.closest('#btnProfile')) { AudioFX.play('click'); openProfileModal('info'); return; }
+      if (e.target.closest('#btnProfile')) { AudioFX.play('click'); openProfileModal(); return; }
       if (e.target.closest('#btnShop')) { openShopModal(shopPacks[shopPackIdx].key); return; }
       if (e.target.closest('#btnNavDeck')) {
         if (CG.ui.deckBuilder) CG.ui.deckBuilder.open(deckA, () => lobby());
