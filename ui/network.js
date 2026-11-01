@@ -32,8 +32,9 @@
       }
 
       return new Promise((resolve, reject) => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const url = customUrl || `${protocol}//${window.location.host}`;
+        const protocol = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+        const host = (typeof window !== 'undefined' && window.location.host) ? window.location.host : 'localhost:3000';
+        const url = customUrl || `${protocol}//${host}`;
 
         this.status = 'connecting';
         this.emit('statusChange', this.status);
@@ -68,6 +69,12 @@
           this.emit('statusChange', this.status);
           this.stopPing();
           this.emit('disconnected');
+          // Auto reconnect for presence
+          setTimeout(() => {
+            if (this.status === 'disconnected') {
+              this.connect().catch(() => {});
+            }
+          }, 5000);
         };
 
         this.ws.onerror = (err) => {
@@ -79,6 +86,14 @@
 
     handleMessage(msg) {
       switch (msg.type) {
+        case 'presence':
+          this.onlineCount = msg.onlineCount || 1;
+          this.emit('presence', msg);
+          if (typeof document !== 'undefined') {
+            const el = document.getElementById('lobbyOnlineCount');
+            if (el) el.textContent = this.onlineCount;
+          }
+          break;
         case 'roomCreated':
           this.status = 'in_room';
           this.roomCode = msg.roomCode;

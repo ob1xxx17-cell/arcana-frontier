@@ -782,6 +782,39 @@
           localStorage.setItem(this.ACCOUNTS_KEY, JSON.stringify(all));
         }
       } catch (_) {}
+
+      this.scheduleServerSync();
+    },
+
+    scheduleServerSync() {
+      if (!this.current || typeof fetch === 'undefined') return;
+      if (typeof window !== 'undefined' && window.location.protocol === 'file:') return;
+      if (this._syncTimeout) clearTimeout(this._syncTimeout);
+      this._syncTimeout = setTimeout(() => {
+        if (!this.current) return;
+        fetch('/api/auth/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: this.current.id,
+            password: this.current.password || this.current.passcode,
+            updates: {
+              nickname: this.current.nickname,
+              level: this.current.level,
+              rank: this.current.rank,
+              curr20: this.current.curr20,
+              curr100: this.current.curr100,
+              starterDeckChosen: this.current.starterDeckChosen,
+              unlockedDecks: this.current.unlockedDecks,
+              onboarded: this.current.onboarded,
+              mailClaimed: this.current.mailClaimed,
+              ownedCards: this.current.ownedCards,
+              stats: this.current.stats,
+              trialsProgress: this.current.trialsProgress
+            }
+          })
+        }).catch(() => {});
+      }, 1000);
     },
 
     setNickname(name) {
@@ -790,7 +823,7 @@
       this.save();
     },
 
-    register(accountId, password, nickname) {
+    async register(accountId, password, nickname) {
       accountId = (accountId || '').trim();
       password = (password || '').trim();
       nickname = (nickname || '').trim();
@@ -806,6 +839,31 @@
         return { success: false, message: 'รหัสผ่านต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น' };
       }
 
+      // Try Server API first
+      if (typeof fetch !== 'undefined' && typeof window !== 'undefined' && window.location.protocol !== 'file:') {
+        try {
+          const resp = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: accountId, password, nickname })
+          });
+          const res = await resp.json();
+          if (res.success && res.account) {
+            this.current = res.account;
+            CG.ui.curr20 = this.current.curr20 || 100;
+            CG.ui.curr100 = this.current.curr100 || 1;
+            CG.ui.mailClaimed = !!this.current.mailClaimed;
+            this.save();
+            return { success: true, account: this.current };
+          } else {
+            return res;
+          }
+        } catch (netErr) {
+          console.warn('[AUTH] Server register failed, falling back to local storage:', netErr);
+        }
+      }
+
+      // Local fallback
       try {
         if (typeof localStorage !== 'undefined') {
           let all = [];
@@ -851,13 +909,58 @@
       return { success: false, message: 'ไม่สามารถสร้างบัญชีได้' };
     },
 
-    login(accountId, password) {
+    async login(accountId, password) {
       accountId = (accountId || '').trim();
       password = (password || '').trim();
 
       if (!accountId) return { success: false, message: 'กรุณากรอกไอดีผู้เล่น' };
       if (!password) return { success: false, message: 'กรุณากรอกรหัสผ่าน' };
 
+      // Look up local legacy account for auto-migration
+      let localAcc = null;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const rawAll = localStorage.getItem(this.ACCOUNTS_KEY);
+          if (rawAll) {
+            const all = JSON.parse(rawAll);
+            localAcc = all.find(a => (a.id && a.id.toLowerCase() === accountId.toLowerCase()) || (a.email && a.email.toLowerCase() === accountId.toLowerCase()) || (a.username && a.username.toLowerCase() === accountId.toLowerCase()));
+          }
+        }
+      } catch (_) {}
+
+      // Try Server API first
+      if (typeof fetch !== 'undefined' && typeof window !== 'undefined' && window.location.protocol !== 'file:') {
+        try {
+          const resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: accountId, password, legacyData: localAcc })
+          });
+          const res = await resp.json();
+          if (res.success && res.account) {
+            this.current = res.account;
+            if (!this.current.level) this.current.level = 1;
+            if (!this.current.stats) {
+              this.current.stats = { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
+            }
+            CG.ui.curr20 = this.current.curr20 !== undefined ? this.current.curr20 : 100;
+            CG.ui.curr100 = this.current.curr100 !== undefined ? this.current.curr100 : 1;
+            CG.ui.mailClaimed = !!this.current.mailClaimed;
+
+            if (this.current.ownedCards && this.current.ownedCards.length) {
+              try { localStorage.setItem('cg_owned_cards', JSON.stringify(this.current.ownedCards)); } catch (_) {}
+            }
+            this.save();
+            return { success: true, account: this.current };
+          } else {
+            return res;
+          }
+        } catch (netErr) {
+          console.warn('[AUTH] Server login failed, falling back to local storage:', netErr);
+        }
+      }
+
+      // Local fallback
       try {
         if (typeof localStorage !== 'undefined') {
           let all = [];
@@ -897,11 +1000,11 @@
       return { success: false, message: 'ไม่สามารถเข้าสู่ระบบได้' };
     },
 
-    createGuest() {
+    async createGuest() {
       const randomNum = Math.floor(1000 + Math.random() * 9000);
       const id = 'guest' + randomNum;
       const pass = 'pass' + randomNum + 'x';
-      return this.register(id, pass, 'ผู้ท้าชิง ' + id);
+      return await this.register(id, pass, 'ผู้ท้าชิง ' + id);
     },
 
     chooseStarterDeck(deckKey) {
@@ -1029,7 +1132,7 @@
         '</div>' +
       '</div>';
 
-    authEl.onclick = (e) => {
+    authEl.onclick = async (e) => {
       if (e.target.closest('#tabAuthLogin')) {
         authEl.querySelector('#formAuthLogin').style.display = 'block';
         authEl.querySelector('#formAuthRegister').style.display = 'none';
@@ -1053,7 +1156,8 @@
         if (!accId) return toast('⚠ กรุณากรอกไอดีผู้เล่น');
         if (!pass) return toast('⚠ กรุณากรอกรหัสผ่าน');
 
-        const res = Account.login(accId, pass);
+        toast('🔄 กำลังเข้าสู่ระบบ...');
+        const res = await Account.login(accId, pass);
         if (res.success) {
           toast('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
           AudioFX.play('chime');
@@ -1087,7 +1191,8 @@
         }
         if (pass !== pass2) return toast('⚠ รหัสผ่านทั้งสองช่องไม่ตรงกัน');
 
-        const res = Account.register(accId, pass, nick);
+        toast('🔄 กำลังสร้างบัญชีผู้เล่น...');
+        const res = await Account.register(accId, pass, nick);
         if (res.success) {
           toast('🎉 สร้างบัญชีใหม่สำเร็จ! ยินดีต้อนรับ ' + res.account.nickname);
           AudioFX.play('chime');
@@ -1100,7 +1205,8 @@
         return;
       }
       if (e.target.closest('#btnDoAuthGuest')) {
-        const res = Account.createGuest();
+        toast('🔄 กำลังสร้างไอดี Guest...');
+        const res = await Account.createGuest();
         if (res.success) {
           toast('👤 สร้างไอดี Guest สำเร็จ! รหัสประจำตัว: ' + res.account.id);
           AudioFX.play('chime');
@@ -1282,6 +1388,9 @@
         CG.network.surrender();
       }
       CG.network.disconnect();
+    }
+    if (CG.network && (CG.network.status === 'disconnected' || !CG.network.ws)) {
+      CG.network.connect().catch(() => {});
     }
     mode = 'bot';
     AudioFX.stopBGM();
@@ -1495,6 +1604,9 @@
           '<div style="font-weight:800;font-size:0.85rem;margin-bottom:4px">เด็คที่ใช้งานบ่อยที่สุด:</div>' +
           deckUsageHtml +
         '</div>' +
+        '<a href="/status" target="_blank" style="text-decoration:none;display:block;text-align:center;width:100%;margin-top:8px;background:#f0fdf4;border:2px solid #22c55e;color:#15803d;padding:10px;border-radius:8px;font-weight:900;font-size:0.9rem;box-sizing:border-box">' +
+          '📊 ดูสถิติเซิร์ฟเวอร์ & ผู้เล่นทั้งหมด (Server Status)' +
+        '</a>' +
         '<button id="btnProfileLogout" style="width:100%;margin-top:8px;background:#fee2e2;border:2px solid #b91c1c;color:#b91c1c;padding:12px;border-radius:8px;font-weight:900;font-size:0.95rem;cursor:pointer">' +
           '🚪 ออกจากระบบ (Logout)' +
         '</button>';
@@ -2796,7 +2908,7 @@
         // TOP ROW: Profile on left, Action buttons & Currencies on right
         '<div class="wf-top-row">' +
           // PROFILE BOX (บนซ้าย)
-          '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
             '<div class="wf-profile-box" id="btnProfile" title="แตะเพื่อดูสถิติและโปรไฟล์">' +
               '<div class="wf-avatar-circle">' +
                 '<span>👤</span>' +
@@ -2808,6 +2920,11 @@
                 '<div style="font-size:0.65rem;color:#64748b;font-weight:700;margin-top:1px">แตะเพื่อดูสถิติและโปรไฟล์</div>' +
               '</div>' +
             '</div>' +
+            '<a href="/status" target="_blank" id="lobbyOnlinePill" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,0.18);border:2px solid #22c55e;color:#15803d;padding:6px 14px;border-radius:20px;font-weight:900;font-size:0.82rem;box-shadow:1.5px 2px 0 rgba(0,0,0,0.15);cursor:pointer;transition:transform 0.15s" title="คลิกเพื่อดูสถิติเซิร์ฟเวอร์และจำนวนผู้เล่นทั้งหมด">' +
+              '<span style="width:9px;height:9px;border-radius:50%;background:#22c55e;display:inline-block;box-shadow:0 0 6px #22c55e"></span>' +
+              '<span>ออนไลน์: <strong id="lobbyOnlineCount">' + (CG.network && CG.network.onlineCount ? CG.network.onlineCount : 1) + '</strong> คน</span>' +
+              '<span style="font-size:0.8rem;margin-left:2px">📊</span>' +
+            '</a>' +
           '</div>' +
 
           // TOP ACTIONS & CURRENCIES (บนขวา)
