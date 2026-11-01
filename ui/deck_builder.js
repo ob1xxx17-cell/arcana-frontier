@@ -30,8 +30,25 @@
   function openDeckBuilder(defaultDeckKey, onSave) {
     onSaveCallback = onSave;
     const cards = CG.cards || {};
-    const keys = Object.keys(cards);
-    activeKey = defaultDeckKey || keys[0] || 'dinosaur';
+    const acc = CG.account && CG.account.current;
+    const unlocked = (acc && Array.isArray(acc.unlockedDecks) && acc.unlockedDecks.length)
+      ? acc.unlockedDecks
+      : null;
+
+    const availableKeys = Object.keys(cards).filter(k => {
+      const d = cards[k];
+      if (!d) return false;
+      if (d.isCustom) return true;
+      if (!unlocked) return true;
+      return unlocked.includes(k);
+    });
+
+    let chosen = defaultDeckKey;
+    if (!chosen || !cards[chosen] || (unlocked && !availableKeys.includes(chosen))) {
+      chosen = availableKeys[0] || Object.keys(cards)[0] || 'dinosaur';
+    }
+
+    activeKey = chosen;
     loadDeckToEdit(activeKey);
     renderModal();
   }
@@ -230,8 +247,67 @@
     }
 
     const cards = CG.cards || {};
-    const deckKeys = Object.keys(cards);
-    const allDefs = DB.getAllCardDefs();
+    const acc = CG.account && CG.account.current;
+    const unlocked = (acc && Array.isArray(acc.unlockedDecks) && acc.unlockedDecks.length)
+      ? acc.unlockedDecks
+      : null;
+
+    // เลือกเฉพาะเด็คที่ปลดล็อกแล้ว หรือเด็ค Custom
+    const allKeys = Object.keys(cards);
+    const deckKeys = allKeys.filter(k => {
+      const d = cards[k];
+      if (!d) return false;
+      if (d.isCustom) return true;
+      if (!unlocked) return true;
+      return unlocked.includes(k);
+    });
+
+    if (!deckKeys.includes(activeKey) && deckKeys.length > 0) {
+      activeKey = deckKeys[0];
+      loadDeckToEdit(activeKey);
+    }
+
+    // รวบรวมการ์ดของผู้เล่น (Owned Cards / Starter Deck Cards)
+    let ownedCardIds = null;
+    if (acc && Array.isArray(acc.ownedCards) && acc.ownedCards.length > 0) {
+      ownedCardIds = acc.ownedCards;
+    } else {
+      try {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('cg_owned_cards') : null;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) ownedCardIds = parsed;
+        }
+      } catch (_) {}
+    }
+
+    let allDefs = [];
+    if (ownedCardIds && ownedCardIds.length > 0) {
+      const seen = new Set();
+      ownedCardIds.forEach(id => {
+        if (!seen.has(id)) {
+          seen.add(id);
+          const def = DB.findCardDef(id);
+          if (def) allDefs.push(def);
+        }
+      });
+      // รวมการ์ดที่มีอยู่ในเด็คปัจจุบันด้วย (เผื่อมี)
+      if (activeDeck) {
+        const checkList = [].concat(activeDeck.main || [], activeDeck.extra || []);
+        checkList.forEach(item => {
+          if (item && item.id && !seen.has(item.id)) {
+            seen.add(item.id);
+            const def = DB.findCardDef(item.id);
+            if (def) allDefs.push(def);
+          }
+        });
+      }
+    } else if (unlocked && unlocked.length > 0) {
+      allDefs = DB.getAllCardDefs(unlocked);
+    } else {
+      allDefs = DB.getAllCardDefs(activeKey ? [activeKey] : ['dinosaur']);
+    }
+
     const val = DB.validateDeck(activeDeck);
     const isCustom = activeDeck && activeDeck.isCustom;
 
@@ -284,7 +360,7 @@
     const renderDeckCardGrid = (list, isExtra) => {
       if (!list.length) return '<div class="db-empty-list">(ยังไม่มีการ์ดในส่วนนี้ — แตะการ์ดจากฝั่งขวาเพื่อเพิ่มลงเด็ค)</div>';
       return '<div class="db-deck-card-grid">' + list.map(item => {
-        const def = DB.findCardDef(item.id) || { name: item.id, type: 'monster', atk: 0, def: 0, level: 1 };
+        const def = DB.findCardDef(item.id) || { id: item.id, cardId: item.id, name: item.id, type: 'monster', atk: 0, def: 0, level: 1 };
         const isMax = (item.count || 1) >= DB.RULES.maxCopies;
         return '<div class="db-deck-card-item" data-db-card="' + def.id + '" data-db-extra="' + (isExtra ? '1' : '0') + '" title="' + V().esc(def.name) + '">' +
           '<div class="db-deck-card-badge">x' + (item.count || 1) + '</div>' +
@@ -306,7 +382,7 @@
     const renderDeckList = (list, isExtra) => {
       if (!list.length) return '<div class="db-empty-list">(ยังไม่มีการ์ดในส่วนนี้)</div>';
       return '<div class="db-deck-rows">' + list.map(item => {
-        const def = DB.findCardDef(item.id) || { name: item.id, type: 'monster', atk: 0, def: 0, level: 1 };
+        const def = DB.findCardDef(item.id) || { id: item.id, cardId: item.id, name: item.id, type: 'monster', atk: 0, def: 0, level: 1 };
         const mon = def.type !== 'spell';
         const statLine = mon
           ? 'Lv' + (def.level || 1) + ' · ' + (def.atk || 0) + '/' + (def.def || 0)

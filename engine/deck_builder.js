@@ -24,13 +24,22 @@
     maxCopies: 3
   };
 
-  // ดึงการ์ดทั้งหมดที่มีในเกมจากทุกเด็คหลัก
-  DB.getAllCardDefs = function () {
+  // ดึงการ์ดทั้งหมดที่มีในเกมจากเด็คที่กำหนด
+  // ถ้าไม่ระบุ scope จะคืนค่า 48 ใบจาก dinosaur และ aquila (เพื่อ backward compatibility กับ test)
+  // ถ้า scope === 'all' จะดึงจากทุกเด็คใน CG.cards
+  // ถ้า scope เป็น Array จะดึงเฉพาะเด็คที่ระบุใน Array
+  DB.getAllCardDefs = function (scope) {
     const cards = CG.cards || {};
     const map = new Map();
-    // คัดลอกเฉพาะการ์ดจากเด็คทางการ (aquila, dinosaur) ไม่นับเด็คที่สร้างเอง
-    const builtInKeys = ['dinosaur', 'aquila'];
-    builtInKeys.forEach(k => {
+    let keys;
+    if (Array.isArray(scope)) {
+      keys = scope;
+    } else if (scope === 'all') {
+      keys = Object.keys(cards);
+    } else {
+      keys = ['dinosaur', 'aquila'];
+    }
+    keys.forEach(k => {
       const d = cards[k];
       if (!d) return;
       (d.main || []).forEach(c => {
@@ -39,14 +48,44 @@
       (d.extra || []).forEach(c => {
         if (!map.has(c.id)) map.set(c.id, Object.assign({}, c, { isExtra: true, archetype: k }));
       });
+      (d.rarePool || []).forEach(c => {
+        const isEx = !!(c.isExtra || c.type === 'fusion' || c.type === 'grade4');
+        if (!map.has(c.id)) map.set(c.id, Object.assign({}, c, { isExtra: isEx, archetype: k }));
+      });
     });
     return Array.from(map.values());
   };
 
-  // ค้นหาการ์ดตาม cardId
+  // ค้นหาการ์ดตาม cardId จากทุกเด็คที่มีในเกม
   DB.findCardDef = function (cardId) {
-    const all = DB.getAllCardDefs();
-    return all.find(c => c.id === cardId) || null;
+    if (!cardId) return null;
+    const cards = CG.cards || {};
+
+    // 1. ตรวจสอบในเด็คหลัก (dinosaur, aquila) ก่อนเพื่อความรวดเร็ว
+    const baseCards = DB.getAllCardDefs();
+    const found = baseCards.find(c => c && c.id === cardId);
+    if (found) return found;
+
+    // 2. ถ้าไม่พบ ให้ค้นจากทุกเด็คที่มีใน CG.cards (เช่น mecha_strike, mecha_scrap, luna_guardians, ฯลฯ)
+    for (const [k, d] of Object.entries(cards)) {
+      if (!d || typeof d !== 'object' || k === 'dinosaur' || k === 'aquila') continue;
+      if (Array.isArray(d.main)) {
+        const m = d.main.find(c => c && c.id === cardId);
+        if (m) return Object.assign({}, m, { isExtra: false, archetype: k });
+      }
+      if (Array.isArray(d.extra)) {
+        const e = d.extra.find(c => c && c.id === cardId);
+        if (e) return Object.assign({}, e, { isExtra: true, archetype: k });
+      }
+      if (Array.isArray(d.rarePool)) {
+        const r = d.rarePool.find(c => c && c.id === cardId);
+        if (r) {
+          const isEx = !!(r.isExtra || r.type === 'fusion' || r.type === 'grade4');
+          return Object.assign({}, r, { isExtra: isEx, archetype: k });
+        }
+      }
+    }
+    return null;
   };
 
   // ตรวจสอบความถูกต้องของเด็ค
