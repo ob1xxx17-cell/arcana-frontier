@@ -414,7 +414,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': stats.size,
-      'Cache-Control': isAsset ? 'public, max-age=86400' : 'no-cache, no-store, must-revalidate'
+      'Cache-Control': isAsset ? 'no-cache, must-revalidate' : 'no-cache, no-store, must-revalidate'
     });
 
     const stream = fs.createReadStream(filePath);

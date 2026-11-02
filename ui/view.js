@@ -557,9 +557,12 @@
     }
     const iconArea = '<div class="card-icon-area">' + iconHtml + '</div>';
 
-    // 2. ภาพการ์ด (ดึงจาก assets/cards/[id].png หรือ d.image หากไม่มีแสดงสีพื้นหลัง)
-    const artImg = d.image || ('assets/cards/' + d.id + '.png');
-    const artHtml = '<div class="card-art art-' + d.type + '"><img src="' + esc(artImg) + '" alt="" class="card-art-img" loading="lazy" onerror="if(!this.dataset.t){this.dataset.t=\'1\';this.src=\'assets/cards/' + d.id + '.jpg\';}"></div>';
+    // 2. ภาพการ์ด (ดึงจาก assets/cards/[id].png หรือ d.image พร้อม cache buster ป้องกันเบราว์เซอร์จำภาพเก่า)
+    const cardVer = '?v=4.2';
+    const rawArt = d.image || ('assets/cards/' + d.id + '.png');
+    const artImg = rawArt.includes('?') ? rawArt : (rawArt + cardVer);
+    const fallbackArt = 'assets/cards/' + d.id + '.jpg' + cardVer;
+    const artHtml = '<div class="card-art art-' + d.type + '"><img src="' + esc(artImg) + '" alt="" class="card-art-img" loading="lazy" onerror="if(!this.dataset.t){this.dataset.t=\'1\';this.src=\'' + fallbackArt + '\';}"></div>';
 
     // 3. แถวค่า: ATK วงรีแดงซ้าย, Level วงกลมเหลืองกลาง, DEF วงรีน้ำเงินขวา
     let statsHtml = '';
