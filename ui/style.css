@@ -8126,12 +8126,13 @@ button.gold:hover:not(:disabled) {
    ========================================================================== */
 @media screen and (max-height: 580px) and (orientation: landscape), screen and (max-height: 520px) {
   :root {
-    --topbar-h: 20px !important;
-    --sq-size: clamp(24px, calc((100dvh - 54px) / 5.4), 38px) !important;
-    --sq-gap: clamp(1px, calc(var(--sq-size) * 0.03), 2px) !important;
-    --sketch-panel-w: clamp(68px, calc(var(--sq-size) * 1.5), 100px) !important;
-    --sketch-side-gap: clamp(3px, calc(var(--sq-size) * 0.08), 6px) !important;
-    --hand-card-h: clamp(40px, calc(100dvh * 0.16), 50px) !important;
+    --topbar-h: 22px !important;
+    --sq-size: clamp(48px, min(calc((96vw - 80px) / 7.8), calc((100dvh - 58px) / 4.75)), 70px) !important;
+    --sq-gap: clamp(2px, calc(var(--sq-size) * 0.035), 4px) !important;
+    --sketch-panel-w: clamp(96px, calc(var(--sq-size) * 1.8), 136px) !important;
+    --sketch-side-gap: clamp(4px, calc(var(--sq-size) * 0.08), 8px) !important;
+    --sketch-total-w: calc(7 * var(--sq-size) + 6 * var(--sq-gap) + var(--sketch-side-gap) + var(--sketch-panel-w)) !important;
+    --hand-card-h: clamp(70px, calc(var(--sq-size) * 1.25), 94px) !important;
     --hand-card-w: calc(var(--hand-card-h) * 5 / 7) !important;
   }
 
@@ -8429,7 +8430,7 @@ button.gold:hover:not(:disabled) {
     height: 100% !important;
     max-height: 100% !important;
     flex: 1 !important;
-    padding: 0 2px calc(var(--hand-card-h) + 2px) 2px !important;
+    padding: 0 4px clamp(28px, calc(var(--hand-card-h) * 0.44), 44px) 4px !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
@@ -8439,27 +8440,27 @@ button.gold:hover:not(:disabled) {
     overflow: hidden !important;
   }
   #game .topbar, .topbar {
-    height: 20px !important;
-    padding: 0 4px !important;
-    font-size: 0.65rem !important;
+    height: 22px !important;
+    padding: 0 6px !important;
+    font-size: 0.68rem !important;
     flex-shrink: 0 !important;
   }
   #game .topbar .info, .topbar .info {
-    gap: 3px !important;
+    gap: 4px !important;
   }
   #game .topbar .info b, .topbar .info b {
-    font-size: 0.62rem !important;
+    font-size: 0.65rem !important;
   }
   #game .topbar .pill, .topbar .pill {
-    padding: 0 3px !important;
-    font-size: 0.56rem !important;
-    height: 16px !important;
-    line-height: 16px !important;
+    padding: 0 4px !important;
+    font-size: 0.58rem !important;
+    height: 17px !important;
+    line-height: 17px !important;
   }
   #game .topbar button, .topbar button {
-    padding: 1px 4px !important;
-    font-size: 0.58rem !important;
-    height: 18px !important;
+    padding: 1px 6px !important;
+    font-size: 0.62rem !important;
+    height: 20px !important;
   }
   #game .topbar .phases, .topbar .phases {
     display: none !important; /* ซ่อนชื่อเฟสยาวบนท็อปบาร์มือถือเพราะมี Phase Coin กลางสนามอยู่แล้ว */
@@ -8471,7 +8472,7 @@ button.gold:hover:not(:disabled) {
   /* มือฝ่ายตรงข้ามแถวบนสุด */
   .handrow.opp {
     position: static !important;
-    height: clamp(14px, 3vh, 18px) !important;
+    height: clamp(16px, calc(var(--sq-size) * 0.32), 22px) !important;
     margin: 0 auto !important;
     display: flex !important;
     justify-content: center !important;
@@ -8479,65 +8480,94 @@ button.gold:hover:not(:disabled) {
     flex-shrink: 0 !important;
   }
   .handrow.opp .card {
-    height: clamp(14px, 3vh, 18px) !important;
-    width: calc(clamp(14px, 3vh, 18px) * 5 / 7) !important;
+    height: clamp(16px, calc(var(--sq-size) * 0.32), 22px) !important;
+    width: calc(clamp(16px, calc(var(--sq-size) * 0.32), 22px) * 5 / 7) !important;
     margin-left: -5px !important;
     border-width: 1px !important;
     border-radius: 2px !important;
   }
 
-  /* กระดานและช่องสนาม 7x2 */
+  /* กระดานและช่องสนาม 7x2 ขยายเต็มตาเหมือนเล่นบนคอมพิวเตอร์ */
   .sketch-arena {
-    gap: 1px !important;
-    max-width: 99vw !important;
+    gap: 2px !important;
+    width: var(--sketch-total-w) !important;
+    max-width: 98vw !important;
     flex-shrink: 0 !important;
     margin: 0 auto !important;
   }
+  .sketch-side {
+    gap: var(--sketch-side-gap) !important;
+  }
   .sketch-row {
-    gap: 1px !important;
+    gap: var(--sq-gap) !important;
   }
   .sketch-slot,
   .slot.sketch-slot,
   .slot {
     width: var(--sq-size) !important;
     height: var(--sq-size) !important;
-    border-width: 2px !important;
-    border-radius: 4px !important;
-    padding: 1px !important;
+    border-width: 2.5px !important;
+    border-radius: 5px !important;
+    padding: 2px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28) !important;
   }
   .sketch-slot-wm {
-    font-size: clamp(0.42rem, calc(var(--sq-size) * 0.14), 0.65rem) !important;
+    font-size: clamp(0.52rem, calc(var(--sq-size) * 0.145), 0.78rem) !important;
+    font-weight: 900 !important;
   }
   .sketch-slot-wm.leader-wm {
-    font-size: clamp(0.48rem, calc(var(--sq-size) * 0.16), 0.75rem) !important;
+    font-size: clamp(0.6rem, calc(var(--sq-size) * 0.17), 0.92rem) !important;
+    font-weight: 900 !important;
   }
   .sketch-pile-name {
-    font-size: clamp(0.42rem, calc(var(--sq-size) * 0.14), 0.65rem) !important;
+    font-size: clamp(0.5rem, calc(var(--sq-size) * 0.13), 0.74rem) !important;
+    font-weight: 800 !important;
   }
   .sketch-pile-num {
-    font-size: clamp(0.75rem, calc(var(--sq-size) * 0.35), 1.2rem) !important;
+    font-size: clamp(0.95rem, calc(var(--sq-size) * 0.38), 1.6rem) !important;
+    font-weight: 900 !important;
   }
   .sketch-pile-sub {
-    font-size: 0.42rem !important;
-    padding: 0 1px !important;
+    font-size: clamp(0.44rem, calc(var(--sq-size) * 0.08), 0.58rem) !important;
+    padding: 0 2px !important;
+  }
+
+  /* แถวกลางสนาม: กระชับพื้นที่ให้การ์ดมอนสเตอร์ขยายใหญ่ได้เต็มที่ */
+  .sketch-center-row {
+    margin: 0 auto !important;
+    gap: var(--sketch-side-gap) !important;
+  }
+  .sketch-center-cell-spacer,
+  .sketch-center-field-slot-wrap,
+  .sketch-field-slot {
+    height: clamp(24px, calc(var(--sq-size) * 0.65), 38px) !important;
+  }
+  .sketch-center-panel-space {
+    height: clamp(24px, calc(var(--sq-size) * 0.65), 38px) !important;
+  }
+  .sketch-field-slot .sketch-slot-wm,
+  .field-slot-wm {
+    font-size: clamp(0.62rem, calc(var(--sq-size) * 0.14), 0.85rem) !important;
+    font-weight: 900 !important;
   }
 
   /* การ์ดในช่องสนาม */
   .sketch-slot .card,
   .sketch-slot > .card {
-    height: calc(var(--sq-size) - 4px) !important;
-    width: calc((var(--sq-size) - 4px) * 5 / 7) !important;
-    max-height: calc(var(--sq-size) - 4px) !important;
-    max-width: calc((var(--sq-size) - 4px) * 5 / 7) !important;
-    border-width: 1px !important;
-    border-radius: 2px !important;
+    height: calc(var(--sq-size) - 6px) !important;
+    width: calc((var(--sq-size) - 6px) * 5 / 7) !important;
+    max-height: calc(var(--sq-size) - 6px) !important;
+    max-width: calc((var(--sq-size) - 6px) * 5 / 7) !important;
+    border-width: 1.5px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
   }
 
-  /* แผงขวาตามแบบร่าง (Frontier Point, Profile, Acana) */
+  /* แผงขวาตามแบบร่าง (Frontier Point, Profile, Acana) แสดงข้อมูลคมชัด */
   .sketch-panel-stack {
     width: var(--sketch-panel-w) !important;
     height: calc(var(--sq-size) * 2 + var(--sq-gap)) !important;
-    gap: 1px !important;
+    gap: 2px !important;
     padding: 0 !important;
     flex-shrink: 0 !important;
     justify-content: space-between !important;
@@ -8545,141 +8575,163 @@ button.gold:hover:not(:disabled) {
   .sketch-info-box.fp-box,
   .sketch-profile-box,
   .sketch-info-box.acana-box {
-    padding: 1px 3px !important;
-    border-width: 1.5px !important;
-    border-radius: 4px !important;
+    padding: 2px 5px !important;
+    border-width: 2px !important;
+    border-radius: 5px !important;
   }
   .sketch-box-title {
-    font-size: 0.52rem !important;
-    line-height: 1 !important;
+    font-size: clamp(0.52rem, calc(var(--sq-size) * 0.11), 0.72rem) !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
   }
   .sketch-box-timer {
-    font-size: 0.48rem !important;
+    font-size: clamp(0.48rem, calc(var(--sq-size) * 0.1), 0.65rem) !important;
   }
   .sketch-box-val-row .lp {
-    font-size: 0.78rem !important;
-    line-height: 1 !important;
+    font-size: clamp(0.92rem, calc(var(--sq-size) * 0.25), 1.4rem) !important;
+    line-height: 1.1 !important;
+    font-weight: 900 !important;
   }
   .sketch-profile-box {
-    gap: 3px !important;
-    padding: 1px 2px !important;
+    gap: 4px !important;
+    padding: 2px 4px !important;
   }
   .sketch-profile-avatar {
-    width: 16px !important;
-    height: 16px !important;
-    font-size: 0.65rem !important;
-    border-width: 1px !important;
+    width: clamp(20px, calc(var(--sq-size) * 0.4), 30px) !important;
+    height: clamp(20px, calc(var(--sq-size) * 0.4), 30px) !important;
+    font-size: clamp(0.8rem, calc(var(--sq-size) * 0.19), 1.1rem) !important;
+    border-width: 1.5px !important;
   }
   .sketch-avatar-level {
-    font-size: 0.4rem !important;
+    font-size: 0.45rem !important;
     bottom: -3px !important;
-    padding: 0 1px !important;
+    padding: 0 2px !important;
   }
   .sketch-profile-name {
-    font-size: 0.58rem !important;
-    line-height: 1 !important;
+    font-size: clamp(0.6rem, calc(var(--sq-size) * 0.13), 0.82rem) !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
   }
   .sketch-profile-id {
-    font-size: 0.45rem !important;
+    font-size: clamp(0.46rem, calc(var(--sq-size) * 0.095), 0.62rem) !important;
   }
   .sketch-info-box.acana-box .sketch-box-val-row .mana {
-    font-size: 0.72rem !important;
-    line-height: 1 !important;
+    font-size: clamp(0.85rem, calc(var(--sq-size) * 0.23), 1.3rem) !important;
+    line-height: 1.1 !important;
+    font-weight: 900 !important;
   }
   .sketch-info-box.acana-box .sketch-max-mana {
-    font-size: 0.5rem !important;
+    font-size: clamp(0.55rem, calc(var(--sq-size) * 0.11), 0.72rem) !important;
+    font-weight: 800 !important;
   }
   .sketch-bar-track {
-    height: 3px !important;
-    border-radius: 2px !important;
+    height: clamp(3.5px, calc(var(--sq-size) * 0.08), 6px) !important;
+    border-radius: 3px !important;
   }
 
   /* ปุ่มเหรียญเฟสตรงกลาง */
   .phase-coin-btn {
-    width: clamp(24px, calc(var(--sq-size) * 0.7), 34px) !important;
-    height: clamp(24px, calc(var(--sq-size) * 0.7), 34px) !important;
-    border-width: 1.5px !important;
+    width: clamp(32px, calc(var(--sq-size) * 0.7), 44px) !important;
+    height: clamp(32px, calc(var(--sq-size) * 0.7), 44px) !important;
+    border-width: 2px !important;
   }
   .phase-coin-btn .coin-turn {
-    font-size: 0.42rem !important;
+    font-size: clamp(0.44rem, calc(var(--sq-size) * 0.09), 0.56rem) !important;
   }
   .phase-coin-btn .coin-phase {
-    font-size: 0.52rem !important;
+    font-size: clamp(0.54rem, calc(var(--sq-size) * 0.12), 0.7rem) !important;
+    font-weight: 900 !important;
   }
 
-  /* มือผู้เล่นด้านล่างสุด (ชูขึ้นเหนือบาร์ ไม่ตกขอบจอ) */
+  /* มือผู้เล่นด้านล่างสุด ชัดเจน แตะง่าย เด้งลอยสวยงาม */
   .handrow#handRow,
   .board > .handrow:not(.opp) {
     position: absolute !important;
-    bottom: 0px !important;
+    bottom: 2px !important;
     left: 0 !important;
     right: 0 !important;
     height: var(--hand-card-h) !important;
     display: flex !important;
     justify-content: center !important;
     align-items: flex-end !important;
-    padding: 0 4px !important;
+    padding: 0 8px !important;
     z-index: 50 !important;
     pointer-events: none !important;
+    transition: transform 0.22s ease !important;
   }
   .handrow#handRow .card,
   .board > .handrow:not(.opp) .card {
     height: var(--hand-card-h) !important;
     width: var(--hand-card-w) !important;
     pointer-events: auto !important;
-    margin-left: -10px !important;
-    border-width: 1.5px !important;
-    border-radius: 4px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+    margin-left: -14px !important;
+    border-width: 2px !important;
+    border-radius: 5px !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65) !important;
+    transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+  }
+  .handrow#handRow .card:first-child,
+  .board > .handrow:not(.opp) .card:first-child {
+    margin-left: 0 !important;
   }
   .handrow#handRow .card:hover,
   .board > .handrow:not(.opp) .card:hover,
   .handrow#handRow .card.sel,
   .board > .handrow:not(.opp) .card.sel {
-    transform: translateY(-20px) !important;
+    transform: translateY(-28px) !important;
     z-index: 100 !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.85), 0 0 12px #eab308 !important;
   }
   .handrow.mode-placing {
-    transform: translateY(calc(var(--hand-card-h) * 0.5)) !important;
+    transform: translateY(calc(var(--hand-card-h) * 0.62)) !important;
+    opacity: 0.65 !important;
+  }
+  .handrow.mode-placing:hover {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
   }
 
   /* แถบคำสั่งลอยด่วนแบบยูกิ */
   .quick-action-bar {
     position: absolute !important;
-    bottom: calc(var(--hand-card-h) + 4px) !important;
+    bottom: calc(var(--hand-card-h) + 6px) !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 120 !important;
-    padding: 3px 8px !important;
-    gap: 4px !important;
-    border-radius: 6px !important;
-    font-size: 0.7rem !important;
+    padding: 4px 10px !important;
+    gap: 6px !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
     white-space: nowrap !important;
     max-width: 96vw !important;
   }
   .quick-act-btn {
-    padding: 3px 6px !important;
-    font-size: 0.68rem !important;
-    border-radius: 5px !important;
+    padding: 4px 8px !important;
+    font-size: 0.72rem !important;
+    border-radius: 6px !important;
   }
 
-  /* รายละเอียดการ์ดในการ์ดมือและสนาม */
+  /* รายละเอียดการ์ดในการ์ดมือและสนาม คมชัด อ่านง่าย */
   .card-stats {
-    font-size: 0.55rem !important;
+    font-size: clamp(0.52rem, calc(var(--sq-size) * 0.1), 0.72rem) !important;
+    gap: 2px !important;
   }
   .stat-pill {
-    padding: 0 2px !important;
-    font-size: 0.52rem !important;
+    padding: 0 3px !important;
+    font-size: clamp(0.5rem, calc(var(--sq-size) * 0.095), 0.68rem) !important;
+    height: clamp(13px, calc(var(--sq-size) * 0.18), 18px) !important;
+    border-radius: 3px !important;
   }
   .stat-circle {
-    width: 12px !important;
-    height: 12px !important;
-    font-size: 0.52rem !important;
+    width: clamp(13px, calc(var(--sq-size) * 0.18), 18px) !important;
+    height: clamp(13px, calc(var(--sq-size) * 0.18), 18px) !important;
+    font-size: clamp(0.48rem, calc(var(--sq-size) * 0.09), 0.65rem) !important;
   }
   .card-name {
-    font-size: 0.5rem !important;
-    padding: 0 1px !important;
-    line-height: 1.1 !important;
+    font-size: clamp(0.52rem, calc(var(--sq-size) * 0.1), 0.72rem) !important;
+    padding: 1px 2px !important;
+    line-height: 1.15 !important;
+    font-weight: 700 !important;
   }
 }
 
