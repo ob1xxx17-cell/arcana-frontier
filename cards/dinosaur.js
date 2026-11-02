@@ -414,7 +414,7 @@
       "tags": [
         "dino"
       ],
-      "text": "ราชาแห่งการกิน (3): เทิร์นละ 1 ครั้ง ทำลายไดโนของเรา 1 ตัว (ไม่ใช่ตัวเอง) +ครึ่งหนึ่งของ ATK ตัวนั้นถาวร เมื่อสำเร็จได้ +1 มานา; คำรามราชา (1): เทิร์นละ 1 ครั้ง ลด ATK ศัตรูทุกตัว 300 ถาวร แต่เร็กซ์โจมตีไม่ได้ในเทิร์นนี้",
+      "text": "ราชาแห่งการกิน (3): เทิร์นละ 1 ครั้ง ทำลายไดโนของเรา 1 ตัว (ไม่ใช่ตัวเอง) +ครึ่งหนึ่งของ ATK ตัวนั้นถาวร เมื่อสำเร็จได้ +1 มานา; คำรามราชา (1): เทิร์นละ 1 ครั้ง ลด ATK ศัตรูทุกตัว 300 ถาวร แต่เร็กซ์โจมตีไม่ได้ในเทิร์นนี้; ราชาจุติ (0): เมื่ออัญเชิญลงช่องผู้นำสำเร็จ ทำลายมอนสเตอร์ฝ่ายตรงข้าม 1 ตัวที่มี ATK น้อยกว่าทีเร็กซ์ และเพิ่ม ATK ครึ่งหนึ่งของมอนสเตอร์ตัวนั้นถาวร",
       "effects": [
         {
           "id": "eat_king",
@@ -498,6 +498,45 @@
               "op": "cannotAttack",
               "target": "self",
               "duration": "endTurn"
+            }
+          ]
+        },
+        {
+          "id": "trex_leader_summon",
+          "name": "ราชาจุติ",
+          "trigger": "onSummon",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "condition": [
+            {
+              "op": "inLeaderSlot"
+            }
+          ],
+          "do": [
+            {
+              "op": "destroy",
+              "target": {
+                "side": "opp",
+                "zone": "monster",
+                "filter": {
+                  "atkBelowSource": true
+                },
+                "count": 1,
+                "choose": "player"
+              }
+            },
+            {
+              "op": "modifyStat",
+              "target": "self",
+              "stat": "atk",
+              "duration": "permanent",
+              "requireSuccess": true,
+              "amount": {
+                "fromResult": "atk",
+                "multiplier": 0.5
+              }
             }
           ]
         }
@@ -704,7 +743,7 @@
       "name": "สัญญาณเรียกฝูง",
       "type": "spell",
       "mana": "1",
-      "count": 2,
+      "count": 1,
       "group": "normal",
       "field": false,
       "proposed_level": false,
@@ -976,6 +1015,59 @@
       ]
     },
     {
+      "id": "dino_king_summon",
+      "name": "อัญเชิญราชา",
+      "type": "spell",
+      "group": "normal",
+      "field": false,
+      "mana": "3",
+      "count": 1,
+      "proposed_level": false,
+      "tags": [
+        "dino"
+      ],
+      "text": "จ่าย 3 มานา ส่งมอนสเตอร์บนสนามของเรา 3 ตัวลงสุสาน: เรียกไทแรนโนซอรัสเร็กซ์ 1 ตัวจากเด็คหรือสุสาน",
+      "effects": [
+        {
+          "id": "king_summon",
+          "name": "อัญเชิญราชา",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 3
+          },
+          "condition": [
+            {
+              "op": "controls",
+              "min": 3
+            }
+          ],
+          "do": [
+            {
+              "op": "sendToGrave",
+              "target": {
+                "side": "self",
+                "zone": "monster",
+                "count": 3,
+                "choose": "player"
+              }
+            },
+            {
+              "op": "specialSummon",
+              "from": [
+                "deck",
+                "grave"
+              ],
+              "filter": {
+                "cardId": "dino_trex"
+              },
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "dino_pack_hunt",
       "name": "ฝูงล่าเหยื่อ",
       "type": "spell",
@@ -1006,6 +1098,70 @@
     }
   ],
   "extra": [
+    {
+      "id": "dino_king_julien",
+      "name": "คิงจูเลี่ยน",
+      "type": "fusion",
+      "level": 2,
+      "atk": 1500,
+      "def": 1500,
+      "mana": "0",
+      "materials": "มอนสเตอร์ไดโนเสาร์ Lv1 2 ตัว (จากมือหรือสนาม)",
+      "materialSlots": [
+        { "tag": "dino", "level": 1 },
+        { "tag": "dino", "level": 1 }
+      ],
+      "proposed_level": false,
+      "tags": [
+        "dino"
+      ],
+      "text": "ราชาปาร์ตี้ (0): เมื่อเรียกสำเร็จ จั่วการ์ด 1 ใบ; เก็บกู้เวท (1): [กดใช้บนสนาม 1 ครั้ง/เทิร์น] จ่าย 1 มานา นำการ์ดเวท 1 ใบจากสุสานขึ้นมือ",
+      "effects": [
+        {
+          "id": "julien_draw",
+          "name": "ราชาปาร์ตี้",
+          "trigger": "onSummon",
+          "speed": 1,
+          "cost": {
+            "mana": 0
+          },
+          "do": [
+            {
+              "op": "draw",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "julien_salvage",
+          "name": "เก็บกู้เวท",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 1
+          },
+          "limit": {
+            "per": "turn",
+            "key": "julien_salvage",
+            "count": 1
+          },
+          "do": [
+            {
+              "op": "returnToHand",
+              "target": {
+                "side": "self",
+                "zone": "grave",
+                "filter": {
+                  "type": "spell"
+                },
+                "count": 1,
+                "choose": "player"
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "dino_tyrano_raptor",
       "name": "ไทรานโนแรปเตอร์",

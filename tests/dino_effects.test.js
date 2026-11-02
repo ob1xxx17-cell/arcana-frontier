@@ -12,7 +12,7 @@ const WITH_EFFECTS = ['dino_egg', 'dino_compy', 'dino_anky', 'dino_spino', 'dino
   'dino_ptero', 'dino_trike', 'dino_stego', 'dino_small_raptor',
   'dino_call', 'dino_hunter_raptor', 'dino_tyrano_raptor', 'dino_brachio',
   'dino_trex', 'dino_nest', 'dino_fast_hatch',
-  'dino_roar', 'dino_escape', 'dino_mud', 'dino_hidden_egg', 'dino_pack_hunt', 'dino_fusion', 'dino_mega_tyrant'];   // 5C: 5 ใบ, 6B: dino_fusion, 6C: dino_mega_tyrant
+  'dino_roar', 'dino_escape', 'dino_mud', 'dino_hidden_egg', 'dino_pack_hunt', 'dino_fusion', 'dino_mega_tyrant', 'dino_king_summon', 'dino_king_julien'];
 
 module.exports = [
   { name: 'DINO-01 ไข่ฟักตอน Standby ของเจ้าของเท่านั้น (ไม่ฟักตอน Standby ฝ่ายตรงข้าม)', run(assert) {
@@ -129,11 +129,15 @@ module.exports = [
 
   { name: 'DINO-12 การ์ดที่ชิ้นส่วนยังทำไม่ได้คงเป็น effects: [] (ตามรายงานขั้น 4C/4E-3/4E-4) และมีเอฟเฟกต์เฉพาะ 19 ใบนี้', run(assert) {
     const all = [].concat(CG.cards.dinosaur.main, CG.cards.dinosaur.extra);
-    assert.strictEqual(all.length, 26);
+    assert.strictEqual(all.length, 28);
     assert.deepStrictEqual(all.filter(c => c.effects.length).map(c => c.id).sort(), WITH_EFFECTS.slice().sort());
     for (const c of all.filter(c => !WITH_EFFECTS.includes(c.id))) assert.deepStrictEqual(c.effects, [], c.id);
-    const TWO_EFFECTS = ['dino_tyrano_raptor', 'dino_trex', 'dino_small_raptor', 'dino_spino'];
-    for (const id of WITH_EFFECTS) assert.strictEqual(cardDef(id).effects.length, TWO_EFFECTS.includes(id) ? 2 : 1, id);
+    const TWO_EFFECTS = ['dino_tyrano_raptor', 'dino_small_raptor', 'dino_spino', 'dino_king_julien'];
+    const THREE_EFFECTS = ['dino_trex'];
+    for (const id of WITH_EFFECTS) {
+      const expected = THREE_EFFECTS.includes(id) ? 3 : (TWO_EFFECTS.includes(id) ? 2 : 1);
+      assert.strictEqual(cardDef(id).effects.length, expected, id);
+    }
   } },
 
   { name: 'DINO-13 ทีเร็กซ์ eat_king: ทำลายไดโนเรา เพิ่ม ATK ครึ่งหนึ่งถาวร ได้มานา +1 สำเร็จสมบูรณ์', run(assert) {
@@ -155,5 +159,91 @@ module.exports = [
     assert.strictEqual(s.players[0].monsters[1], null, 'แรปเตอร์เล็กถูกทำลายไปสุสาน');
     assert.strictEqual(E().atk(s.players[0].monsters[0]), 2500, 'ทีเร็กซ์ได้ ATK +300 (ครึ่งหนึ่งของ 600) กลายเป็น 2500');
     assert.strictEqual(s.players[0].mana, 3, 'มานาสุทธิ 5 - 3 + 1 = 3');
+  } },
+  { name: 'DINO-14 ทีเร็กซ์ trex_leader_summon: ลงช่องผู้นำสำเร็จ ทำลายมอนฝ่ายตรงข้ามที่ ATK น้อยกว่า และเพิ่ม ATK ครึ่งหนึ่งถาวร', run(assert) {
+    const s = game({
+      config: { autoChoose: true },
+      p0: {
+        hand: ['dino_trex'],
+        mana: 5,
+        monsters: { 0: 'dino_small_raptor', 1: 'dino_small_raptor', 3: 'dino_small_raptor' }
+      },
+      p1: {
+        monsters: { 0: 'dino_small_raptor' } // ATK 600 < 2200
+      }
+    });
+    s.phase = 'main1';
+    const r = E().applyAction(s, {
+      type: 'tributeSummon',
+      player: 0,
+      handIdx: 0,
+      slot: 2,
+      materials: [0, 1, 3]
+    });
+    assert.strictEqual(r.ok, true, 'tribute summon ทีเร็กซ์ลงช่องผู้นำสำเร็จ');
+    assert.strictEqual(s.players[1].monsters[0], null, 'มอนศัตรูถูกทำลาย');
+    assert.strictEqual(E().atk(s.players[0].monsters[2]), 2500, 'ทีเร็กซ์ได้ ATK +300 (ครึ่งหนึ่งของ 600)');
+  } },
+
+  { name: 'DINO-15 คิงจูเลี่ยน: ลงสนามจั่ว 1 ใบ และจ่าย 1 มานานำการ์ดเวทจากสุสานขึ้นมือ', run(assert) {
+    const s = game({
+      config: { autoChoose: true },
+      p0: {
+        hand: [],
+        grave: ['dino_call'],
+        deck: ['dino_egg'],
+        mana: 2
+      }
+    });
+    s.phase = 'main1';
+    // เรียกพิเศษคิงจูเลี่ยนลงสนาม
+    const julienDef = cardDef('dino_king_julien');
+    const inst = {
+      uid: 501,
+      cardId: 'dino_king_julien',
+      owner: 0,
+      controller: 0,
+      faceDown: false,
+      position: 'atk',
+      level: 2,
+      baseAtk: 1500,
+      baseDef: 1500,
+      atkMod: 0,
+      defMod: 0,
+      tempAtkMod: 0,
+      tempDefMod: 0,
+      under: [],
+      flags: {}
+    };
+    s.players[0].monsters[0] = inst;
+    CG.effects.fire(s, [], 'onSummon', { source: inst });
+    assert.strictEqual(s.players[0].hand.length, 1, 'เมื่อลงสนามสำเร็จ จั่วการ์ด 1 ใบ');
+
+    // กดใช้เก็บกู้เวท
+    const rAct = E().applyAction(s, { type: 'activateEffect', player: 0, slot: 0, effectId: 'julien_salvage' });
+    assert.strictEqual(rAct.ok, true, 'สั่งใช้ julien_salvage สำเร็จ');
+    assert.strictEqual(s.players[0].grave.length, 0, 'การ์ดเวทในสุสานถูกเก็บขึ้นมือ');
+    assert.strictEqual(s.players[0].hand.length, 2, 'การ์ดบนมือเพิ่มเป็น 2 ใบ');
+    assert.strictEqual(s.players[0].mana, 2, 'จ่าย 1 มานา เหลือ 2');
+  } },
+
+  { name: 'DINO-16 อัญเชิญราชา: จ่าย 3 มานา ส่งมอน 3 ตัวลงสุสาน เรียกทีเร็กซ์จากเด็ค/สุสาน', run(assert) {
+    const s = game({
+      config: { autoChoose: true },
+      p0: {
+        hand: ['dino_king_summon'],
+        monsters: { 0: 'dino_egg', 1: 'dino_egg', 2: 'dino_egg' },
+        deck: ['dino_trex'],
+        mana: 5
+      }
+    });
+    s.phase = 'main1';
+    // รันเอฟเฟกต์การ์ดเวท อัญเชิญราชา
+    const spellDef = cardDef('dino_king_summon');
+    const eff = spellDef.effects[0];
+    const r = CG.effects.run(s, [], eff, { player: 0, trigger: 'ignition', source: { uid: 999, cardId: 'dino_king_summon' } });
+    assert.strictEqual(r.ok, true, 'รันเอฟเฟกต์อัญเชิญราชาสำเร็จ');
+    assert.strictEqual(s.players[0].monsters.filter(Boolean).length, 1, 'มอน 3 ตัวถูกส่งลงสุสาน และทีเร็กซ์ถูกเรียกขึ้นมา 1 ตัว');
+    assert.strictEqual(s.players[0].monsters.find(Boolean).cardId, 'dino_trex', 'ตัวที่อยู่บนสนามคือทีเร็กซ์');
   } }
 ];

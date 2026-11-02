@@ -5,11 +5,11 @@ const t = (name, fn) => tests.push({ name, run: fn });
 t('DECK-01: ดึงการ์ดทั้งหมดในเกมครบ 48 ใบและระบุหมวดหมู่ Extra/Main ถูกต้อง', (assert) => {
   const DB = globalThis.CG.deckBuilder;
   const all = DB.getAllCardDefs();
-  assert.equal(all.length, 48, 'ต้องมี 48 ใบ');
+  assert.equal(all.length, 50, 'ต้องมี 50 ใบ');
   const mainCards = all.filter(c => !c.isExtra);
   const extraCards = all.filter(c => c.isExtra);
-  assert.equal(mainCards.length, 42, 'Main Deck ต้องมี 42 ใบ');
-  assert.equal(extraCards.length, 6, 'Extra Deck ต้องมี 6 ใบ');
+  assert.equal(mainCards.length, 43, 'Main Deck ต้องมี 43 ใบ');
+  assert.equal(extraCards.length, 7, 'Extra Deck ต้องมี 7 ใบ');
 });
 
 t('DECK-02: ตรวจเด็คที่ถูกต้อง (เด็คไดโนเสาร์เดิม 40 ใบ) ต้องผ่านการตรวจสอบ', (assert) => {

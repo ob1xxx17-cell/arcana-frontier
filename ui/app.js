@@ -683,6 +683,34 @@
   }
 
   // ---------------- ระบบบัญชีผู้เล่น (Account / ID / Login / Register / Starter Deck) ----------------
+  function getOwnedCards() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const s = localStorage.getItem('cg_owned_cards');
+        if (s) return new Set(JSON.parse(s));
+      }
+    } catch (e) {}
+    const starter = new Set();
+    const keys = ['aquila', 'dinosaur', 'mecha_strike', 'cube_forge'];
+    keys.forEach(k => {
+      const d = CG.cards && CG.cards[k];
+      if (d) {
+        (d.main || []).forEach(c => starter.add(c.id));
+        if (d.extra && d.extra.length) d.extra.forEach(c => starter.add(c.id));
+      }
+    });
+    return starter;
+  }
+
+  function saveOwnedCards(owned) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('cg_owned_cards', JSON.stringify(Array.from(owned)));
+      }
+    } catch (e) {}
+    if (Account && Account.save) Account.save();
+  }
+
   const Account = {
     CURRENT_KEY: 'af_current_account',
     ACCOUNTS_KEY: 'af_saved_accounts',
@@ -700,6 +728,22 @@
 
       if (this.current) {
         if (!this.current.level) this.current.level = 1;
+        if (!this.current.unlockedDecks) this.current.unlockedDecks = ['dinosaur'];
+        if (!this.current.unlockedDecks.includes('dinosaur')) {
+          this.current.unlockedDecks.push('dinosaur');
+        }
+        if (!this.current.unlockedDecks.includes('cube_forge')) {
+          this.current.unlockedDecks.push('cube_forge');
+        }
+        const owned = getOwnedCards();
+        this.current.unlockedDecks.forEach(dk => {
+          const d = CG.cards && CG.cards[dk];
+          if (d) {
+            (d.main || []).forEach(c => owned.add(c.id));
+            (d.extra || []).forEach(c => owned.add(c.id));
+          }
+        });
+        saveOwnedCards(owned);
         if (!this.current.stats) {
           this.current.stats = { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} };
         }
@@ -1386,13 +1430,7 @@
 
   function boot() {
     Account.init();
-    if (!Account.isLoggedIn()) {
-      showAuthScreen();
-    } else if (!Account.current.onboarded) {
-      showOnboardingModal();
-    } else {
-      lobby();
-    }
+    lobby();
   }
   CG.account = Account;
 
@@ -1400,12 +1438,18 @@
   function lobby() {
     Account.init();
     if (!Account.isLoggedIn()) {
-      showAuthScreen();
-      return;
-    }
-    if (!Account.current.onboarded) {
-      showOnboardingModal();
-      return;
+      Account.current = {
+        id: '45678',
+        nickname: 'ADVENTURER_123',
+        level: 1,
+        onboarded: true,
+        unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
+        curr20: 950,
+        curr100: 50,
+        stats: { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} }
+      };
+      CG.ui.curr20 = 950;
+      CG.ui.curr100 = 50;
     }
 
     if (mode === 'online' && CG.network) {
@@ -1817,7 +1861,11 @@
           '</div>';
       }
 
-      const cardViewHtml = V().cardHtml(d, { reveal: true, field: false });
+      const cardViewHtml = V().cardHtml(d, { 
+        reveal: true, 
+        field: false,
+        attrs: ' style="width:100%!important;height:100%!important;"'
+      });
 
       const overlay = document.createElement('div');
       overlay.className = 'wf-modal-overlay';
@@ -1829,7 +1877,7 @@
             '<button class="wf-modal-close" id="btnFullModalClose" style="font-size:1.1rem;padding:2px 10px">✕ ปิด</button>' +
           '</div>' +
           '<div style="display:grid;grid-template-columns:180px 1fr;gap:20px;align-items:start">' +
-            '<div style="width:180px;height:252px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.35);overflow:hidden">' +
+            '<div class="wf-card-full-slot" style="width:180px;height:252px;--cw:180px;--ch:252px;--tag-icon-size:26px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.35);overflow:hidden;flex-shrink:0;">' +
               cardViewHtml +
             '</div>' +
             '<div>' +
@@ -3193,6 +3241,26 @@
       { key: 'aquila', name: 'กองทัพโรมัน' }
     ];
     let shopPackIdx = 0;
+
+    // RENDER LOBBY
+    if (globalThis.CG && globalThis.CG.lobby && typeof globalThis.CG.lobby.render === 'function') {
+      window.openFriendModal = openFriendModal;
+      window.openNoticeModal = openNoticeModal;
+      window.openMailModal = openMailModal;
+      window.openRedeemCodeModal = openRedeemCodeModal;
+      window.openShopModal = openShopModal;
+      window.openProfileModal = openProfileModal;
+      window.openBotModal = openBotModal;
+      window.openPvpModal = openPvpModal;
+      window.openTrialsModal = openTrialsModal;
+      window.openMissionsModal = openMissionsModal;
+      window.openCodexModal = openCodexModal;
+      window.CG.currentDeckA = deckA;
+      window.lobby = lobby;
+
+      CG.lobby.render($('lobby'));
+      return;
+    }
 
     // RENDER LOBBY
     $('lobby').innerHTML = '<div class="grimoire-lobby">' +
