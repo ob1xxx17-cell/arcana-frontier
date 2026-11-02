@@ -29,7 +29,7 @@
       waitOther: 'รอฝ่ายตรงข้ามตัดสินใจ…',
       discardTitle: 'มือเกินกำหนด', discardHint: 'เลือกการ์ดที่จะทิ้ง (ไปอยู่ Exile) ให้ครบ',
       selectedN: 'เลือกแล้ว', ofN: 'จาก',
-      summon: 'อัญเชิญ', setMon: 'Set คว่ำ', tribute: 'เสียสละ', flip: 'พลิกหงาย', changePos: 'เปลี่ยนท่า', attack: 'โจมตี', attackDirect: 'โจมตีตรง',
+      summon: 'ตั้งโจมตี', setMon: 'ตั้งป้องกัน (หมอบ)', tribute: 'เสียสละ', flip: 'พลิกหงาย', changePos: 'เปลี่ยนท่า', attack: 'โจมตี', attackDirect: 'โจมตีตรง',
       overlay: 'Eclipse (เอ็กลิปส์)', extraSummon: 'อัญเชิญ Astral Gate', pickOverlayTarget: 'เลือก Entity ที่จะทำ Eclipse (วางทับ)', pickExtraSlot: 'เลือกช่องที่จะลง Astral Gate',
       pickSlot: 'เลือกช่อง Entity ที่จะลง', pickMats: 'เลือก Entity ของคุณที่จะเสียสละ แล้วกด "ยืนยันวัสดุ"', confirmMats: 'ยืนยันวัสดุ',
       pickTarget: 'เลือกเป้าหมายที่จะโจมตี',
@@ -115,6 +115,7 @@
       CHOOSE_FUSION_MONSTER: '🌀 เลือกมอนสเตอร์ Fusion ที่จะอัญเชิญ',
       CHOOSE_FUSION_MATERIALS: '🌀 เลือกวัตถุดิบสำหรับฟิวชั่น',
       CHOOSE_FUSION_SLOT: '🌀 เลือกช่องสำหรับวางมอนสเตอร์ฟิวชั่น',
+      CHOOSE_SUMMON_POSITION: '⚔️ เลือกรูปแบบการลงสนาม (ตั้งโจมตี หรือ ตั้งป้องกัน)',
       CHOOSE_SLOT: '🌀 เลือกช่องสำหรับวางมอนสเตอร์',
       unknown: 'ต้องการให้คุณเลือก'
     },

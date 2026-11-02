@@ -655,6 +655,26 @@
     const p = state.players[ctx.player];
     const autoChoose = !!(state.config && state.config.autoChoose);
 
+    // Resuming from stage 'position':
+    if (ctx._fusionData && ctx._fusionData.stage === 'position') {
+      const chosenFusion = p.extra.find(c => c.uid === ctx._fusionData.chosenFusionUid);
+      if (!chosenFusion) return;
+      const chosenSlot = ctx._fusionData.chosenSlot;
+      const pickedIdx = ctx._stepChoice !== undefined ? ctx._stepChoice[0] : 0;
+      const pos = pickedIdx === 1 ? 'def' : 'atk';
+
+      const exIdx = p.extra.findIndex(c => c.uid === chosenFusion.uid);
+      if (exIdx >= 0) p.extra.splice(exIdx, 1);
+      E.placeMonster(state, events, ctx.player, chosenFusion, chosenSlot, { how: 'fusion', from: 'extra', faceDown: false, position: pos });
+      E.refreshAuras(state);
+      if (state.config && state.config.chainMode) {
+        E.openWindow(state, events, { kind: 'summon', uid: chosenFusion.uid, how: 'fusion' });
+      }
+      delete ctx._fusionData;
+      delete ctx._stepChoice;
+      return;
+    }
+
     // Resuming from stage 'slot':
     if (ctx._fusionData && ctx._fusionData.stage === 'slot') {
       const chosenFusion = p.extra.find(c => c.uid === ctx._fusionData.chosenFusionUid);
@@ -670,6 +690,23 @@
         if (pickedIdx >= 0 && pickedIdx < freeSlots.length) {
           chosenSlot = freeSlots[pickedIdx];
         }
+      }
+
+      if (!autoChoose && state.config && state.config.interactivePosition) {
+        const def = E.cardOf(chosenFusion) || {};
+        ctx._fusionData = { stage: 'position', chosenFusionUid: chosenFusion.uid, chosenSlot };
+        delete ctx._stepChoice;
+        FX.openPending(state, events, {
+          kind: 'chooseOption',
+          player: ctx.player,
+          prompt: 'CHOOSE_SUMMON_POSITION',
+          options: [
+            { index: 0, name: '⚔️ ตั้งโจมตี (หงายหน้า)', text: 'หงายหน้าตั้งโจมตี (ATK: ' + (def.atk || chosenFusion.atk || 0) + ') พร้อมต่อสู้ใน Battle Phase' },
+            { index: 1, name: '🛡️ ตั้งป้องกัน (หงายหน้า)', text: 'หงายหน้าตั้งป้องกัน (DEF: ' + (def.def || chosenFusion.def || 0) + ') ใช้ค่าพลังป้องกันรับการโจมตี' }
+          ],
+          resume: FX.makeResume(state, step, ctx)
+        });
+        return;
       }
 
       const exIdx = p.extra.findIndex(c => c.uid === chosenFusion.uid);

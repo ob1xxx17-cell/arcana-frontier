@@ -164,7 +164,8 @@
         const c = p.monsters[act.slot];
         const d = E.cardOf(c);
         cardName = d ? d.name : '';
-        label = a.changePos;
+        const curPos = (c && c.position) || 'atk';
+        label = curPos === 'atk' ? '🛡️ ตั้งป้องกัน' : '⚔️ ตั้งโจมตี';
         id = 'changePosition:' + act.slot;
         break;
       }
@@ -930,10 +931,12 @@
           }
         } else {
           const canPos = menuActions.some(x => x.type === 'changePosition' && x.enabled);
-          if (canPos) btns += '<button class="cmd-cell enabled" data-act="pos">' + esc(a.changePos) + '</button>';
+          const curPos = (m && m.position) || 'atk';
+          const posLabel = curPos === 'atk' ? '🛡️ ตั้งป้องกัน' : '⚔️ ตั้งโจมตี';
+          if (canPos) btns += '<button class="cmd-cell enabled" data-act="pos">' + esc(posLabel) + '</button>';
           else {
             const dis = menuActions.find(x => x.type === 'changePosition' && !x.enabled);
-            if (dis) btns += '<button class="cmd-cell disabled" data-reason="' + esc(dis.reason || '') + '">' + esc(a.changePos) + '</button>';
+            if (dis) btns += '<button class="cmd-cell disabled" data-reason="' + esc(dis.reason || '') + '">' + esc(posLabel) + '</button>';
           }
 
           if (state.phase === 'battle') {
@@ -1623,7 +1626,11 @@
                 if (canAtk) btns += '<button class="quick-act-btn danger" data-act="atk">⚔️ ' + esc(a.attack) + '</button>';
               }
               const canPos = menuActions.some(x => x.type === 'changePosition' && x.enabled);
-              if (canPos) btns += '<button class="quick-act-btn" data-act="pos">🔄 ' + esc(a.changePos) + '</button>';
+              if (canPos) {
+                const curPos = (m && m.position) || 'atk';
+                const posBtnLabel = curPos === 'atk' ? '🛡️ ตั้งป้องกัน' : '⚔️ ตั้งโจมตี';
+                btns += '<button class="quick-act-btn" data-act="pos">' + posBtnLabel + '</button>';
+              }
 
               const effActs = menuActions.filter(x => x.type === 'activateEffect' && x.enabled);
               effActs.forEach(eb => {

@@ -14,7 +14,7 @@
     const p = state.players[pIdx];
     inst.controller = pIdx;
     inst.faceDown = !!opt.faceDown;
-    inst.position = opt.faceDown ? 'def' : 'atk';
+    inst.position = opt.position || (opt.faceDown ? 'def' : 'atk');
     inst.flags = inst.flags || {};
     inst.flags.summonedTurn = state.turn;
     inst.flags.setTurn = opt.faceDown ? state.turn : null;

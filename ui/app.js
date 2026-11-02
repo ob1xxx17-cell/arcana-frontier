@@ -591,7 +591,7 @@
       deckB: 'dinosaur',
       seed,
       mode: 'bot',
-      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true }
+      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true, interactivePosition: true }
     });
 
     sel = null; handSel = new Set(); pendingSel = new Set(); evBuf = []; confirmedViewer = null;
@@ -3446,7 +3446,7 @@
       seed,
       firstPlayer,
       mode: (mode === 'online' ? 'pvp' : 'bot'),
-      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true }
+      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true, interactivePosition: true }
     });
     if (isBotMatch() && state && state.players) {
       if (state.players[0]) {
@@ -4744,6 +4744,61 @@
     }
   }
 
+    function promptSummonPosition(slotIdx, actSummon, actSet) {
+    const root = $('overlayRoot');
+    if (!root) return;
+    const existing = document.getElementById('posChoiceOverlay');
+    if (existing) existing.remove();
+
+    const ov = document.createElement('div');
+    ov.id = 'posChoiceOverlay';
+    ov.className = 'overlay';
+    ov.style.zIndex = '9999';
+    ov.style.display = 'flex';
+    ov.style.alignItems = 'center';
+    ov.style.justifyContent = 'center';
+    ov.style.background = 'rgba(0,0,0,0.8)';
+    ov.style.backdropFilter = 'blur(4px)';
+
+    const card = state.players[actSummon.player].hand[actSummon.handIdx];
+    const def = card ? E().cardOf(card) : {};
+    const cardName = def.name || 'มอนสเตอร์';
+
+    ov.innerHTML = '<div class="modal" style="text-align:center;max-width:380px;background:#101428;border:2px solid var(--gold);padding:24px 20px;border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,0.95);animation:scaleIn 0.15s ease-out;">' +
+      '<div style="font-size:0.85rem;color:var(--gold);font-weight:700;letter-spacing:1px;text-transform:uppercase;">เลือกรูปแบบการลงสนาม</div>' +
+      '<div style="font-size:1.15rem;font-weight:900;color:#fff;margin:6px 0 16px 0;">' + V().esc(cardName) + ' (ช่อง ' + (slotIdx + 1) + ')</div>' +
+      '<div style="display:flex;gap:12px;justify-content:center;">' +
+        '<button id="btnChooseAtk" style="flex:1;background:linear-gradient(135deg, #dc2626, #991b1b);border:2px solid #f87171;color:#fff;font-weight:800;padding:14px 10px;border-radius:10px;cursor:pointer;font-size:0.95rem;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 4px 12px rgba(220,38,38,0.4);transition:transform 0.1s;">' +
+          '<span style="font-size:1.3rem;">⚔️</span>' +
+          '<span>ตั้งโจมตี</span>' +
+          '<span style="font-size:0.75rem;font-weight:600;opacity:0.85;color:#fecaca;">(หงายหน้า)</span>' +
+        '</button>' +
+        '<button id="btnChooseDef" style="flex:1;background:linear-gradient(135deg, #2563eb, #1e40af);border:2px solid #60a5fa;color:#fff;font-weight:800;padding:14px 10px;border-radius:10px;cursor:pointer;font-size:0.95rem;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 4px 12px rgba(37,99,235,0.4);transition:transform 0.1s;">' +
+          '<span style="font-size:1.3rem;">🛡️</span>' +
+          '<span>ตั้งป้องกัน</span>' +
+          '<span style="font-size:0.75rem;font-weight:600;opacity:0.85;color:#bfdbfe;">(เซ็ตคว่ำหน้า)</span>' +
+        '</button>' +
+      '</div>' +
+      '<button id="btnChooseCancel" style="margin-top:16px;background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:0.85rem;font-weight:600;padding:6px 12px;">ยกเลิก</button>' +
+    '</div>';
+
+    root.appendChild(ov);
+
+    document.getElementById('btnChooseAtk').onclick = () => {
+      ov.remove();
+      act(actSummon);
+    };
+    document.getElementById('btnChooseDef').onclick = () => {
+      ov.remove();
+      act(actSet);
+    };
+    document.getElementById('btnChooseCancel').onclick = () => {
+      ov.remove();
+      sel = null;
+      render();
+    };
+  }
+
   function onClick(e) {
     if (justDragged) { justDragged = false; return; }
     if (!state || state.ended) return;
@@ -4976,9 +5031,16 @@
         // Direct click on empty monster slot without needing to click mode:normal button first!
         const legals = E().getLegalActions(state, v);
         const actSummon = legals.find(a => a.type === 'normalSummon' && a.handIdx === sel.idx && a.slot === si);
+        const actSet = legals.find(a => a.type === 'setMonster' && a.handIdx === sel.idx && a.slot === si);
         const actOverlay = legals.find(a => a.type === 'overlay' && a.handIdx === sel.idx && a.targetSlot === si);
-        if (actSummon) {
+        if (actSummon && actSet) {
+          promptSummonPosition(si, actSummon, actSet);
+          return;
+        } else if (actSummon) {
           act(actSummon);
+          return;
+        } else if (actSet) {
+          act(actSet);
           return;
         } else if (actOverlay) {
           act(actOverlay);
@@ -5590,7 +5652,10 @@
           const actSummon = myLegals.find(a => a.type === 'normalSummon' && a.slot === slot);
           const actSet = myLegals.find(a => a.type === 'setMonster' && a.slot === slot);
           const actOverlay = myLegals.find(a => a.type === 'overlay' && a.targetSlot === slot);
-          if (actSummon) { act(actSummon); didAction = true; }
+          if (actSummon && actSet) {
+            promptSummonPosition(slot, actSummon, actSet);
+            didAction = true;
+          } else if (actSummon) { act(actSummon); didAction = true; }
           else if (actSet) { act(actSet); didAction = true; }
           else if (actOverlay) { act(actOverlay); didAction = true; }
         } else {
