@@ -55,7 +55,7 @@
 
   function render(container) {
     const S = global.STRINGS_LOBBY || {
-      profile: { name: 'ADVENTURER_123', id: '45678', level: 1, hint: 'แตะเพื่อดูสถิติและโปรไฟล์' },
+      profile: { name: 'ผู้ท้าชิง', id: 'player01', level: 1, hint: 'แตะเพื่อดูสถิติและโปรไฟล์' },
       onlineStatus: { count: 1, format: function(n) { return 'ออนไลน์: ' + n + ' คน'; } },
       currencies: { gold: 950, ticket: 50 },
       news: { caption: 'ฮีโร่ใหม่เข้าร่วมศึก!' },
@@ -83,14 +83,32 @@
       rotateNotice: 'หมุนจอเป็นแนวนอน'
     };
 
-    // เชื่อมต่อข้อมูลบัญชีผู้เล่นจริง
-    const acc = (global.Account && (typeof global.Account.getProfile === 'function' ? global.Account.getProfile() : global.Account.current)) || {};
-    const playerName = (global.Account && typeof global.Account.getNickname === 'function' ? global.Account.getNickname() : acc.nickname) || S.profile.name;
-    const playerId = (global.Account && typeof global.Account.getId === 'function' ? global.Account.getId() : acc.id) || S.profile.id;
-    const playerLv = (global.Account && typeof global.Account.getLevel === 'function' ? global.Account.getLevel() : acc.level) || S.profile.level;
+    // เชื่อมต่อข้อมูลบัญชีผู้เล่นจริง (รองรับทั้ง global.Account และ global.CG.account)
+    const accObj = global.Account || (global.CG && global.CG.account) || null;
+    const acc = (accObj && (typeof accObj.getProfile === 'function' ? accObj.getProfile() : accObj.current)) || {};
+
+    const playerName = (accObj && typeof accObj.getNickname === 'function' && accObj.getNickname())
+      || acc.nickname
+      || acc.id
+      || S.profile.name;
+
+    const playerId = (accObj && typeof accObj.getId === 'function' && accObj.getId())
+      || acc.id
+      || S.profile.id;
+
+    const playerLv = (accObj && typeof accObj.getLevel === 'function')
+      ? accObj.getLevel()
+      : (acc.level || S.profile.level || 1);
+
     const onlineCount = (global.CG && global.CG.network && global.CG.network.onlineCount) ? global.CG.network.onlineCount : S.onlineStatus.count;
-    const curr20Val = (global.Account && typeof global.Account.getCoins === 'function' ? global.Account.getCoins() : (global.CG && global.CG.ui && global.CG.ui.curr20 !== undefined ? global.CG.ui.curr20 : (acc.curr20 !== undefined ? acc.curr20 : S.currencies.gold)));
-    const curr100Val = (global.Account && typeof global.Account.getTickets === 'function' ? global.Account.getTickets() : (global.CG && global.CG.ui && global.CG.ui.curr100 !== undefined ? global.CG.ui.curr100 : (acc.curr100 !== undefined ? acc.curr100 : S.currencies.ticket)));
+
+    const curr20Val = (accObj && typeof accObj.getCoins === 'function')
+      ? accObj.getCoins()
+      : (global.CG && global.CG.ui && global.CG.ui.curr20 !== undefined ? global.CG.ui.curr20 : (acc.curr20 !== undefined ? acc.curr20 : S.currencies.gold));
+
+    const curr100Val = (accObj && typeof accObj.getTickets === 'function')
+      ? accObj.getTickets()
+      : (global.CG && global.CG.ui && global.CG.ui.curr100 !== undefined ? global.CG.ui.curr100 : (acc.curr100 !== undefined ? acc.curr100 : S.currencies.ticket));
 
     const packs = (S.shop && S.shop.packs) || [
       { id: 'mecha_strike', name: "Dragon's Hoard Cards" },

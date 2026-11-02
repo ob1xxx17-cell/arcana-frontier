@@ -886,10 +886,42 @@
       }, 1000);
     },
 
+    getProfile() {
+      return this.current || {};
+    },
+
+    getNickname() {
+      if (this.current) {
+        return this.current.nickname || this.current.id || 'ผู้ท้าชิง';
+      }
+      return 'ผู้ท้าชิง';
+    },
+
+    getId() {
+      if (this.current) {
+        return this.current.id || '';
+      }
+      return '';
+    },
+
+    getLevel() {
+      return (this.current && this.current.level) || 1;
+    },
+
+    getCoins() {
+      return (this.current && this.current.curr20 !== undefined) ? this.current.curr20 : (CG.ui.curr20 || 0);
+    },
+
+    getTickets() {
+      return (this.current && this.current.curr100 !== undefined) ? this.current.curr100 : (CG.ui.curr100 || 0);
+    },
+
     setNickname(name) {
       if (!this.current) return;
       this.current.nickname = (name || 'ผู้ท้าชิงนิรนาม').trim().slice(0, 16);
       this.save();
+      const el = document.getElementById('lbProfileName');
+      if (el) el.textContent = this.current.nickname;
     },
 
     async register(accountId, password, nickname) {
@@ -1122,6 +1154,8 @@
     }
   };
   CG.account = Account;
+  if (typeof window !== 'undefined') window.Account = Account;
+  if (typeof globalThis !== 'undefined') globalThis.Account = Account;
 
   // ---------------- ระบบ Modal กลาง (Modal Helper) ----------------
   function showWfModal(title, contentHtml, extraCls, options = {}) {
@@ -1437,19 +1471,42 @@
   // ---------------- ล็อบบี้ ----------------
   function lobby() {
     Account.init();
-    if (!Account.isLoggedIn()) {
-      Account.current = {
-        id: '45678',
-        nickname: 'ADVENTURER_123',
-        level: 1,
-        onboarded: true,
-        unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
-        curr20: 950,
-        curr100: 50,
-        stats: { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} }
-      };
-      CG.ui.curr20 = 950;
-      CG.ui.curr100 = 50;
+    if (typeof window !== 'undefined') window.Account = Account;
+    if (typeof globalThis !== 'undefined') globalThis.Account = Account;
+    CG.account = Account;
+
+    // เคลียร์ค่าหลงเหลือของม็อกจำลองเดิม (45678 / ADVENTURER_123) และกู้คืนบัญชีจริงของผู้เล่น
+    if (!Account.isLoggedIn() || (Account.current && Account.current.id === '45678' && Account.current.nickname === 'ADVENTURER_123')) {
+      let savedAcc = null;
+      try {
+        const rawSaved = localStorage.getItem('af_saved_accounts');
+        if (rawSaved) {
+          const list = JSON.parse(rawSaved);
+          if (Array.isArray(list) && list.length > 0) {
+            // ดึงบัญชีล่าสุดที่ผู้เล่นเคยล็อกอินหรือสร้างไว้
+            savedAcc = list[list.length - 1];
+          }
+        }
+      } catch (_) {}
+
+      if (savedAcc && savedAcc.id && savedAcc.id !== '45678') {
+        Account.current = savedAcc;
+      } else {
+        const guestNum = Math.floor(1000 + Math.random() * 9000);
+        Account.current = {
+          id: 'player' + guestNum,
+          nickname: 'ผู้ท้าชิง ' + guestNum,
+          level: 1,
+          onboarded: true,
+          unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
+          curr20: 950,
+          curr100: 50,
+          stats: { wins: 0, losses: 0, currentStreak: 0, maxStreak: 0, maxDmg: 0, deckUsage: {} }
+        };
+      }
+      Account.save();
+      CG.ui.curr20 = Account.current.curr20 !== undefined ? Account.current.curr20 : 950;
+      CG.ui.curr100 = Account.current.curr100 !== undefined ? Account.current.curr100 : 50;
     }
 
     if (mode === 'online' && CG.network) {
@@ -3265,6 +3322,9 @@
       window.openCodexModal = openCodexModal;
       window.CG.currentDeckA = deckA;
       window.lobby = lobby;
+      window.Account = Account;
+      globalThis.Account = Account;
+      CG.account = Account;
 
       CG.lobby.render($('lobby'));
       return;

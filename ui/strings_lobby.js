@@ -3,8 +3,8 @@
   'use strict';
   const STRINGS_LOBBY = {
   "profile": {
-    "name": "ADVENTURER_123",
-    "id": "45678",
+    "name": "ผู้ท้าชิง",
+    "id": "player01",
     "level": 1,
     "hint": "แตะเพื่อดูสถิติและโปรไฟล์"
   },
