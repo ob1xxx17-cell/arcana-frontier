@@ -6275,9 +6275,10 @@ button.gold:hover:not(:disabled) {
 }
 .codex-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 10px;
   align-items: start;
+  justify-items: center;
 }
 .codex-card-cell {
   display: flex;
@@ -6285,6 +6286,7 @@ button.gold:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   text-align: center;
+  width: 100%;
 }
 .codex-card-wrapper {
   width: 110px;

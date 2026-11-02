@@ -2651,7 +2651,7 @@
       const allCards = [].concat(curDeck.main || [], curDeck.extra || [], curDeck.rarePool || []);
       const owned = getOwnedCards();
       
-      const cardsPerPage = 4;
+      const cardsPerPage = 6;
       const spreadSize = cardsPerPage * 2;
       const totalSpreads = Math.ceil(allCards.length / spreadSize) || 1;
       if (currentCodexPage < 0) currentCodexPage = 0;
