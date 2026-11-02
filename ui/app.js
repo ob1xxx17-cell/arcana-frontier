@@ -591,7 +591,7 @@
       deckB: 'dinosaur',
       seed,
       mode: 'bot',
-      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true, interactivePosition: true }
+      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true, interactivePosition: true, interactiveSlot: true }
     });
 
     sel = null; handSel = new Set(); pendingSel = new Set(); evBuf = []; confirmedViewer = null;
@@ -3446,7 +3446,7 @@
       seed,
       firstPlayer,
       mode: (mode === 'online' ? 'pvp' : 'bot'),
-      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true, interactivePosition: true }
+      config: { autoChoose: false, chainMode: true, interactiveFusion: true, interactiveChoice: true, interactivePosition: true, interactiveSlot: true }
     });
     if (isBotMatch() && state && state.players) {
       if (state.players[0]) {
@@ -4237,7 +4237,7 @@
     if (pd.stage === 'materials' || pd.prompt === 'CHOOSE_FUSION_MATERIALS') {
       return buildFusionMaterialsPickerOverlay(st, v, pd);
     }
-    if (pd.stage === 'slot' || pd.prompt === 'CHOOSE_FUSION_SLOT') {
+    if (pd.stage === 'slot' || pd.prompt === 'CHOOSE_FUSION_SLOT' || pd.prompt === 'CHOOSE_SLOT') {
       return buildFusionSlotPickerOverlay(st, v, pd);
     }
 

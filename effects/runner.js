@@ -290,7 +290,8 @@
               list = FX.refine(list, t, ctx, x => x);
               if (t.count !== undefined) list = list.slice(0, t.count);
             }
-            const amt = FX.resolveValue ? FX.resolveValue(state, s, ctx, s.amount || 0) : s.amount;
+            const rawAmt = s.amount !== undefined ? s.amount : (s.val !== undefined ? s.val : 0);
+            const amt = FX.resolveValue ? FX.resolveValue(state, s, ctx, rawAmt) : rawAmt;
             for (const m of list) { if (pass === 1) apply(m, s.stat, amt); else later.push([m, s.stat, amt]); }
           }
         }
@@ -599,7 +600,9 @@
         trigger: ctx.trigger,
         lastResult: ctx.lastResult ? JSON.parse(JSON.stringify(ctx.lastResult)) : null,
         watchedUid: ctx.watched ? ctx.watched.uid : null,
-        _fusionData: ctx._fusionData ? JSON.parse(JSON.stringify(ctx._fusionData)) : undefined
+        _fusionData: ctx._fusionData ? JSON.parse(JSON.stringify(ctx._fusionData)) : undefined,
+        _specialSummonStage: ctx._specialSummonStage,
+        _specialSummonData: ctx._specialSummonData ? JSON.parse(JSON.stringify(ctx._specialSummonData)) : undefined
       }
     };
   };
@@ -618,7 +621,9 @@
       _isResume: true,
       _resumeStepIndex: resume.stepIndex,
       _stepChoice: choice,
-      _fusionData: resume.ctx && resume.ctx._fusionData
+      _fusionData: resume.ctx && resume.ctx._fusionData,
+      _specialSummonStage: resume.ctx && resume.ctx._specialSummonStage,
+      _specialSummonData: resume.ctx && resume.ctx._specialSummonData
     };
     const buf = [];
     FX.run(state, buf, resume.effect, resumedCtx);
@@ -737,6 +742,23 @@
     if (!FX.getSummonableFusions) return false;
     const list = FX.getSummonableFusions(state, cond, ctx);
     return list.length > 0;
+  });
+
+  // handCount condition: ตรวจสอบจำนวนการ์ดบนมือ
+  FX.registerCondition('handCount', function (state, cond, ctx) {
+    const p = state.players[ctx.player];
+    if (!p || !Array.isArray(p.hand)) return false;
+    let count = 0;
+    if (cond.filter) {
+      for (const c of p.hand) {
+        if (FX.matchFilter(c, cond.filter, ctx)) count++;
+      }
+    } else {
+      count = p.hand.length;
+    }
+    if (cond.min !== undefined && count < cond.min) return false;
+    if (cond.max !== undefined && count > cond.max) return false;
+    return true;
   });
 
   // 6C: wrap destroy op to support target.zone === 'under'

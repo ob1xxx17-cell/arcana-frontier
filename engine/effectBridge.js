@@ -321,7 +321,7 @@
       if (setTurn !== undefined && setTurn >= state.turn) return 'CANNOT_ACTIVATE_SET_TURN';
       const def = E.cardOf(card);
       if (!def || def.type !== 'spell') return 'NOT_A_SPELL';
-      const eff = def.effects && def.effects[0];
+      const eff = def.effects && (def.effects.find(e => e.trigger === 'ignition' || e.trigger === 'spell') || def.effects[0]);
       if (!eff) return 'NO_SUCH_EFFECT';
       const ctx = { source: card, player: a.player, trigger: 'spell' };
       if (!FX.checkCanActivate(state, eff, ctx)) return 'CONDITION_FAILED';
@@ -347,7 +347,7 @@
       return E.addChainLink(state, events, a, card, castEff, def, 'hand');
     }
 
-    const eff = def.effects && def.effects[0];
+    const eff = def.effects && (def.effects.find(e => e.trigger === 'ignition' || e.trigger === 'spell') || def.effects[0]);
     if (!eff) return 'NO_SUCH_EFFECT';
     const ctx = { source: card, player: a.player, trigger: 'spell' };
     if (!FX.checkCanActivate(state, eff, ctx)) return 'CONDITION_FAILED';
@@ -671,7 +671,26 @@
     }
 
     const stays = !link.negated && !link.fizzled && (cDef.continuous || cDef.group === 'continuous');
-    if (stays || link.fromZone === 'grave') return;
+    if (stays) {
+      if (link.fromZone === 'hand') {
+        const p = state.players[link.controller];
+        const freeSpSlot = p.spells.findIndex(s => !s);
+        if (freeSpSlot >= 0) {
+          p.spells[freeSpSlot] = link.spellCard;
+          link.spellCard.faceDown = false;
+          events.push({
+            type: 'moveCard',
+            uid: link.spellCard.uid,
+            from: 'hand',
+            to: 'spell',
+            player: link.controller,
+            slot: freeSpSlot
+          });
+        }
+      }
+      return;
+    }
+    if (link.fromZone === 'grave') return;
     const p = state.players[link.controller];
     if (link.fromZone === 'spells') {
       const spSlot = link.spellSlot !== undefined ? link.spellSlot : link.slot;

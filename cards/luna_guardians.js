@@ -415,7 +415,7 @@
           {
             "id": "luna_prep_mill",
             "name": "ส่งกำลังพลจันทรา",
-            "trigger": "spell",
+            "trigger": "ignition",
             "speed": 1,
             "cost": { "mana": 1 },
             "do": [
@@ -441,7 +441,7 @@
           {
             "id": "luna_rebirth_summon",
             "name": "คืนชีพผู้พิทักษ์",
-            "trigger": "spell",
+            "trigger": "ignition",
             "speed": 1,
             "cost": { "mana": 1 },
             "condition": [{ "op": "freeMonsterSlot" }],
@@ -468,7 +468,7 @@
           {
             "id": "luna_resonance_fusion",
             "name": "ผสานพลังจันทรา",
-            "trigger": "spell",
+            "trigger": "ignition",
             "from": "hand",
             "speed": 1,
             "cost": { "mana": 1 },
@@ -549,7 +549,7 @@
           {
             "id": "luna_recycle_draw",
             "name": "วัฏจักรแห่งราตรี",
-            "trigger": "spell",
+            "trigger": "ignition",
             "speed": 1,
             "cost": { "mana": 1 },
             "condition": [

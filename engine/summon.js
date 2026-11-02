@@ -103,7 +103,7 @@
 
   // ---- Special Summon (ไม่จำกัดจำนวน ช่องเต็มเรียกเพิ่มไม่ได้) สำหรับให้เอฟเฟกต์ขั้น 4-6 เรียกใช้ ----
   // คืน null เมื่อสำเร็จ หรือรหัสผิดพลาด (ไม่แก้ state เมื่อผิด)
-  E.specialSummon = function (state, events, pIdx, inst, slot, from, faceDown, how) {
+  E.specialSummon = function (state, events, pIdx, inst, slot, from, faceDown, how, position) {
     const p = state.players[pIdx];
     const def = E.cardOf(inst);
     if (!slotOk(state, slot)) return 'INVALID_SLOT';
@@ -115,7 +115,7 @@
       p.flags.grade4SummonedThisTurn = true;
     }
     zone.splice(i, 1);
-    E.placeMonster(state, events, pIdx, inst, slot, { how: how || 'special', faceDown: !!faceDown, from });
+    E.placeMonster(state, events, pIdx, inst, slot, { how: how || 'special', faceDown: !!faceDown, from, position: position });
     E.openWindow(state, events, { kind: 'summon', uid: inst.uid });
     return null;
   };

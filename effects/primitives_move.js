@@ -183,6 +183,55 @@
     const firstFree = () => { for (let s = 0; s < slots; s++) if (!p.monsters[s]) return s; return -1; };
     const want = step.count === undefined ? 1 : step.count;
 
+    // 1. Resuming from stage 'position'
+    if (ctx && ctx._specialSummonStage === 'position') {
+      const { inst, zone, slot } = ctx._specialSummonData;
+      const pickedIdx = ctx._stepChoice !== undefined ? ctx._stepChoice[0] : 0;
+      const pos = pickedIdx === 1 ? 'def' : 'atk';
+      delete ctx._stepChoice;
+      delete ctx._specialSummonStage;
+      delete ctx._specialSummonData;
+      E.specialSummon(state, events, ctx.player, inst, slot, zone, !!step.faceDown, step.how, pos);
+      return;
+    }
+
+    // 2. Resuming from stage 'slot'
+    if (ctx && ctx._specialSummonStage === 'slot') {
+      const { inst, zone, freeSlots } = ctx._specialSummonData;
+      let slot = freeSlots[0];
+      if (ctx._stepChoice !== undefined) {
+        const pickedIdx = ctx._stepChoice[0];
+        if (pickedIdx >= 0 && pickedIdx < freeSlots.length) {
+          slot = freeSlots[pickedIdx];
+        }
+      }
+      delete ctx._stepChoice;
+      delete ctx._specialSummonStage;
+
+      const autoChoose = !!(state.config && state.config.autoChoose);
+      if (!autoChoose && state.config && state.config.interactivePosition && !step.faceDown) {
+        const def = E.cardOf(inst) || {};
+        ctx._specialSummonStage = 'position';
+        ctx._specialSummonData = { inst, zone, slot };
+        FX.openPending(state, events, {
+          kind: 'chooseOption',
+          stage: 'position',
+          player: ctx.player,
+          prompt: 'CHOOSE_SUMMON_POSITION',
+          options: [
+            { index: 0, name: '⚔️ ตั้งโจมตี (หงายหน้า)', text: 'หงายหน้าตั้งโจมตี (ATK: ' + (def.atk || inst.atk || 0) + ') พร้อมต่อสู้ใน Battle Phase' },
+            { index: 1, name: '🛡️ ตั้งป้องกัน (หงายหน้า)', text: 'หงายหน้าตั้งป้องกัน (DEF: ' + (def.def || inst.def || 0) + ') ใช้ค่าพลังป้องกันรับการโจมตี' }
+          ],
+          resume: FX.makeResume(state, step, ctx)
+        });
+        return;
+      }
+
+      delete ctx._specialSummonData;
+      E.specialSummon(state, events, ctx.player, inst, slot, zone, !!step.faceDown, step.how, 'atk');
+      return;
+    }
+
     let freeCount = 0;
     for (let s = 0; s < slots; s++) if (!p.monsters[s]) freeCount++;
     const maxCanSummon = Math.min(want, freeCount);
@@ -205,6 +254,7 @@
     let chosen = null;
     if (ctx && ctx._stepChoice !== undefined) {
       chosen = ctx._stepChoice.map(idx => candidates[idx]).filter(Boolean);
+      delete ctx._stepChoice;
     } else if (maxCanSummon > 0 && FX.shouldAskPlayer && FX.shouldAskPlayer(state, step, step, candidates.length, maxCanSummon, ctx)) {
       const options = candidates.map((cand, idx) => ({
         uid: cand.inst.uid,
@@ -225,7 +275,33 @@
       });
       return;
     } else {
-      chosen = candidates;
+      chosen = candidates.slice(0, maxCanSummon);
+    }
+
+    const autoChoose = !!(state.config && state.config.autoChoose);
+    const isInteractiveSlot = !!(state.config && state.config.interactiveSlot);
+
+    // If single card summon in interactive mode with interactiveSlot enabled and multiple free slots exist:
+    if (!autoChoose && isInteractiveSlot && chosen.length === 1 && step.slot !== 'leader' && step.slot === undefined) {
+      const freeSlots = [];
+      for (let s = 0; s < slots; s++) if (!p.monsters[s]) freeSlots.push(s);
+      if (freeSlots.length > 1) {
+        const item = chosen[0];
+        const inst = item.inst;
+        const def = E.cardOf(inst) || {};
+        ctx._specialSummonStage = 'slot';
+        ctx._specialSummonData = { inst, zone: item.zone, freeSlots };
+        FX.openPending(state, events, {
+          kind: 'chooseSlot',
+          stage: 'slot',
+          player: ctx.player,
+          prompt: 'CHOOSE_SLOT',
+          monsterName: def.name || 'มอนสเตอร์',
+          options: freeSlots.map((s, idx) => ({ index: idx, slot: s, name: 'ช่อง ' + (s + 1) })),
+          resume: FX.makeResume(state, step, ctx)
+        });
+        return;
+      }
     }
 
     let done = 0;

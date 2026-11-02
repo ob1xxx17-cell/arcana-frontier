@@ -689,7 +689,7 @@
         {
           "id": "wood_sword_replace",
           "name": "สลับดาบ",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "do": [
             {
@@ -747,7 +747,7 @@
         {
           "id": "stone_sword_replace",
           "name": "สลับดาบ",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "do": [
             {
@@ -806,7 +806,7 @@
         {
           "id": "iron_sword_replace",
           "name": "สลับดาบ",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "do": [
             {
@@ -865,7 +865,7 @@
         {
           "id": "crystal_sword_replace",
           "name": "สลับดาบ",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "do": [
             {
@@ -902,7 +902,7 @@
         {
           "id": "dark_sword_cost",
           "name": "สังเวยดาบผลึก",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "do": [
             {
@@ -1023,7 +1023,7 @@
         {
           "id": "crafting_table_craft",
           "name": "ประกอบอาวุธ",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "cost": {
             "mana": 0
@@ -1117,7 +1117,7 @@
         {
           "id": "forge_upgrade",
           "name": "หลอมอัปเกรดดาบ",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "cost": {
             "mana": 1
@@ -1244,7 +1244,7 @@
         {
           "id": "recycle_choice",
           "name": "กู้ซาก",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "cost": {
             "mana": 1
@@ -1306,7 +1306,7 @@
         {
           "id": "map_search",
           "name": "แผนที่นำทาง",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "cost": {
             "mana": 1
@@ -1378,7 +1378,7 @@
         {
           "id": "storage_recycle",
           "name": "แลกเปลี่ยนชิ้นส่วน",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "cost": {
             "mana": 1
@@ -1449,7 +1449,7 @@
         {
           "id": "the_end_open",
           "name": "เปิดมิติปลายทาง",
-          "trigger": "onSummon",
+          "trigger": "ignition",
           "speed": 1,
           "cost": {
             "mana": 1
