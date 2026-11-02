@@ -2297,8 +2297,11 @@
     let currentShopDeck = 'mecha_strike';
     function openShopModal(deckKey) {
       if (deckKey) currentShopDeck = deckKey;
-      const keys = Object.keys(CG.cards || {});
-      if (!CG.cards[currentShopDeck]) currentShopDeck = keys[0] || 'mecha_strike';
+      const keys = Object.keys(CG.cards || {}).filter(k => {
+        const d = CG.cards[k];
+        return d && !d.isCustom && !k.startsWith('custom_') && k !== 'fixture';
+      });
+      if (!keys.includes(currentShopDeck)) currentShopDeck = keys[0] || 'mecha_strike';
       const curDeck = CG.cards[currentShopDeck] || { name: 'เด็ค', main: [], extra: [] };
       const allCards = [].concat(curDeck.main || [], curDeck.extra || [], curDeck.rarePool || []);
 
@@ -2638,8 +2641,12 @@
     function openCodexModal(deckKey, pageIdx) {
       if (deckKey) currentCodexDeck = deckKey;
       if (pageIdx !== undefined) currentCodexPage = pageIdx;
-      const keys = Object.keys(CG.cards || {});
-      if (!CG.cards[currentCodexDeck]) currentCodexDeck = keys[0] || 'mecha_strike';
+      // สารานุกรมคลังการ์ด (Codex) ต้องแสดงเฉพาะชุดการ์ดทางการของระบบ ไม่รวมเด็ค Custom ที่ผู้เล่นจัดเอง
+      const keys = Object.keys(CG.cards || {}).filter(k => {
+        const d = CG.cards[k];
+        return d && !d.isCustom && !k.startsWith('custom_') && k !== 'fixture';
+      });
+      if (!keys.includes(currentCodexDeck)) currentCodexDeck = keys[0] || 'mecha_strike';
       const curDeck = CG.cards[currentCodexDeck] || { name: 'เด็ค', main: [], extra: [] };
       const allCards = [].concat(curDeck.main || [], curDeck.extra || [], curDeck.rarePool || []);
       const owned = getOwnedCards();
@@ -2679,11 +2686,11 @@
       const html = 
         '<div class="codex-fullscreen-book">' +
           '<div class="codex-header-bar">' +
-            '<div style="display:flex;align-items:center;gap:14px">' +
+            '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1">' +
               '<div class="codex-title">📖 สารานุกรมคลังการ์ด (Codex)</div>' +
-              '<div style="display:flex;gap:6px">' + tabsHtml + '</div>' +
+              '<div style="display:flex;gap:6px;flex-wrap:wrap">' + tabsHtml + '</div>' +
             '</div>' +
-            '<div style="display:flex;align-items:center;gap:12px">' +
+            '<div style="display:flex;align-items:center;gap:12px;flex-shrink:0">' +
               '<span style="font-size:0.85rem;font-weight:800;color:#15803d">ครอบครอง: ' + ownedInDeck + '/' + allCards.length + ' ใบ</span>' +
               '<button class="codex-close-btn" id="btnCodexClose">✕ ปิดหน้าคลัง</button>' +
             '</div>' +
