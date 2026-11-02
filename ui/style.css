@@ -8126,8 +8126,8 @@ button.gold:hover:not(:disabled) {
    ========================================================================== */
 @media screen and (max-height: 580px) and (orientation: landscape), screen and (max-height: 520px) {
   :root {
-    --topbar-h: 22px !important;
-    --sq-size: clamp(48px, min(calc((96vw - 80px) / 7.8), calc((100dvh - 58px) / 4.75)), 70px) !important;
+    --topbar-h: 0px !important;
+    --sq-size: clamp(48px, min(calc((96vw - 180px) / 7.8), calc((100dvh - 36px) / 4.75)), 70px) !important;
     --sq-gap: clamp(2px, calc(var(--sq-size) * 0.035), 4px) !important;
     --sketch-panel-w: clamp(96px, calc(var(--sq-size) * 1.8), 136px) !important;
     --sketch-side-gap: clamp(4px, calc(var(--sq-size) * 0.08), 8px) !important;
@@ -8430,7 +8430,7 @@ button.gold:hover:not(:disabled) {
     height: 100% !important;
     max-height: 100% !important;
     flex: 1 !important;
-    padding: 0 4px clamp(28px, calc(var(--hand-card-h) * 0.44), 44px) 4px !important;
+    padding: 0 clamp(98px, 13vw, 132px) clamp(28px, calc(var(--hand-card-h) * 0.44), 44px) 4px !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
@@ -8439,34 +8439,135 @@ button.gold:hover:not(:disabled) {
     position: relative !important;
     overflow: hidden !important;
   }
-  #game .topbar, .topbar {
-    height: 22px !important;
-    padding: 0 6px !important;
-    font-size: 0.68rem !important;
-    flex-shrink: 0 !important;
-  }
-  #game .topbar .info, .topbar .info {
+
+  /* ย้ายแถบควบคุมและข้อมูลด้านบน (Topbar) มาไว้แนวตั้งทางขวาของหน้าจอ */
+  #game .topbar,
+  .topbar {
+    position: fixed !important;
+    top: 6px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+    left: auto !important;
+    width: clamp(92px, 12.5vw, 124px) !important;
+    height: auto !important;
+    max-height: calc(100dvh - 12px) !important;
+    background: rgba(26, 15, 8, 0.94) !important;
+    border: 2px solid #5c391f !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    padding: 6px 5px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: stretch !important;
     gap: 4px !important;
+    z-index: 200 !important;
+    box-sizing: border-box !important;
   }
-  #game .topbar .info b, .topbar .info b {
-    font-size: 0.65rem !important;
+  #game .topbar .info,
+  .topbar .info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 3px !important;
+    width: 100% !important;
   }
-  #game .topbar .pill, .topbar .pill {
-    padding: 0 4px !important;
-    font-size: 0.58rem !important;
-    height: 17px !important;
-    line-height: 17px !important;
-  }
-  #game .topbar button, .topbar button {
-    padding: 1px 6px !important;
+  #game .topbar .info b,
+  .topbar .info b {
     font-size: 0.62rem !important;
-    height: 20px !important;
+    text-align: center !important;
+    color: #fef08a !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    padding-bottom: 2px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
   }
-  #game .topbar .phases, .topbar .phases {
-    display: none !important; /* ซ่อนชื่อเฟสยาวบนท็อปบาร์มือถือเพราะมี Phase Coin กลางสนามอยู่แล้ว */
+  #game .topbar .pill,
+  .topbar .pill {
+    padding: 2px 4px !important;
+    font-size: 0.58rem !important;
+    height: auto !important;
+    min-height: 18px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    border-radius: 4px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
-  #game .topbar #btnSpeed, .topbar #btnSpeed {
-    display: none !important;
+  #game .topbar .pill.turnme {
+    background: #166534 !important;
+    color: #bbf7d0 !important;
+    border: 1px solid #22c55e !important;
+    font-weight: 800 !important;
+  }
+  #game .topbar .pill.turnopp {
+    background: #7f1d1d !important;
+    color: #fecaca !important;
+    border: 1px solid #ef4444 !important;
+    font-weight: 800 !important;
+  }
+  #game .topbar .phases,
+  .topbar .phases {
+    display: none !important; /* ซ่อนชื่อเฟสยาวเพราะมี Phase Coin กลางสนาม */
+  }
+  #game .topbar .pill:last-child {
+    font-size: 0.46rem !important;
+    opacity: 0.75 !important;
+  }
+  #game .topbar .row,
+  .topbar .row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+  #game .topbar button,
+  .topbar button {
+    width: 100% !important;
+    padding: 4px 2px !important;
+    font-size: 0.62rem !important;
+    height: auto !important;
+    min-height: 24px !important;
+    line-height: 1.2 !important;
+    border-radius: 5px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+  }
+  #game .topbar #btnMenu,
+  .topbar #btnMenu {
+    background: linear-gradient(135deg, #fef08a 0%, #facc15 100%) !important;
+    color: #1e293b !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #1e293b !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    order: 1 !important;
+  }
+  #game .topbar #btnSound,
+  .topbar #btnSound {
+    display: flex !important;
+    order: 2 !important;
+  }
+  #game .topbar #btnSpeed,
+  .topbar #btnSpeed {
+    display: flex !important;
+    order: 3 !important;
+  }
+  #game .topbar #btnSideToggle,
+  .topbar #btnSideToggle {
+    display: flex !important;
+    order: 4 !important;
   }
 
   /* มือฝ่ายตรงข้ามแถวบนสุด */
@@ -8649,7 +8750,7 @@ button.gold:hover:not(:disabled) {
     position: absolute !important;
     bottom: 2px !important;
     left: 0 !important;
-    right: 0 !important;
+    right: clamp(98px, 13vw, 132px) !important;
     height: var(--hand-card-h) !important;
     display: flex !important;
     justify-content: center !important;
@@ -8695,7 +8796,7 @@ button.gold:hover:not(:disabled) {
   .quick-action-bar {
     position: absolute !important;
     bottom: calc(var(--hand-card-h) + 6px) !important;
-    left: 50% !important;
+    left: calc((100% - clamp(98px, 13vw, 132px)) / 2) !important;
     transform: translateX(-50%) !important;
     z-index: 120 !important;
     padding: 4px 10px !important;
