@@ -605,6 +605,18 @@
         extraBadges += '<div class="stack-layers-wrap stack-' + stackLayers + '"></div>';
       }
     }
+    const hasEquipUnder = Boolean(onField && mon && inst.under && inst.under.some(u => {
+      if (u.isEquip) return true;
+      const ud = def(u);
+      return ud && (ud.type === 'spell' || ud.group === 'equip' || (ud.tags || []).includes('equip'));
+    }));
+    if (hasEquipUnder) {
+      cls.push('has-equip-blue-glow');
+      extraBadges += '<div class="equip-blue-indicator" data-act="inspectUnderEquip:' + inst.uid + '" title="มีเวทสวมใส่ (แตะเพื่อดูการ์ด)">' +
+        '<span class="equip-blue-gem"></span>' +
+        '<span class="equip-blue-icon">⚔</span>' +
+      '</div>';
+    }
     if (o.isTributeMat) {
       extraBadges += '<div class="tribute-badge-overlay"><span class="t-skull">💀</span> <span class="t-badge-txt">สังเวย #' + (o.tributeOrder || 1) + '</span></div>';
     }
@@ -790,29 +802,62 @@
       '</div>';
     }
 
-    // ใต้ช่องเอฟเฟกต์ = การ์ดที่ซ้อนอยู่ใต้ร่าง (ถ้ามี)
+    // ใต้ช่องเอฟเฟกต์ = การ์ดที่ซ้อนอยู่ใต้ร่าง หรือเวทสวมใส่ (ถ้ามี)
     let underCardsHtml = '';
     if (cardInst.under && cardInst.under.length > 0) {
-      underCardsHtml = '<div class="detail-under-section">' +
-        '<div class="under-section-header">' +
-          '<span class="under-icon">📚</span>' +
-          '<span class="under-title">การ์ดที่ซ้อนอยู่ใต้ร่าง (Stacked Materials): <strong>' + cardInst.under.length + ' ใบ</strong></span>' +
-        '</div>' +
-        '<div class="under-cards-row">' +
-          cardInst.under.map((uCard, uIdx) => {
-            const uDef = def(uCard);
-            return '<div class="under-card-item">' +
-              '<div class="under-card-thumb" data-act="inspectUnder:' + uCard.uid + '" title="แตะเพื่อดูรายละเอียด">' +
-                cardHtml(uCard, { reveal: true, field: false }) +
-              '</div>' +
-              '<div class="under-card-meta">' +
-                '<span class="under-card-name">' + esc(uDef ? uDef.name : uCard.cardId) + '</span>' +
-                '<button class="pill inspect-under-btn" data-act="inspectUnder:' + uCard.uid + '">🔍 ดูการ์ด</button>' +
-              '</div>' +
-            '</div>';
-          }).join('') +
-        '</div>' +
-      '</div>';
+      const isEquipCard = u => {
+        if (u.isEquip) return true;
+        const ud = def(u);
+        return ud && (ud.type === 'spell' || ud.group === 'equip' || (ud.tags || []).includes('equip'));
+      };
+      const equipCards = cardInst.under.filter(isEquipCard);
+      const stackCards = cardInst.under.filter(u => !isEquipCard(u));
+
+      if (equipCards.length > 0) {
+        underCardsHtml += '<div class="detail-under-section equip-section">' +
+          '<div class="under-section-header equip-header">' +
+            '<span class="under-icon">⚔️</span>' +
+            '<span class="under-title" style="color:#38bdf8">เวทสวมใส่ (Equipped Spells): <strong>' + equipCards.length + ' ใบ</strong></span>' +
+          '</div>' +
+          '<div class="under-cards-row">' +
+            equipCards.map(uCard => {
+              const uDef = def(uCard);
+              return '<div class="under-card-item equip-card-item">' +
+                '<div class="under-card-thumb" data-act="inspectUnder:' + uCard.uid + '" title="แตะเพื่อดูรายละเอียด">' +
+                  cardHtml(uCard, { reveal: true, field: false }) +
+                '</div>' +
+                '<div class="under-card-meta">' +
+                  '<span class="under-card-name" style="color:#e0f2fe;font-weight:700">' + esc(uDef ? uDef.name : uCard.cardId) + '</span>' +
+                  '<button class="pill inspect-under-btn equip-inspect-btn" data-act="inspectUnder:' + uCard.uid + '">🔍 ดูการ์ด</button>' +
+                '</div>' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+      }
+
+      if (stackCards.length > 0) {
+        underCardsHtml += '<div class="detail-under-section">' +
+          '<div class="under-section-header">' +
+            '<span class="under-icon">📚</span>' +
+            '<span class="under-title">การ์ดที่ซ้อนอยู่ใต้ร่าง (Stacked Materials): <strong>' + stackCards.length + ' ใบ</strong></span>' +
+          '</div>' +
+          '<div class="under-cards-row">' +
+            stackCards.map(uCard => {
+              const uDef = def(uCard);
+              return '<div class="under-card-item">' +
+                '<div class="under-card-thumb" data-act="inspectUnder:' + uCard.uid + '" title="แตะเพื่อดูรายละเอียด">' +
+                  cardHtml(uCard, { reveal: true, field: false }) +
+                '</div>' +
+                '<div class="under-card-meta">' +
+                  '<span class="under-card-name">' + esc(uDef ? uDef.name : uCard.cardId) + '</span>' +
+                  '<button class="pill inspect-under-btn" data-act="inspectUnder:' + uCard.uid + '">🔍 ดูการ์ด</button>' +
+                '</div>' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+      }
     }
 
     // กล่องข้อความเต็มของการ์ด (d.text)
@@ -1610,8 +1655,9 @@
             if (canSpell) {
               const cd = E.cardOf(cardInst);
               const isField = cd && (cd.field || cd.group === 'field');
-              const actText = isField ? (a.activateField || 'ร่ายเวทสนาม') : (a.activateSpell || 'ใช้สเปล');
-              btns += '<button class="quick-act-btn gold" data-act="actSpell">⚡ ' + esc(actText) + '</button>';
+              const isEquip = cd && (cd.equip || cd.group === 'equip' || ((cd.tags || []).includes('equip')));
+              const actText = isField ? (a.activateField || 'ร่ายเวทสนาม') : isEquip ? 'สวมใส่' : (a.activateSpell || 'ใช้สเปล');
+              btns += '<button class="quick-act-btn gold" data-act="actSpell">' + (isEquip ? '⚔️ ' : '⚡ ') + esc(actText) + '</button>';
             }
             if (canSetSpell) btns += '<button class="quick-act-btn" data-act="mode:setSpell">🛡️ ' + esc(a.setSpell || 'Set สเปล') + '</button>';
 

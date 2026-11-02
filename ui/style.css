@@ -4835,6 +4835,87 @@ button.gold:hover:not(:disabled) {
 }
 
 /* ==========================================================================
+   Equip Spell System: Blue Glow & Inspection Light
+   ========================================================================== */
+.card.has-equip-blue-glow {
+  box-shadow: 0 0 14px 3px rgba(56, 189, 248, 0.95), inset 0 0 8px rgba(56, 189, 248, 0.45) !important;
+  border-color: #38bdf8 !important;
+  animation: equipBluePulse 2s ease-in-out infinite alternate !important;
+}
+
+@keyframes equipBluePulse {
+  0% {
+    box-shadow: 0 0 8px 1px rgba(56, 189, 248, 0.7), inset 0 0 6px rgba(56, 189, 248, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 18px 4px rgba(56, 189, 248, 1), inset 0 0 12px rgba(56, 189, 248, 0.6);
+  }
+}
+
+.equip-blue-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(12, 74, 110, 0.92);
+  border: 1px solid #38bdf8;
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  color: #e0f2fe;
+  cursor: pointer;
+  z-index: 15;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+  pointer-events: auto;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.equip-blue-indicator:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 1);
+  background: rgba(14, 116, 144, 0.98);
+}
+
+.equip-blue-gem {
+  width: 7px;
+  height: 7px;
+  background: #38bdf8;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #38bdf8, 0 0 12px #0284c7;
+  animation: equipGemGlow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes equipGemGlow {
+  0% { opacity: 0.6; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.25); }
+}
+
+.equip-blue-icon {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.detail-under-section.equip-section {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(8, 47, 73, 0.4);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+  margin-bottom: 8px;
+}
+
+.equip-inspect-btn {
+  background: rgba(14, 116, 144, 0.45) !important;
+  border-color: #38bdf8 !important;
+  color: #e0f2fe !important;
+}
+
+.equip-inspect-btn:hover {
+  background: rgba(14, 116, 144, 0.8) !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8) !important;
+}
+
+/* ==========================================================================
    Step 2: Battle VFX, Floating Damage & Combat Slash
    ========================================================================== */
 

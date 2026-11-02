@@ -112,11 +112,27 @@
     }
     return list;
   };
-  // การ์ดที่หงายอยู่บนสนามทั้งสองฝ่าย (มอนสเตอร์ สเปล ช่องสนาม)
+  // การ์ดที่หงายอยู่บนสนามทั้งสองฝ่าย (มอนสเตอร์ สเปล ช่องสนาม รวมถึงเวทสวมใส่ใต้ตัวมอน)
   FX.fieldInsts = function (state) {
     const out = [];
+    const E = CG.engine;
     for (const p of state.players) {
-      for (const m of p.monsters) if (m && !m.faceDown) out.push(m);
+      for (const m of p.monsters) {
+        if (m && !m.faceDown) {
+          out.push(m);
+          if (Array.isArray(m.under)) {
+            for (const u of m.under) {
+              const uDef = E && E.cardOf ? E.cardOf(u) : null;
+              const isEquip = Boolean(u && (u.isEquip || (uDef && (uDef.equip || uDef.group === 'equip' || ((uDef.tags || []).includes('equip'))))));
+              if (isEquip) {
+                u.controller = m.controller;
+                u.equippedToUid = m.uid;
+                out.push(u);
+              }
+            }
+          }
+        }
+      }
       for (const x of (p.spells || [])) if (x && !x.faceDown) out.push(x);
       if (p.fieldSpell && !p.fieldSpell.faceDown) out.push(p.fieldSpell);
     }
@@ -279,10 +295,14 @@
           for (const s of steps) {
             const t = s.target && typeof s.target === 'object' ? s.target : {};
             const isSelf = s.target === 'self';
-            if (!isSelf && !!t.pick !== (pass === 2)) continue;
-            if (isSelf && pass === 2) continue;
+            const isEquipped = s.target === 'equipped' || (src.equippedToUid && (s.target === 'self' || s.target === 'equipped'));
+            if (!isSelf && !isEquipped && !!t.pick !== (pass === 2)) continue;
+            if ((isSelf || isEquipped) && pass === 2) continue;
             let list;
-            if (isSelf) {
+            if (isEquipped) {
+              const host = state.players[src.controller].monsters.find(m => m && m.uid === src.equippedToUid);
+              list = host ? [host] : [];
+            } else if (isSelf) {
               list = [src];
             } else {
               const idx = t.side === 'opp' ? 1 - src.controller : src.controller;

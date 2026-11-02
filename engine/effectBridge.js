@@ -203,8 +203,14 @@
 
     let targetUid = a.targetUid;
     if (targetUid === undefined && a.targetSlot !== undefined) {
-      const oppP = state.players[1 - a.player];
-      if (oppP.monsters[a.targetSlot]) targetUid = oppP.monsters[a.targetSlot].uid;
+      const isEquip = Boolean(def && (def.equip || def.group === 'equip' || (def.tags && def.tags.includes('equip'))));
+      if (isEquip) {
+        const ownM = state.players[a.player].monsters[a.targetSlot];
+        if (ownM) targetUid = ownM.uid;
+      } else {
+        const oppP = state.players[1 - a.player];
+        if (oppP.monsters[a.targetSlot]) targetUid = oppP.monsters[a.targetSlot].uid;
+      }
     }
 
     const link = {
@@ -321,7 +327,16 @@
       if (setTurn !== undefined && setTurn >= state.turn) return 'CANNOT_ACTIVATE_SET_TURN';
       const def = E.cardOf(card);
       if (!def || def.type !== 'spell') return 'NOT_A_SPELL';
-      const eff = def.effects && (def.effects.find(e => e.trigger === 'ignition' || e.trigger === 'spell') || def.effects[0]);
+      const isEquip = Boolean(def.equip || def.group === 'equip' || (def.tags && def.tags.includes('equip')));
+      if (isEquip) {
+        const hasMon = p.monsters.some(m => m && !m.faceDown);
+        if (!hasMon) return 'NO_LEGAL_TARGET';
+        if (a.targetSlot === undefined && a.targetUid === undefined) {
+          a.targetSlot = p.monsters.findIndex(m => m && !m.faceDown);
+        }
+      }
+
+    const eff = def.effects && (def.effects.find(e => e.trigger === 'ignition' || e.trigger === 'spell') || def.effects[0]);
       if (!eff) return 'NO_SUCH_EFFECT';
       const ctx = { source: card, player: a.player, trigger: 'spell' };
       if (!FX.checkCanActivate(state, eff, ctx)) return 'CONDITION_FAILED';
@@ -345,6 +360,15 @@
         cost: { mana: manaCost }
       };
       return E.addChainLink(state, events, a, card, castEff, def, 'hand');
+    }
+
+    const isEquip = Boolean(def.equip || def.group === 'equip' || (def.tags && def.tags.includes('equip')));
+    if (isEquip) {
+      const hasMon = p.monsters.some(m => m && !m.faceDown);
+      if (!hasMon) return 'NO_LEGAL_TARGET';
+      if (a.targetSlot === undefined && a.targetUid === undefined) {
+        a.targetSlot = p.monsters.findIndex(m => m && !m.faceDown);
+      }
     }
 
     const eff = def.effects && (def.effects.find(e => e.trigger === 'ignition' || e.trigger === 'spell') || def.effects[0]);
@@ -562,8 +586,14 @@
 
     let targetUid = a.targetUid;
     if (targetUid === undefined && a.targetSlot !== undefined) {
-      const oppP = state.players[1 - a.player];
-      if (oppP.monsters[a.targetSlot]) targetUid = oppP.monsters[a.targetSlot].uid;
+      const isEquip = Boolean(def && (def.equip || def.group === 'equip' || (def.tags && def.tags.includes('equip'))));
+      if (isEquip) {
+        const ownM = state.players[a.player].monsters[a.targetSlot];
+        if (ownM) targetUid = ownM.uid;
+      } else {
+        const oppP = state.players[1 - a.player];
+        if (oppP.monsters[a.targetSlot]) targetUid = oppP.monsters[a.targetSlot].uid;
+      }
     }
 
     const link = {
@@ -668,6 +698,68 @@
         player: link.controller
       });
       return;
+    }
+
+    const isEquip = !link.negated && !link.fizzled && Boolean(cDef && (cDef.equip || cDef.group === 'equip' || (cDef.tags && cDef.tags.includes('equip'))));
+    if (isEquip) {
+      let targetMonster = null;
+      let targetPlayerIdx = link.controller;
+      let targetSlotIdx = link.targetSlot;
+      if (link.targetUid !== undefined) {
+        for (let pi = 0; pi < state.players.length; pi++) {
+          const s = state.players[pi].monsters.findIndex(m => m && m.uid === link.targetUid);
+          if (s >= 0) {
+            targetMonster = state.players[pi].monsters[s];
+            targetPlayerIdx = pi;
+            targetSlotIdx = s;
+            break;
+          }
+        }
+      }
+      if (!targetMonster && targetSlotIdx !== undefined && state.players[targetPlayerIdx] && state.players[targetPlayerIdx].monsters[targetSlotIdx]) {
+        targetMonster = state.players[targetPlayerIdx].monsters[targetSlotIdx];
+      }
+      if (!targetMonster) {
+        targetSlotIdx = state.players[link.controller].monsters.findIndex(m => m && !m.faceDown);
+        if (targetSlotIdx >= 0) {
+          targetMonster = state.players[link.controller].monsters[targetSlotIdx];
+          targetPlayerIdx = link.controller;
+        }
+      }
+
+      if (targetMonster) {
+        if (link.fromZone === 'spells') {
+          const spSlot = link.spellSlot !== undefined ? link.spellSlot : link.slot;
+          if (state.players[link.controller].spells && spSlot !== undefined) {
+            state.players[link.controller].spells[spSlot] = null;
+          }
+        }
+        targetMonster.under = targetMonster.under || [];
+        link.spellCard.isEquip = true;
+        link.spellCard.equippedToUid = targetMonster.uid;
+        link.spellCard.controller = link.controller;
+        link.spellCard.faceDown = false;
+        targetMonster.under.push(link.spellCard);
+
+        events.push({
+          type: 'moveCard',
+          uid: link.spellCard.uid,
+          from: link.fromZone === 'spells' ? 'spell' : 'hand',
+          to: 'under',
+          player: targetPlayerIdx,
+          slot: targetSlotIdx
+        });
+        events.push({
+          type: 'cardEquipped',
+          uid: link.spellCard.uid,
+          cardId: link.spellCard.cardId,
+          targetUid: targetMonster.uid,
+          player: targetPlayerIdx,
+          slot: targetSlotIdx
+        });
+        if (E.refreshAuras) E.refreshAuras(state);
+        return;
+      }
     }
 
     const stays = !link.negated && !link.fizzled && (cDef.continuous || cDef.group === 'continuous');

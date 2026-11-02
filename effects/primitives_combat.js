@@ -58,9 +58,20 @@
       const par = ctx.source ? locate(state, ctx.source.uid) : null;
       if (par && par.zone === 'monster') par.inst.under.forEach((u, i) => list.push({ inst: u, zone: 'under', owner: par.owner, slot: i, parent: par.inst }));
     } else if (zone === 'monster') p.monsters.forEach((m, s) => { if (m) list.push({ inst: m, zone, owner: pi, slot: s }); });
-    else if (zone === 'spell') {
-      p.spells.forEach((m, s) => { if (m) list.push({ inst: m, zone, owner: pi, slot: s }); });
+    else if (zone === 'spell' || zone === 'equip') {
+      p.spells.forEach((m, s) => { if (m) list.push({ inst: m, zone: 'spell', owner: pi, slot: s }); });
       if (p.fieldSpell) list.push({ inst: p.fieldSpell, zone: 'field', owner: pi, slot: 0 });
+      p.monsters.forEach((mon) => {
+        if (mon && Array.isArray(mon.under)) {
+          mon.under.forEach((u, ui) => {
+            const uDef = CG.engine ? CG.engine.cardOf(u) : null;
+            const isEq = Boolean(u && (u.isEquip || (uDef && (uDef.equip || uDef.group === 'equip' || ((uDef.tags || []).includes('equip'))))));
+            if (isEq) {
+              list.push({ inst: u, zone: 'under', owner: pi, slot: ui, parent: mon });
+            }
+          });
+        }
+      });
     } else if (zone === 'hand' || zone === 'deck' || zone === 'grave') p[zone].forEach((m, i) => list.push({ inst: m, zone, owner: pi, slot: i }));
     if (target.slot !== undefined) list = list.filter(l => l.slot === target.slot);
     list = FX.refine(list.filter(l => matches(l.inst, target.filter, ctx)), target, ctx, l => l.inst);

@@ -4631,6 +4631,16 @@
       }
       return;
     }
+    if (k.startsWith('inspectUnderEquip:')) {
+      const mUid = Number(k.slice(18));
+      const uidMap = V().uidMap(state);
+      const mCard = uidMap[mUid];
+      if (mCard) {
+        CG.ui.inspectCard = { inst: mCard, isOpponent: false };
+        render();
+      }
+      return;
+    }
     if (k.startsWith('inspectPendingCard:')) {
       const idx = Number(k.slice(19));
       const pd = state.pending;
@@ -5089,6 +5099,13 @@
     }
     const pi = Number(slot.dataset.p), si = Number(slot.dataset.slot);
     if (sel && sel.kind === 'hand') {
+      const handCard = p.hand[sel.idx];
+      const handCd = handCard ? E().cardOf(handCard) : null;
+      const isEquip = Boolean(handCd && (handCd.equip || handCd.group === 'equip' || ((handCd.tags || []).includes('equip'))));
+      if (isEquip && pi === v && p.monsters[si]) {
+        act({ type: 'activateSpell', player: v, handIdx: sel.idx, targetSlot: si });
+        return;
+      }
       if (sel.mode === 'normal' && pi === v) act({ type: 'normalSummon', player: v, handIdx: sel.idx, slot: si });
       else if (sel.mode === 'set' && pi === v) act({ type: 'setMonster', player: v, handIdx: sel.idx, slot: si });
       else if (sel.mode === 'overlay' && pi === v) act({ type: 'overlay', player: v, handIdx: sel.idx, targetSlot: si });
@@ -5193,7 +5210,23 @@
     else if (k === 'pos') act({ type: 'changePosition', player: v, slot: sel.slot });
     else if (k === 'atk') { sel = { kind: 'attack', slot: sel.slot }; CG.ui.inspectCard = null; render(); }
     else if (k === 'direct') act({ type: 'attack', player: v, from: sel.slot, to: null });
-    else if (k === 'actSpell') act({ type: 'activateSpell', player: v, handIdx: sel.idx });
+    else if (k === 'actSpell') {
+      const card = p.hand[sel.idx];
+      const cd = card ? E().cardOf(card) : null;
+      const isEquip = Boolean(cd && (cd.equip || cd.group === 'equip' || ((cd.tags || []).includes('equip'))));
+      if (isEquip) {
+        const ownMons = p.monsters.map((m, s) => ({ m, s })).filter(x => x.m && !x.m.faceDown);
+        if (ownMons.length === 1) {
+          act({ type: 'activateSpell', player: v, handIdx: sel.idx, targetSlot: ownMons[0].s });
+        } else if (ownMons.length > 1) {
+          toast('👉 แตะมอนสเตอร์บนสนามเพื่อสวมใส่ ' + (cd.name || 'การ์ดนี้'));
+        } else {
+          toast('⚠ ไม่มีมอนสเตอร์บนสนามที่จะสวมใส่การ์ดนี้ได้');
+        }
+      } else {
+        act({ type: 'activateSpell', player: v, handIdx: sel.idx });
+      }
+    }
     else if (k === 'actSpellField') act({ type: 'activateSpell', player: v, spellSlot: sel.slot });
     else if (k.startsWith('actEff:hand:')) {
       const rest = k.slice(12);
@@ -5717,15 +5750,23 @@
         const monSlotEl = hoverEl.closest('.slot[data-p="' + v + '"][data-slot]');
         if (monSlotEl) {
           const slot = Number(monSlotEl.dataset.slot);
-          const actSummon = myLegals.find(a => a.type === 'normalSummon' && a.slot === slot);
-          const actSet = myLegals.find(a => a.type === 'setMonster' && a.slot === slot);
-          const actOverlay = myLegals.find(a => a.type === 'overlay' && a.targetSlot === slot);
-          if (actSummon && actSet) {
-            promptSummonPosition(slot, actSummon, actSet);
+          const handCard = p.hand[dragState.handIdx];
+          const handCd = handCard ? E().cardOf(handCard) : null;
+          const isEquip = Boolean(handCd && (handCd.equip || handCd.group === 'equip' || ((handCd.tags || []).includes('equip'))));
+          if (isEquip && p.monsters[slot]) {
+            act({ type: 'activateSpell', player: v, handIdx: dragState.handIdx, targetSlot: slot });
             didAction = true;
-          } else if (actSummon) { act(actSummon); didAction = true; }
-          else if (actSet) { act(actSet); didAction = true; }
-          else if (actOverlay) { act(actOverlay); didAction = true; }
+          } else {
+            const actSummon = myLegals.find(a => a.type === 'normalSummon' && a.slot === slot);
+            const actSet = myLegals.find(a => a.type === 'setMonster' && a.slot === slot);
+            const actOverlay = myLegals.find(a => a.type === 'overlay' && a.targetSlot === slot);
+            if (actSummon && actSet) {
+              promptSummonPosition(slot, actSummon, actSet);
+              didAction = true;
+            } else if (actSummon) { act(actSummon); didAction = true; }
+            else if (actSet) { act(actSet); didAction = true; }
+            else if (actOverlay) { act(actOverlay); didAction = true; }
+          }
         } else {
           const spellSlotEl = hoverEl.closest('.slot[data-p="' + v + '"][data-spell-slot]');
           if (spellSlotEl) {

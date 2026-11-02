@@ -289,6 +289,11 @@
               }
               continue;
             }
+            const isEquip = Boolean(hd.equip || hd.group === 'equip' || (hd.tags && hd.tags.includes('equip')));
+            if (isEquip) {
+              const hasMon = p.monsters.some(m => m && !m.faceDown);
+              if (!hasMon) continue;
+            }
             const eff = hd.effects && hd.effects[0];
             const eWin = eff && (eff.timingWindow || eff['win' + 'dow']);
             const ctx = { source: p.hand[h], player: P, trigger: 'spell' };
@@ -304,6 +309,11 @@
             const setTurn = sp.flags && sp.flags.setTurn !== undefined ? sp.flags.setTurn : sp.setTurn;
             if (setTurn !== undefined && setTurn < state.turn) {
               const spDef = E.cardOf(sp);
+              const isEquip = Boolean(spDef && (spDef.equip || spDef.group === 'equip' || (spDef.tags && spDef.tags.includes('equip'))));
+              if (isEquip) {
+                const hasMon = p.monsters.some(m => m && !m.faceDown);
+                if (!hasMon) continue;
+              }
               const eff = spDef && spDef.effects && spDef.effects[0];
               const eWin = eff && (eff.timingWindow || eff['win' + 'dow']);
               const ctx = { source: sp, player: P, trigger: 'spell' };
