@@ -3241,6 +3241,7 @@
 
     // รายการเด็คในร้านค้า
     const shopPacks = [
+      { key: 'cube_forge', name: 'คิวบ์ฟอร์จ (Cube Forge)' },
       { key: 'luna_guardians', name: 'LUNA ผู้พิทักษ์จันทรา' },
       { key: 'mecha_strike', name: 'เมก้าสไตรก์' },
       { key: 'mecha_scrap', name: 'เมก้าสแครป' },

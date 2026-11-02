@@ -27,16 +27,28 @@
     "featuredLabel": "FEATURED PACK",
     "packs": [
       {
-        "id": "mecha_strike",
-        "name": "Dragon's Hoard Cards"
-      },
-      {
-        "id": "mecha_scrap",
-        "name": "Mecha Scrap Workshop"
+        "id": "cube_forge",
+        "name": "คิวบ์ฟอร์จ (Cube Forge)"
       },
       {
         "id": "luna_guardians",
-        "name": "Luna Celestial Guardians"
+        "name": "LUNA ผู้พิทักษ์จันทรา"
+      },
+      {
+        "id": "mecha_strike",
+        "name": "เมก้าสไตรก์"
+      },
+      {
+        "id": "mecha_scrap",
+        "name": "เมก้าสแครป"
+      },
+      {
+        "id": "dinosaur",
+        "name": "กองทัพไดโนเสาร์"
+      },
+      {
+        "id": "aquila",
+        "name": "กองทัพโรมัน"
       }
     ]
   },
