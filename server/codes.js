@@ -78,6 +78,54 @@ const INITIAL_CODES = [
     maxUses: null,
     expiresAt: null,
     usedBy: []
+  },
+  {
+    code: 'ALLDECKS100',
+    title: '👑 มหาเทพ Arcana: ปลดล็อกครบทุกเด็คในเกม + แบงก์ 100 x 100 ใบ!',
+    description: 'ปลดล็อกครบทั้ง 6 เด็คหลัก (ไดโนเสาร์, อาควิลา, เมก้าสไตรก์, เมก้าสแครป, ลูน่าการ์เดียนส์, คิวบ์ฟอร์จ) และการ์ดทุกใบ พร้อมรับ แบงก์ 100 จำนวน 100 ใบ (10,000 บาท) + แบงก์ 20 จำนวน 1,000 ใบ',
+    curr20: 1000,
+    curr100: 100,
+    cards: [],
+    unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
+  },
+  {
+    code: 'OPENGAME100',
+    title: '👑 ปลดล็อกทุกเด็ค + แบงก์ 100 จำนวน 100 ใบ',
+    description: 'ปลดล็อกเด็คครบทุกเด็คในเกม พร้อมรับแบงก์ 100 x 100 ใบ + แบงก์ 20 x 1,000 ใบ',
+    curr20: 1000,
+    curr100: 100,
+    cards: [],
+    unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
+  },
+  {
+    code: 'UNLOCKALL',
+    title: '👑 มหาเทพ Arcana: ปลดล็อกครบทุกเด็ค + แบงก์ 100 x 100 ใบ',
+    description: 'ปลดล็อกครบทุกเด็คและรับแบงก์ 100 จำนวน 100 ใบ',
+    curr20: 1000,
+    curr100: 100,
+    cards: [],
+    unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
+  },
+  {
+    code: 'FREE100ALL',
+    title: '👑 ปลดล็อกทุกเด็ค + แบงก์ 100 จำนวน 100 ใบ',
+    description: 'ปลดล็อกครบทุกเด็คและรับแบงก์ 100 x 100 ใบ',
+    curr20: 1000,
+    curr100: 100,
+    cards: [],
+    unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'],
+    maxUses: null,
+    expiresAt: null,
+    usedBy: []
   }
 ];
 

@@ -3114,6 +3114,7 @@
         '<div style="margin-top:16px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:10px;padding:12px;font-size:0.82rem;color:#475569">' +
           '<div style="font-weight:900;color:#0f172a;margin-bottom:6px">💡 โค้ดแจกฟรีสำหรับผู้เล่นใหม่ (แตะเพื่อคัดลอกใส่ช่อง):</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+            '<span class="code-quick-pill" data-code="ALLDECKS100" style="background:#fef08a;color:#854d0e;border:1.5px solid #facc15;padding:4px 10px;border-radius:6px;font-weight:900;cursor:pointer">👑 ALLDECKS100 (ปลดทุกเด็ค + แบงก์ 100 x 100)</span>' +
             '<span class="code-quick-pill" data-code="WELCOME2026" style="background:#e0e7ff;color:#3730a3;border:1.5px solid #c7d2fe;padding:4px 10px;border-radius:6px;font-weight:800;cursor:pointer">WELCOME2026</span>' +
             '<span class="code-quick-pill" data-code="ARCANAFREE" style="background:#fef3c7;color:#92400e;border:1.5px solid #fde68a;padding:4px 10px;border-radius:6px;font-weight:800;cursor:pointer">ARCANAFREE</span>' +
             '<span class="code-quick-pill" data-code="LUNAGIFT" style="background:#f3e8ff;color:#6b21a8;border:1.5px solid #e9d5ff;padding:4px 10px;border-radius:6px;font-weight:800;cursor:pointer">LUNAGIFT</span>' +
@@ -3166,7 +3167,17 @@
 
             // Local fallback if offline or account needs local resolution
             if (!result || (result && !result.success && result.message && result.message.includes('ไม่พบ'))) {
+              const allDecksMasterReward = {
+                title: '👑 มหาเทพ Arcana: ปลดล็อกครบทุกเด็คในเกม + แบงก์ 100 x 100 ใบ!',
+                curr20: 1000,
+                curr100: 100,
+                unlockedDecks: ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge']
+              };
               const fallbackCodes = {
+                'ALLDECKS100': allDecksMasterReward,
+                'OPENGAME100': allDecksMasterReward,
+                'UNLOCKALL': allDecksMasterReward,
+                'FREE100ALL': allDecksMasterReward,
                 'WELCOME2026': { title: '🎁 ของขวัญต้อนรับผู้เล่นใหม่', curr20: 200, curr100: 5 },
                 'ARCANAFREE': { title: '✨ โค้ดฉลองเปิดทดสอบ Arcana Frontier', curr20: 150, curr100: 3 },
                 'LUNAGIFT': { title: '🌙 พลังแห่งจันทราผู้พิทักษ์', curr20: 300, curr100: 2 },
@@ -3241,6 +3252,17 @@
                   Account.current.curr100 = result.updatedAccount.curr100;
                   if (result.updatedAccount.unlockedDecks) {
                     Account.current.unlockedDecks = result.updatedAccount.unlockedDecks;
+                    const ownedSet = getOwnedCards();
+                    result.updatedAccount.unlockedDecks.forEach(dk => {
+                      const d = CG.cards && CG.cards[dk];
+                      if (d) {
+                        (d.main || []).forEach(c => ownedSet.add(c.id));
+                        (d.extra || []).forEach(c => ownedSet.add(c.id));
+                        (d.rarePool || []).forEach(c => ownedSet.add(c.id));
+                      }
+                    });
+                    saveOwnedCards(ownedSet);
+                    Account.current.ownedCards = Array.from(ownedSet);
                   }
                   if (result.updatedAccount.ownedCards) {
                     Account.current.ownedCards = result.updatedAccount.ownedCards;
@@ -5892,6 +5914,35 @@
   CG.ui.botChoose = (st, idx, legal, opts) => (CG.bot && CG.bot.choose ? CG.bot.choose(st, idx, legal, opts) : null);
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { chooseAction: CG.ui.botChoose, botChoose: CG.ui.botChoose };
+  }
+
+  if (typeof window !== 'undefined') {
+    window.unlockAll = function () {
+      Account.current = Account.current || {};
+      Account.current.unlockedDecks = ['dinosaur', 'aquila', 'mecha_strike', 'mecha_scrap', 'luna_guardians', 'cube_forge'];
+      Account.current.curr100 = (Number(Account.current.curr100) || 0) + 100;
+      Account.current.curr20 = (Number(Account.current.curr20) || 0) + 1000;
+      CG.ui.curr100 = Account.current.curr100;
+      CG.ui.curr20 = Account.current.curr20;
+      const ownedSet = getOwnedCards();
+      Account.current.unlockedDecks.forEach(dk => {
+        const d = CG.cards && CG.cards[dk];
+        if (d) {
+          (d.main || []).forEach(c => ownedSet.add(c.id));
+          (d.extra || []).forEach(c => ownedSet.add(c.id));
+          (d.rarePool || []).forEach(c => ownedSet.add(c.id));
+        }
+      });
+      saveOwnedCards(ownedSet);
+      Account.current.ownedCards = Array.from(ownedSet);
+      Account.save();
+      const el20 = $('valCurr20'), el100 = $('valCurr100');
+      if (el20) el20.textContent = CG.ui.curr20;
+      if (el100) el100.textContent = CG.ui.curr100;
+      if (typeof renderLobby === 'function') renderLobby();
+      toast('👑 ปลดล็อกครบทั้ง 6 เด็ค + รับแบงก์ 100 จำนวน 100 ใบ เรียบร้อยแล้ว!');
+      return '👑 ปลดล็อกครบทุกเด็คในเกม และเพิ่มแบงก์ 100 จำนวน 100 ใบ สำเร็จ!';
+    };
   }
 
   CG.ui.app = { start: lobby, _render: () => render(), _debug: () => ({ state, mode }) };
