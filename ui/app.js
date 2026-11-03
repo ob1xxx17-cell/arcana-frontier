@@ -4639,15 +4639,16 @@
     const isResolving = r.events.some(e => e.type === 'chainResolving');
     const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
     const isActivation = ['activateSpell', 'activateEffect', 'activateResponse'].includes(action.type) || r.events.some(e => e.type === 'chainLinkAdded');
+    const hasMultipleChainLinks = resolveEvents.length > 1 || resolveEvents.some(e => e.linkId > 1);
 
     if (isActivation) {
-      const bannerDelay = currentSpeed === 'slow' ? 3800 : (currentSpeed === 'fast' ? 1600 : 2600);
+      const bannerDelay = currentSpeed === 'slow' ? 5600 : (currentSpeed === 'fast' ? 2400 : 4200);
       const bannerData = formatBotBanner(state, action, r.events, cardBeforeAct, actor);
       if (globalThis.AudioFX && globalThis.AudioFX.play) {
         globalThis.AudioFX.play('spell');
       }
       showBotBanner(bannerData, bannerDelay, () => {
-        if (isResolving && resolveEvents.length > 0) {
+        if (isResolving && hasMultipleChainLinks) {
           playChainResolutionSequence(resolveEvents, () => {
             afterAction();
           });
@@ -4658,7 +4659,7 @@
       return true;
     }
 
-    if (isResolving && resolveEvents.length > 0) {
+    if (isResolving && hasMultipleChainLinks) {
       playChainResolutionSequence(resolveEvents, () => {
         afterAction();
       });
@@ -5457,7 +5458,7 @@
         res.cardName = d ? d.name : 'สเปล';
         const grpKey = d ? ((d.field || d.group === 'field') ? 'field' : d.group) : 'normal';
         res.stats = d ? ('สเปล ' + (s.spellGroup[grpKey] || d.group) + ' • จ่าย ' + (d.mana || 0) + ' มานา') : '';
-        res.desc = d ? (d.text || '') : '';
+        res.desc = d && d.text ? ('⚡ ' + d.text) : (d ? ('ร่ายการ์ด ' + d.name) : '');
         res.inst = card || (d ? { uid: 9991, cardId: d.id, baseAtk: 0, baseDef: 0, level: 1, faceDown: false } : null);
         res.cardId = d ? d.id : null;
         break;
@@ -5475,8 +5476,8 @@
         res.icon = '⚡';
         res.title = isChain ? (actorPrefix + ' เปิดใช้เอฟเฟกต์ต่อเชน (Chain Link ' + linkId + ')') : (actorPrefix + ' เปิดใช้เอฟเฟกต์มอนสเตอร์');
         res.cardName = d ? d.name : 'เอฟเฟกต์';
-        res.stats = d ? ('Lv' + (d.level || 1) + ' • ATK ' + (d.atk || 0)) : '';
-        res.desc = d ? (d.text || '') : '';
+        res.stats = d ? ('มอนสเตอร์ Lv' + (d.level || 1) + ' • ATK ' + (d.atk || 0)) : '';
+        res.desc = d && d.text ? ('⚡ ' + d.text) : (d ? ('เปิดใช้ ' + d.name) : '');
         res.inst = card || (d ? { uid: 9992, cardId: d.id, baseAtk: d.atk || 0, baseDef: d.def || 0, level: d.level || 1, faceDown: false } : null);
         res.cardId = d ? d.id : null;
         break;
@@ -5534,7 +5535,7 @@
         res.title = actorPrefix + ' ตอบโต้ในเชน (Chain Link ' + linkId + ')';
         res.cardName = respDef ? respDef.name : (act.name || act.cardId || 'การ์ดตอบโต้');
         res.stats = 'Chain Link ' + linkId + ' • ตอบโต้เอฟเฟกต์';
-        res.desc = respDef ? (respDef.text || '') : 'ใช้งานการตอบโต้ใน Chain';
+        res.desc = respDef && respDef.text ? ('⚡ ' + respDef.text) : 'ใช้งานการตอบโต้ใน Chain';
         res.cardId = respDef ? respDef.id : null;
         res.inst = cardBeforeAct || (respDef ? { uid: 9993, cardId: respDef.id, baseAtk: respDef.atk || 0, baseDef: respDef.def || 0, level: respDef.level || 1, faceDown: false } : null);
         break;
@@ -5575,14 +5576,14 @@
 
   // ⛓️ เล่นแอนิเมชันแก้ผล Chain ทีละใบตามกฎยูกิโอ (LIFO: จากใบล่าสุดย้อนไปใบแรก)
   function playChainResolutionSequence(resolveEvents, onDone) {
-    if (!resolveEvents || !resolveEvents.length) {
+    if (!resolveEvents || resolveEvents.length <= 1) {
       if (typeof onDone === 'function') onDone();
       return;
     }
 
     botBusy = true;
     let idx = 0;
-    const stepDelay = currentSpeed === 'slow' ? 2400 : (currentSpeed === 'fast' ? 1000 : 1800);
+    const stepDelay = currentSpeed === 'slow' ? 3200 : (currentSpeed === 'fast' ? 1400 : 2400);
 
     function nextStep() {
       if (idx >= resolveEvents.length) {
@@ -5594,7 +5595,7 @@
           stats: 'แก้ผลตามลำดับ Chain Link เรียบร้อย (LIFO)',
           desc: 'ผลของการ์ดทั้งหมดใน Chain ได้ถูกคลี่คลายตามกฎยูกิโอเรียบร้อยแล้ว'
         };
-        showBotBanner(doneBanner, Math.max(900, stepDelay - 400), () => {
+        showBotBanner(doneBanner, Math.max(1000, stepDelay - 400), () => {
           botBusy = false;
           if (typeof onDone === 'function') onDone();
         });
@@ -5654,6 +5655,7 @@
   }
 
   function botStep(idx) {
+    clearTimeout(timer);
     if (!state || state.ended || botToAct() !== idx) {
       botBusy = false;
       render();
@@ -5699,22 +5701,40 @@
     evBuf = evBuf.concat(r.events);
     processEventHighlights(r.events);
 
+    // 1. การเปลี่ยนเฟส (advancePhase) หรือจบเทิร์น (endTurn) ไม่ควรขึ้นแบนเนอร์การ์ดใบใหญ่มาแย่งซีน
+    const isPhaseOrTurn = ['advancePhase', 'endTurn', 'pass'].includes(a.type);
+    if (isPhaseOrTurn) {
+      render();
+      const nextBot = botToAct();
+      if (nextBot !== null) {
+        botBusy = true;
+        const phaseDelay = currentSpeed === 'slow' ? 1400 : (currentSpeed === 'fast' ? 400 : 800);
+        timer = setTimeout(() => botStep(nextBot), phaseDelay);
+      } else {
+        botBusy = false;
+        render();
+      }
+      return;
+    }
+
+    // 2. การกระทำเกี่ยวกับการ์ด (อัญเชิญ, ร่ายเวท, ใช้เอฟเฟกต์, โจมตี)
     const isMajor = ['normalSummon', 'tributeSummon', 'extraSummon', 'overlay', 'activateSpell', 'activateEffect', 'attack', 'flipSummon', 'activateResponse'].includes(a.type);
     const isSet = ['setMonster', 'setSpell'].includes(a.type);
 
     let bannerDelay;
     if (currentSpeed === 'slow') {
-      bannerDelay = isMajor ? 5200 : (isSet ? 4200 : 2800);
+      bannerDelay = isMajor ? 5800 : (isSet ? 4200 : 3000);
     } else if (currentSpeed === 'fast') {
-      bannerDelay = isMajor ? 2000 : (isSet ? 1400 : 900);
+      bannerDelay = isMajor ? 2400 : (isSet ? 1600 : 1200);
     } else {
-      // Normal speed (default) - much slower, calm, cinematic and readable
-      bannerDelay = isMajor ? 3800 : (isSet ? 3000 : 2000);
+      // Normal speed (default) - ปรับเวลาให้อ่านชื่อการ์ดและเอฟเฟกต์ได้สบายตา ไม่รีบเด้งหาย
+      bannerDelay = isMajor ? 4200 : (isSet ? 3200 : 2400);
     }
 
     const bannerData = formatBotBanner(state, a, r.events, cardBeforeAct, idx);
     const isResolving = r.events.some(e => e.type === 'chainResolving');
     const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
+    const hasMultipleChainLinks = resolveEvents.length > 1 || resolveEvents.some(e => e.linkId > 1);
 
     if (isMajor && globalThis.AudioFX && globalThis.AudioFX.play) {
       if (['activateSpell', 'activateEffect', 'activateResponse'].includes(a.type)) {
@@ -5724,7 +5744,7 @@
 
     botBusy = true;
     showBotBanner(bannerData, bannerDelay, () => {
-      if (isResolving && resolveEvents.length > 0) {
+      if (isResolving && hasMultipleChainLinks) {
         playChainResolutionSequence(resolveEvents, () => {
           botBusy = false;
           render();
@@ -5734,7 +5754,8 @@
         const nextBot = botToAct();
         if (nextBot !== null) {
           botBusy = true;
-          botStep(nextBot);
+          const nextDelay = currentSpeed === 'slow' ? 2200 : (currentSpeed === 'fast' ? 600 : 1400);
+          timer = setTimeout(() => botStep(nextBot), nextDelay);
         } else {
           botBusy = false;
           render();
