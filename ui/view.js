@@ -80,7 +80,7 @@
           const c = p.spells[act.spellSlot];
           const d = E.cardOf(c);
           cardName = d ? d.name : '';
-          label = (a.activateSpellSlot || s.chain.activateSet || 'เปิดใช้') + ' ' + (cardName || s.term.spell) + ' (ช่อง ' + (act.spellSlot + 1) + ')';
+          label = (a.activateSpellSlot || s.chain.activateSet || 'เปิดใช้ Distortion') + (cardName ? ': ' + cardName : '') + ' (ช่อง ' + (act.spellSlot + 1) + ')';
           id = 'activateSpell:slot:' + act.spellSlot;
         }
         break;

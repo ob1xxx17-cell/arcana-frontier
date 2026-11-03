@@ -2579,28 +2579,104 @@ button.gold:hover:not(:disabled) {
 .cmd-cell {
   flex: 1;
   min-width: 90px;
-  max-width: 180px;
-  padding: 10px 8px;
-  border-radius: 6px;
-  font-weight: 700;
+  max-width: 240px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 800;
   font-size: 13.5px;
   cursor: pointer;
   text-align: center;
-  border: 1px solid transparent;
-  transition: all 0.15s ease;
+  border: 1.5px solid transparent;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
+  letter-spacing: 0.3px;
 }
 
+/* Default enabled button: Radiant Amber-Gold */
 .cmd-cell.enabled {
-  background: linear-gradient(135deg, #8e44ad, #6c3483);
-  color: #fff;
-  border-color: #a569bd;
-  box-shadow: 0 2px 8px rgba(110, 44, 145, 0.4);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1a0b26;
+  border-color: #fef08a;
+  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .cmd-cell.enabled:hover {
-  background: linear-gradient(135deg, #9b59b6, #7d3c98);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.6);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  transform: translateY(-2px);
+  border-color: #ffffff;
+  box-shadow: 0 5px 16px rgba(251, 191, 36, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.cmd-cell.enabled:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+/* 1. Cast Distortion / Activate Effect: Vibrant Emerald-Teal */
+.cmd-cell.enabled[data-act="actSpell"],
+.cmd-cell.enabled[data-act="actSpellField"],
+.cmd-cell.enabled[data-act^="actEff:"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border-color: #6ee7b7;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.cmd-cell.enabled[data-act="actSpell"]:hover,
+.cmd-cell.enabled[data-act="actSpellField"]:hover,
+.cmd-cell.enabled[data-act^="actEff:"]:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-2px);
+  border-color: #a7f3d0;
+  box-shadow: 0 5px 16px rgba(52, 211, 153, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* 2. Set Spell & Set Monster: Royal Azure Blue */
+.cmd-cell.enabled[data-act="mode:setSpell"],
+.cmd-cell.enabled[data-act="mode:set"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-color: #93c5fd;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.cmd-cell.enabled[data-act="mode:setSpell"]:hover,
+.cmd-cell.enabled[data-act="mode:set"]:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: 0 5px 16px rgba(96, 165, 250, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* 3. Attack: Crimson Red */
+.cmd-cell.enabled[data-act="atk"] {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+  border-color: #fca5a5;
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.cmd-cell.enabled[data-act="atk"]:hover {
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  transform: translateY(-2px);
+  border-color: #fecaca;
+  box-shadow: 0 5px 16px rgba(248, 113, 113, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* 4. Astral Gate / Extra Summon / Eclipse: Mystic Cosmic Violet */
+.cmd-cell.enabled[data-act^="callExtra"],
+.cmd-cell.enabled[data-act="mode:overlay"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: #ffffff;
+  border-color: #c4b5fd;
+  box-shadow: 0 3px 10px rgba(139, 92, 246, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.cmd-cell.enabled[data-act^="callExtra"]:hover,
+.cmd-cell.enabled[data-act="mode:overlay"]:hover {
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+  transform: translateY(-2px);
+  border-color: #ddd6fe;
+  box-shadow: 0 5px 16px rgba(167, 139, 250, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .cmd-cell.disabled {
@@ -2613,6 +2689,17 @@ button.gold:hover:not(:disabled) {
 .cmd-cell.disabled:hover {
   background: rgba(255, 255, 255, 0.08);
   opacity: 0.8;
+}
+
+.cmd-cell.btn-deselect {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.cmd-cell.btn-deselect:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+  border-color: #ef4444;
 }
 
 .cmd-cell.btn-close {
