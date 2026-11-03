@@ -2058,21 +2058,49 @@ button.gold:hover:not(:disabled) {
 .chain-trigger-meta {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   text-align: left;
+  flex: 1;
 }
 
 .chain-trigger-name {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: var(--gold);
 }
 
+.chain-trigger-eff-text {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 204, 0, 0.25);
+  border-radius: 6px;
+  padding: 6px 10px;
+  line-height: 1.35;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.chain-question-banner {
+  width: 100%;
+  max-width: 600px;
+  box-sizing: border-box;
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.2), rgba(168, 85, 247, 0.25));
+  border: 1.5px solid #eab308;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 6px 0 10px 0;
+  font-size: 0.88rem;
+  color: #fef08a;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
 .chain-responses-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--blue, #7aa2f7);
-  margin: 8px 0 4px 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #38bdf8;
+  margin: 6px 0 4px 0;
   align-self: flex-start;
 }
 
@@ -2095,7 +2123,40 @@ button.gold:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  width: var(--cw);
+  width: clamp(110px, var(--cw), 140px);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.chain-response-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: center;
+}
+
+.chain-response-name {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fef08a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chain-response-eff-text {
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  padding: 3px 5px;
+  line-height: 1.25;
+  max-height: 55px;
+  overflow-y: auto;
+  text-align: left;
 }
 
 .chain-response-btns {
@@ -2106,24 +2167,25 @@ button.gold:hover:not(:disabled) {
 }
 
 .resp-use-btn {
-  background: var(--blue, #7aa2f7) !important;
-  border: 1px solid var(--blue, #7aa2f7) !important;
-  color: #fff !important;
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%) !important;
+  border: 1.5px solid #fef08a !important;
+  color: #1e1b4b !important;
   border-radius: 6px !important;
   padding: 6px 8px !important;
   font-size: 0.78rem !important;
-  font-weight: 800 !important;
+  font-weight: 900 !important;
   cursor: pointer !important;
   white-space: nowrap !important;
   text-overflow: ellipsis !important;
   overflow: hidden !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
 }
 
 .resp-use-btn:hover {
-  filter: brightness(1.18);
-  border-color: #fff !important;
+  filter: brightness(1.15);
+  box-shadow: 0 0 12px #facc15 !important;
 }
 
 .chain-pass-wrap {
@@ -2856,6 +2918,21 @@ button.gold:hover:not(:disabled) {
   gap: 8px;
   border-bottom: 1px solid rgba(255, 204, 0, 0.3);
   padding-bottom: 5px;
+}
+.bba-header.is-chain {
+  border-bottom: 2px solid #a855f7;
+}
+.bba-chain-badge {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: #fff;
+  border: 1.5px solid #c084fc;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+  margin-left: auto;
 }
 .bba-icon { font-size: 1.25rem; }
 .bba-title {
@@ -8833,6 +8910,54 @@ button.gold:hover:not(:disabled) {
     padding: 1px 2px !important;
     line-height: 1.15 !important;
     font-weight: 700 !important;
+  }
+
+  /* แบนเนอร์แสดงเอฟเฟกต์การ์ดยูกิโอ และ Chain Stack โหมดมือถือแนวนอน */
+  .bot-card-announcement {
+    max-width: clamp(280px, 78vw, 480px) !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+  }
+  .bot-card-announcement .bba-card-preview {
+    width: clamp(55px, 12vw, 75px) !important;
+    height: clamp(77px, calc(12vw * 1.4), 105px) !important;
+  }
+  .bot-card-announcement .bba-card-name {
+    font-size: 0.95rem !important;
+  }
+  .bot-card-announcement .bba-card-desc {
+    font-size: 0.75rem !important;
+    max-height: 55px !important;
+    line-height: 1.25 !important;
+  }
+  .chain-stack {
+    position: fixed !important;
+    top: 6px !important;
+    left: 6px !important;
+    right: auto !important;
+    width: clamp(140px, 20vw, 180px) !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    z-index: 150 !important;
+    padding: 6px 8px !important;
+  }
+  .chain-window-modal {
+    max-width: 95vw !important;
+    max-height: 94vh !important;
+    overflow-y: auto !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+  }
+  .chain-trigger-card-box {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+  .chain-trigger-content {
+    gap: 8px !important;
+  }
+  .chain-card-wrap {
+    width: clamp(55px, 12vw, 75px) !important;
+    height: clamp(77px, calc(12vw * 1.4), 105px) !important;
   }
 }
 

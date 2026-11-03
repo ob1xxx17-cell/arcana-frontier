@@ -1414,11 +1414,16 @@
 
       const isComplex = !!(banner.cardName || banner.inst || banner.cardId || banner.isSet);
       const backdrop = isComplex ? '<div class="bot-spotlight-backdrop' + fadeCls + '"></div>' : '';
+      const chainBadge = banner.isChain
+        ? '<span class="bba-chain-badge">⛓️ CHAIN LINK ' + (banner.linkId || 1) + '</span>'
+        : '';
+      const headerCls = banner.isChain ? 'bba-header is-chain' : 'bba-header';
 
       return backdrop + '<div class="bot-banner bot-card-announcement' + fadeCls + '">' +
-        '<div class="bba-header">' +
-          '<span class="bba-icon">' + (banner.icon || '🤖') + '</span>' +
+        '<div class="' + headerCls + '">' +
+          '<span class="bba-icon">' + (banner.icon || (banner.isChain ? '⚡' : '🤖')) + '</span>' +
           '<span class="bba-title">' + esc(banner.title || '') + '</span>' +
+          chainBadge +
         '</div>' +
         '<div class="bba-content-grid">' +
           cardVisual +

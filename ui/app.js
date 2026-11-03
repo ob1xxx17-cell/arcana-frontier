@@ -3986,14 +3986,17 @@
   function buildChainStack(st, v) {
     const cs = S().chain;
     let links = '';
-    for (let i = 0; i < st.chain.length; i++) {
+    // Show links in LIFO order (latest on top)
+    for (let i = st.chain.length - 1; i >= 0; i--) {
       const lk = st.chain[i];
       const def = E().findCard(lk.cardId);
       const name = def ? def.name : lk.cardId;
-      const cls = lk.negated ? 'chain-link negated' : 'chain-link';
-      links += '<div class="' + cls + '"><span class="lnum">' + lk.linkId + '</span><span class="lname">' + V().esc(name) + '</span></div>';
+      const isTop = (i === st.chain.length - 1);
+      const cls = (lk.negated ? 'chain-link negated' : 'chain-link') + (isTop ? ' chain-link-top' : '');
+      const orderHint = isTop ? ' ⚡ แก้ผลก่อน' : (i === 0 ? ' (แก้หลังสุด)' : '');
+      links += '<div class="' + cls + '"><span class="lnum">Link ' + lk.linkId + '</span><span class="lname">' + V().esc(name) + orderHint + '</span></div>';
     }
-    return '<div class="chain-stack" style="position:fixed;top:60px;right:260px;z-index:35;width:200px"><h4>⛓ ' + cs.title + '</h4>' + links + '</div>';
+    return '<div class="chain-stack" style="position:fixed;top:60px;right:260px;z-index:35;width:220px"><h4>⛓ ' + cs.title + ' <small style="display:block;font-size:0.7rem;font-weight:normal;color:#cbd5e1">(แก้ผลจากบนลงล่าง / LIFO)</small></h4>' + links + '</div>';
   }
 
   // 5D: Build chain window overlay (priority/response)
@@ -4003,7 +4006,7 @@
     const pname = V().pname(st, v);
     const uidMap = V().uidMap(st);
 
-    // 1. เหนือปุ่มทั้งหมดแสดงการ์ดที่เพิ่งถูกใช้ (จาก state.chain ล่าสุด) พร้อมปุ่ม "อ่านเอฟเฟกต์"
+    // 1. เหนือปุ่มทั้งหมดแสดงการ์ดที่เพิ่งถูกใช้ (จาก state.chain ล่าสุด) พร้อมข้อความเอฟเฟกต์เต็ม
     let triggerCardHtml = '';
     const lastLink = (st.chain && st.chain.length > 0) ? st.chain[st.chain.length - 1] : null;
     if (lastLink) {
@@ -4018,19 +4021,22 @@
       };
       const cardFace = V().cardHtml(inst, { reveal: true, field: false });
       const cname = def ? def.name : lastLink.cardId;
+      const effText = def ? (def.text || 'ไม่มีคำอธิบายเอฟเฟกต์') : '';
       triggerCardHtml = '<div class="chain-trigger-card-box">' +
         '<div class="chain-trigger-title">⚡ การ์ดที่เพิ่งถูกใช้ (Chain Link ' + lastLink.linkId + ')</div>' +
         '<div class="chain-trigger-content">' +
           '<div class="chain-card-wrap">' + cardFace + '</div>' +
           '<div class="chain-trigger-meta">' +
             '<div class="chain-trigger-name">' + V().esc(cname) + '</div>' +
-            '<button class="btn-read-eff" data-ov="inspectChainLast" title="อ่านรายละเอียดเอฟเฟกต์">📖 อ่านเอฟเฟกต์</button>' +
+            '<div class="chain-trigger-eff-text"><strong>เอฟเฟกต์:</strong> ' + V().esc(effText) + '</div>' +
+            '<button class="btn-read-eff" data-ov="inspectChainLast" title="อ่านรายละเอียดเอฟเฟกต์">📖 ขยายดูการ์ดเต็ม</button>' +
           '</div>' +
         '</div>' +
-      '</div>';
+      '</div>' +
+      '<div class="chain-question-banner">❓ คุณต้องการร่ายสเปลความเร็วสูง / โต้ตอบกลับ (Chain) หรือไม่?</div>';
     }
 
-    // 2. ตัวเลือกตอบโต้แต่ละอัน (จาก pending.options / getLegalActions) แสดงหน้าการ์ดของการ์ดที่จะใช้
+    // 2. ตัวเลือกตอบโต้แต่ละอัน (จาก pending.options / getLegalActions) แสดงหน้าการ์ดของการ์ดที่จะใช้พร้อมเอฟเฟกต์
     const legal = E().getLegalActions(st, v);
     const responses = legal.filter(x => x.type === 'activateResponse');
     const p = st.players[v];
@@ -4049,8 +4055,8 @@
         cardInst = p.monsters[r.slot];
       }
 
+      const def = E().findCard(r.cardId);
       if (!cardInst) {
-        const def = E().findCard(r.cardId);
         cardInst = {
           uid: 9100 + i,
           cardId: r.cardId,
@@ -4063,20 +4069,26 @@
 
       // การ์ดคว่ำของเราที่จะใช้ได้แสดงหน้าการ์ดจริงให้ผู้เล่นฝั่งตัวเองเห็น (reveal: true)
       const cardFace = V().cardHtml(cardInst, { reveal: true, field: false });
-      const rName = r.name || (E().findCard(r.cardId) || {}).name || r.cardId;
+      const rName = r.name || (def || {}).name || r.cardId;
+      const rEffText = def ? (def.text || '') : '';
+      const nextChainLink = (lastLink ? lastLink.linkId : 0) + 1;
 
       responseCards += '<div class="chain-response-col">' +
         '<div class="chain-card-wrap">' + cardFace + '</div>' +
+        '<div class="chain-response-meta">' +
+          '<div class="chain-response-name">' + V().esc(rName) + '</div>' +
+          (rEffText ? '<div class="chain-response-eff-text">' + V().esc(rEffText) + '</div>' : '') +
+        '</div>' +
         '<div class="chain-response-btns">' +
-          '<button class="resp-use-btn" data-ov="chainResp:' + i + '">' + cs.use + ' ' + V().esc(rName) + '</button>' +
-          '<button class="btn-read-eff" data-ov="inspectRespCard:' + i + '">📖 อ่านเอฟเฟกต์</button>' +
+          '<button class="resp-use-btn" data-ov="chainResp:' + i + '">⚡ ต่อเชน (Chain Link ' + nextChainLink + ')</button>' +
+          '<button class="btn-read-eff" data-ov="inspectRespCard:' + i + '">📖 ขยายดูการ์ด</button>' +
         '</div>' +
       '</div>';
     }
 
     const passAct = legal.find(x => x.type === 'passPriority');
     const passBtnHtml = passAct
-      ? '<div class="chain-pass-wrap"><button class="pass-btn-large" data-ov="chainPass">' + cs.pass + '</button></div>'
+      ? '<div class="chain-pass-wrap"><button class="pass-btn-large" data-ov="chainPass">❌ ไม่ตอบโต้ (เริ่มแก้ผล Chain จากการ์ดใบล่าสุด)</button></div>'
       : '';
 
     return '<div class="overlay"><div class="modal chain-window-modal">' +
@@ -4600,10 +4612,61 @@
       render();
       return true;
     }
+
+    // Snapshot card before action executes
+    let cardBeforeAct = null;
+    const actor = action.player !== undefined ? action.player : viewer();
+    const actPlayer = state.players[actor];
+    if (actPlayer) {
+      if (action.handIdx !== undefined && actPlayer.hand && actPlayer.hand[action.handIdx]) {
+        cardBeforeAct = actPlayer.hand[action.handIdx];
+      } else if (action.slot !== undefined && actPlayer.monsters && actPlayer.monsters[action.slot]) {
+        cardBeforeAct = actPlayer.monsters[action.slot];
+      } else if (action.from !== undefined && actPlayer.monsters && actPlayer.monsters[action.from]) {
+        cardBeforeAct = actPlayer.monsters[action.from];
+      } else if (action.spellSlot !== undefined && actPlayer.spells && actPlayer.spells[action.spellSlot]) {
+        cardBeforeAct = actPlayer.spells[action.spellSlot];
+      } else if (action.extraIdx !== undefined && actPlayer.extra && actPlayer.extra[action.extraIdx]) {
+        cardBeforeAct = actPlayer.extra[action.extraIdx];
+      }
+    }
+
     const r = E().applyAction(state, action);
     if (!r.ok) { toast(V().errorText(r.error)); return false; }
     evBuf = evBuf.concat(r.events); sel = null; handSel = new Set(); pendingSel = new Set();
-    afterAction(); return true;
+    processEventHighlights(r.events);
+
+    const isResolving = r.events.some(e => e.type === 'chainResolving');
+    const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
+    const isActivation = ['activateSpell', 'activateEffect', 'activateResponse'].includes(action.type) || r.events.some(e => e.type === 'chainLinkAdded');
+
+    if (isActivation) {
+      const bannerDelay = currentSpeed === 'slow' ? 3800 : (currentSpeed === 'fast' ? 1600 : 2600);
+      const bannerData = formatBotBanner(state, action, r.events, cardBeforeAct, actor);
+      if (globalThis.AudioFX && globalThis.AudioFX.play) {
+        globalThis.AudioFX.play('spell');
+      }
+      showBotBanner(bannerData, bannerDelay, () => {
+        if (isResolving && resolveEvents.length > 0) {
+          playChainResolutionSequence(resolveEvents, () => {
+            afterAction();
+          });
+        } else {
+          afterAction();
+        }
+      });
+      return true;
+    }
+
+    if (isResolving && resolveEvents.length > 0) {
+      playChainResolutionSequence(resolveEvents, () => {
+        afterAction();
+      });
+      return true;
+    }
+
+    afterAction();
+    return true;
   }
   function afterAction() {
     render(); schedule();
@@ -5302,22 +5365,31 @@
     }, 700);
   }
 
-  // 7P: Format Thai banner for bot actions with rich visual announcement
-  function formatBotBanner(st, act, events, cardBeforeAct) {
+  // 7P: Format Thai banner for player and bot actions with rich visual announcement
+  function formatBotBanner(st, act, events, cardBeforeAct, customActor) {
     const s = S(), a = s.app;
-    const p = st.players[act.player];
+    const actorIdx = customActor !== undefined ? customActor : act.player;
+    const p = st.players[actorIdx];
     const def = (c) => V().def(c);
+    const isPlayer = (actorIdx === viewer());
+    const actorPrefix = isPlayer ? 'คุณ' : 'บอท';
+
+    const linkEv = events && events.find(e => e.type === 'chainLinkAdded');
+    const isChain = !!linkEv;
+    const linkId = linkEv ? linkEv.link.linkId : ((st.chain && st.chain.length) || 1);
 
     let res = {
       type: act.type,
-      icon: '🤖',
-      title: 'บอทดำเนินการ',
+      icon: isPlayer ? '🧙‍♂️' : '🤖',
+      title: actorPrefix + 'ดำเนินการ',
       cardName: '',
       stats: '',
       desc: '',
       inst: null,
       cardId: null,
-      isSet: false
+      isSet: false,
+      isChain,
+      linkId
     };
 
     switch (act.type) {
@@ -5325,7 +5397,7 @@
         const m = cardBeforeAct || (act.slot !== undefined ? p.monsters[act.slot] : null);
         const d = m ? def(m) : null;
         res.icon = '⚔️';
-        res.title = 'บอทอัญเชิญมอนสเตอร์';
+        res.title = actorPrefix + 'อัญเชิญมอนสเตอร์';
         res.cardName = d ? d.name : 'มอนสเตอร์';
         res.stats = d ? ('Lv' + (d.level || 1) + ' • ATK ' + (d.atk || 0) + ' / DEF ' + (d.def || 0)) : '';
         res.desc = 'อัญเชิญลงที่ช่อง ' + (act.slot + 1) + (d && d.text ? ' • ' + d.text : '');
@@ -5335,7 +5407,7 @@
       }
       case 'setMonster': {
         res.icon = '🛡️';
-        res.title = 'บอท Set คว่ำมอนสเตอร์';
+        res.title = actorPrefix + ' Set คว่ำมอนสเตอร์';
         res.cardName = 'มอนสเตอร์คว่ำ';
         res.desc = 'Set คว่ำป้องกันที่ช่อง ' + (act.slot + 1);
         res.isSet = true;
@@ -5345,7 +5417,7 @@
         const m = cardBeforeAct || (act.slot !== undefined ? p.monsters[act.slot] : null);
         const d = m ? def(m) : null;
         res.icon = '💀';
-        res.title = 'บอทเสียสละอัญเชิญ (Tribute)';
+        res.title = actorPrefix + 'เสียสละอัญเชิญ (Tribute)';
         res.cardName = d ? d.name : 'มอนสเตอร์';
         res.stats = d ? ('Lv' + (d.level || 2) + ' • ATK ' + (d.atk || 0) + ' / DEF ' + (d.def || 0)) : '';
         res.desc = 'เสียสละมอนสเตอร์ ' + (act.materials ? act.materials.length : 1) + ' ตัว อัญเชิญลงช่อง ' + (act.slot + 1) + (d && d.text ? ' • ' + d.text : '');
@@ -5357,7 +5429,7 @@
         const m = cardBeforeAct || (act.targetSlot !== undefined ? p.monsters[act.targetSlot] : null);
         const d = m ? def(m) : null;
         res.icon = '🪐';
-        res.title = 'บอท Eclipse วางทับ';
+        res.title = actorPrefix + ' Eclipse วางทับ';
         res.cardName = d ? d.name : 'มอนสเตอร์';
         res.stats = d ? ('Lv' + (d.level || 1) + ' • ATK ' + (d.atk || 0)) : '';
         res.desc = 'วางทับมอนสเตอร์ที่ช่อง ' + (act.targetSlot + 1);
@@ -5369,7 +5441,7 @@
         const m = cardBeforeAct || (act.targetSlot !== undefined ? p.monsters[act.targetSlot] : null);
         const d = m ? def(m) : null;
         res.icon = '🌟';
-        res.title = 'บอทอัญเชิญพิเศษ (Extra Deck)';
+        res.title = actorPrefix + 'อัญเชิญพิเศษ (Extra Deck)';
         res.cardName = d ? d.name : 'มอนสเตอร์';
         res.stats = d ? ('Lv' + (d.level || 3) + ' • ATK ' + (d.atk || 0) + ' / DEF ' + (d.def || 0)) : '';
         res.desc = 'อัญเชิญพิเศษวางทับที่ช่อง ' + (act.targetSlot + 1) + (d && d.text ? ' • ' + d.text : '');
@@ -5379,33 +5451,33 @@
       }
       case 'activateSpell': {
         const card = cardBeforeAct || (act.handIdx !== undefined ? p.hand[act.handIdx] : (act.spellSlot !== undefined ? p.spells[act.spellSlot] : null));
-        const d = card ? def(card) : null;
-        res.icon = '🪄';
-        res.title = 'บอทร่ายการ์ดสเปล';
+        const d = card ? def(card) : (act.cardId ? E().findCard(act.cardId) : null);
+        res.icon = isChain ? '⛓️' : '🪄';
+        res.title = isChain ? (actorPrefix + ' ร่ายสเปลต่อเชน (Chain Link ' + linkId + ')') : (actorPrefix + ' ร่ายการ์ดสเปล');
         res.cardName = d ? d.name : 'สเปล';
         const grpKey = d ? ((d.field || d.group === 'field') ? 'field' : d.group) : 'normal';
         res.stats = d ? ('สเปล ' + (s.spellGroup[grpKey] || d.group) + ' • จ่าย ' + (d.mana || 0) + ' มานา') : '';
         res.desc = d ? (d.text || '') : '';
-        res.inst = card;
+        res.inst = card || (d ? { uid: 9991, cardId: d.id, baseAtk: 0, baseDef: 0, level: 1, faceDown: false } : null);
         res.cardId = d ? d.id : null;
         break;
       }
       case 'setSpell': {
         res.icon = '📜';
-        res.title = 'บอทหมอบสเปล';
+        res.title = actorPrefix + 'หมอบสเปล';
         res.desc = 'หมอบสเปลที่ช่อง ' + (act.slot + 1);
         res.isSet = true;
         break;
       }
       case 'activateEffect': {
         const card = cardBeforeAct || (act.slot !== undefined ? p.monsters[act.slot] : (act.handIdx !== undefined ? p.hand[act.handIdx] : null));
-        const d = card ? def(card) : null;
+        const d = card ? def(card) : (act.cardId ? E().findCard(act.cardId) : null);
         res.icon = '⚡';
-        res.title = 'บอทเปิดใช้เอฟเฟกต์';
+        res.title = isChain ? (actorPrefix + ' เปิดใช้เอฟเฟกต์ต่อเชน (Chain Link ' + linkId + ')') : (actorPrefix + ' เปิดใช้เอฟเฟกต์มอนสเตอร์');
         res.cardName = d ? d.name : 'เอฟเฟกต์';
         res.stats = d ? ('Lv' + (d.level || 1) + ' • ATK ' + (d.atk || 0)) : '';
         res.desc = d ? (d.text || '') : '';
-        res.inst = card;
+        res.inst = card || (d ? { uid: 9992, cardId: d.id, baseAtk: d.atk || 0, baseDef: d.def || 0, level: d.level || 1, faceDown: false } : null);
         res.cardId = d ? d.id : null;
         break;
       }
@@ -5414,7 +5486,7 @@
         const d = atkMon ? def(atkMon) : null;
         const toText = act.to === null ? 'โจมตีตรงใส่ผู้เล่น!' : ('มอนสเตอร์ช่อง ' + (act.to + 1));
         res.icon = '⚔️';
-        res.title = 'บอทประกาศโจมตี!';
+        res.title = actorPrefix + 'ประกาศโจมตี!';
         res.cardName = d ? d.name : 'มอนสเตอร์';
         res.stats = atkMon ? ('ATK ' + E().atk(atkMon)) : '';
         res.desc = 'จากช่อง ' + (act.from + 1) + ' โจมตี → ' + toText;
@@ -5426,7 +5498,7 @@
         const m = cardBeforeAct || p.monsters[act.slot];
         const d = m ? def(m) : null;
         res.icon = '✨';
-        res.title = 'บอทพลิกหงายมอนสเตอร์';
+        res.title = actorPrefix + 'พลิกหงายมอนสเตอร์';
         res.cardName = d ? d.name : 'มอนสเตอร์';
         res.stats = d ? ('Lv' + (d.level || 1) + ' • ATK ' + (d.atk || 0) + ' / DEF ' + (d.def || 0)) : '';
         res.desc = 'พลิกหงายขึ้นมาเป็นท่าโจมตีที่ช่อง ' + (act.slot + 1);
@@ -5437,7 +5509,7 @@
       case 'changePosition': {
         const m = cardBeforeAct || p.monsters[act.slot];
         res.icon = '🔄';
-        res.title = 'บอทเปลี่ยนท่า';
+        res.title = actorPrefix + 'เปลี่ยนท่า';
         res.cardName = m ? (def(m).name) : 'มอนสเตอร์';
         res.desc = 'เปลี่ยนเป็นท่า ' + (m && m.position === 'atk' ? 'โจมตี' : 'ป้องกัน') + ' ที่ช่อง ' + (act.slot + 1);
         res.inst = m;
@@ -5445,36 +5517,41 @@
       }
       case 'advancePhase': {
         res.icon = '⏩';
-        res.title = 'บอทเปลี่ยนเฟส';
+        res.title = actorPrefix + 'เปลี่ยนเฟส';
         res.desc = 'เปลี่ยนเป็น ' + (s.phase[st.phase] || st.phase);
         break;
       }
       case 'endTurn': {
         res.icon = '⏭️';
-        res.title = 'บอทจบเทิร์น';
-        res.desc = 'สิ้นสุดเทิร์นของบอท';
+        res.title = actorPrefix + 'จบเทิร์น';
+        res.desc = 'สิ้นสุดเทิร์นของ' + actorPrefix;
         break;
       }
       case 'activateResponse': {
+        const respDef = cardBeforeAct ? def(cardBeforeAct) : (act.cardId ? E().findCard(act.cardId) : null);
+        res.isChain = true;
         res.icon = '⛓️';
-        res.title = 'บอทตอบโต้ใน Chain';
-        res.cardName = act.name || act.cardId || '';
-        res.desc = 'ใช้งานการตอบโต้ใน Chain';
+        res.title = actorPrefix + ' ตอบโต้ในเชน (Chain Link ' + linkId + ')';
+        res.cardName = respDef ? respDef.name : (act.name || act.cardId || 'การ์ดตอบโต้');
+        res.stats = 'Chain Link ' + linkId + ' • ตอบโต้เอฟเฟกต์';
+        res.desc = respDef ? (respDef.text || '') : 'ใช้งานการตอบโต้ใน Chain';
+        res.cardId = respDef ? respDef.id : null;
+        res.inst = cardBeforeAct || (respDef ? { uid: 9993, cardId: respDef.id, baseAtk: respDef.atk || 0, baseDef: respDef.def || 0, level: respDef.level || 1, faceDown: false } : null);
         break;
       }
       default:
-        res.title = 'บอท: ' + act.type;
+        res.title = actorPrefix + ': ' + act.type;
         break;
     }
     return res;
   }
 
-  function showBotBanner(bannerData, delayMs) {
+  function showBotBanner(bannerData, delayMs, onDone) {
     clearTimeout(bannerTimer);
     botBannerText = bannerData;
     botBannerFade = false;
 
-    // Auto-inspect the bot's card so the sidebar shows full card text immediately
+    // Auto-inspect the card so the sidebar shows full card text immediately
     if (bannerData && bannerData.inst) {
       CG.ui.lastInspectedInst = bannerData.inst;
       const inspectEl = $('inspect');
@@ -5482,7 +5559,8 @@
     }
 
     render();
-    const fadeAfter = Math.max(700, delayMs - 450);
+    const totalDelay = delayMs || 3000;
+    const fadeAfter = Math.max(600, totalDelay - 450);
     bannerTimer = setTimeout(() => {
       botBannerFade = true;
       render();
@@ -5490,8 +5568,89 @@
         botBannerText = null;
         botBannerFade = false;
         render();
+        if (typeof onDone === 'function') onDone();
       }, 450);
     }, fadeAfter);
+  }
+
+  // ⛓️ เล่นแอนิเมชันแก้ผล Chain ทีละใบตามกฎยูกิโอ (LIFO: จากใบล่าสุดย้อนไปใบแรก)
+  function playChainResolutionSequence(resolveEvents, onDone) {
+    if (!resolveEvents || !resolveEvents.length) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+
+    botBusy = true;
+    let idx = 0;
+    const stepDelay = currentSpeed === 'slow' ? 2400 : (currentSpeed === 'fast' ? 1000 : 1800);
+
+    function nextStep() {
+      if (idx >= resolveEvents.length) {
+        // แบนเนอร์แสดงว่าแก้ผล Chain ครบสมบูรณ์แล้ว
+        const doneBanner = {
+          icon: '✅',
+          title: 'จบการแก้ผล Chain ครบทุกใบ!',
+          cardName: 'การแก้ผลสำเร็จสมบูรณ์',
+          stats: 'แก้ผลตามลำดับ Chain Link เรียบร้อย (LIFO)',
+          desc: 'ผลของการ์ดทั้งหมดใน Chain ได้ถูกคลี่คลายตามกฎยูกิโอเรียบร้อยแล้ว'
+        };
+        showBotBanner(doneBanner, Math.max(900, stepDelay - 400), () => {
+          botBusy = false;
+          if (typeof onDone === 'function') onDone();
+        });
+        return;
+      }
+
+      const rev = resolveEvents[idx];
+      const linkNum = rev.linkId || (resolveEvents.length - idx);
+      const isFirstResolved = (idx === 0);
+      const def = E().findCard(rev.cardId);
+      const cname = def ? def.name : (rev.cardId || 'การ์ด');
+      const effText = def ? (def.text || '') : '';
+
+      let statusTitle = '';
+      let statusDesc = '';
+      if (rev.type === 'chainLinkNegated') {
+        statusTitle = '⛔ Chain Link ' + linkNum + ': ถูกขัดขวาง (Negated)!';
+        statusDesc = 'เอฟเฟกต์ของการ์ดใบนี้ถูกไร้ผล ไม่เกิดผลลัพธ์ใดๆ';
+      } else if (rev.type === 'chainLinkFizzled') {
+        statusTitle = '💨 Chain Link ' + linkNum + ': เป้าหมายหายไป (Fizzled)!';
+        statusDesc = 'เป้าหมายของเอฟเฟกต์ไม่อยู่ในเงื่อนไข ผลลัพธ์จึงสลายไป';
+      } else {
+        statusTitle = '⛓️ กำลังแก้ผล Chain Link ' + linkNum + (isFirstResolved ? ' (ล่าสุด)' : '');
+        statusDesc = effText ? ('แสดงผล: ' + effText) : 'เอฟเฟกต์ของการ์ดเริ่มทำงานตามลำดับ LIFO';
+      }
+
+      const resBanner = {
+        icon: '⛓️',
+        title: statusTitle,
+        cardName: cname,
+        stats: 'Chain Link ' + linkNum + ' • แก้ผลตามลำดับยูกิ',
+        desc: statusDesc,
+        cardId: rev.cardId,
+        inst: {
+          uid: rev.uid || (8800 + idx),
+          cardId: rev.cardId,
+          baseAtk: def ? def.atk : 0,
+          baseDef: def ? def.def : 0,
+          level: def ? def.level : 1,
+          faceDown: false
+        },
+        isChain: true,
+        linkId: linkNum
+      };
+
+      if (globalThis.AudioFX && globalThis.AudioFX.play) {
+        globalThis.AudioFX.play('spell');
+      }
+
+      idx++;
+      showBotBanner(resBanner, stepDelay, () => {
+        nextStep();
+      });
+    }
+
+    nextStep();
   }
 
   function botStep(idx) {
@@ -5540,7 +5699,7 @@
     evBuf = evBuf.concat(r.events);
     processEventHighlights(r.events);
 
-    const isMajor = ['normalSummon', 'tributeSummon', 'extraSummon', 'overlay', 'activateSpell', 'activateEffect', 'attack', 'flipSummon'].includes(a.type);
+    const isMajor = ['normalSummon', 'tributeSummon', 'extraSummon', 'overlay', 'activateSpell', 'activateEffect', 'attack', 'flipSummon', 'activateResponse'].includes(a.type);
     const isSet = ['setMonster', 'setSpell'].includes(a.type);
 
     let bannerDelay;
@@ -5553,24 +5712,35 @@
       bannerDelay = isMajor ? 3800 : (isSet ? 3000 : 2000);
     }
 
-    const bannerData = formatBotBanner(state, a, r.events, cardBeforeAct);
-    showBotBanner(bannerData, bannerDelay);
+    const bannerData = formatBotBanner(state, a, r.events, cardBeforeAct, idx);
+    const isResolving = r.events.some(e => e.type === 'chainResolving');
+    const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
 
-    render();
-
-    clearTimeout(timer);
-    const nextBot = botToAct();
-    if (nextBot !== null) {
-      botBusy = true;
-      timer = setTimeout(() => botStep(nextBot), bannerDelay);
-    } else {
-      // Even if nextBot is null (e.g. turn ended / handed to player), keep botBusy = true until the banner finishes!
-      botBusy = true;
-      timer = setTimeout(() => {
-        botBusy = false;
-        render();
-      }, bannerDelay);
+    if (isMajor && globalThis.AudioFX && globalThis.AudioFX.play) {
+      if (['activateSpell', 'activateEffect', 'activateResponse'].includes(a.type)) {
+        globalThis.AudioFX.play('spell');
+      }
     }
+
+    botBusy = true;
+    showBotBanner(bannerData, bannerDelay, () => {
+      if (isResolving && resolveEvents.length > 0) {
+        playChainResolutionSequence(resolveEvents, () => {
+          botBusy = false;
+          render();
+          schedule();
+        });
+      } else {
+        const nextBot = botToAct();
+        if (nextBot !== null) {
+          botBusy = true;
+          botStep(nextBot);
+        } else {
+          botBusy = false;
+          render();
+        }
+      }
+    });
   }
 
   function schedule() {
