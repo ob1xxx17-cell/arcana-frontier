@@ -5541,14 +5541,20 @@
         break;
       }
       default:
-        res.title = actorPrefix + ': ' + act.type;
-        break;
+        return null;
     }
     return res;
   }
 
   function showBotBanner(bannerData, delayMs, onDone) {
     clearTimeout(bannerTimer);
+    if (!bannerData || (!bannerData.cardName && !bannerData.inst && !bannerData.desc)) {
+      botBannerText = null;
+      botBannerFade = false;
+      render();
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     botBannerText = bannerData;
     botBannerFade = false;
 
@@ -5701,14 +5707,15 @@
     evBuf = evBuf.concat(r.events);
     processEventHighlights(r.events);
 
-    // 1. การเปลี่ยนเฟส (advancePhase) หรือจบเทิร์น (endTurn) ไม่ควรขึ้นแบนเนอร์การ์ดใบใหญ่มาแย่งซีน
-    const isPhaseOrTurn = ['advancePhase', 'endTurn', 'pass'].includes(a.type);
-    if (isPhaseOrTurn) {
+    // 1. การเปลี่ยนเฟส (advancePhase), จบเทิร์น (endTurn), หรือคำสั่งระบบ (respond, passPriority, pass, mulligan)
+    // ไม่ใช่การร่ายการ์ด จึงไม่ขึ้นแบนเนอร์การ์ดใบใหญ่
+    const isSilentAction = ['advancePhase', 'endTurn', 'pass', 'passPriority', 'respond', 'changePosition', 'mulligan'].includes(a.type);
+    if (isSilentAction) {
       render();
       const nextBot = botToAct();
       if (nextBot !== null) {
         botBusy = true;
-        const phaseDelay = currentSpeed === 'slow' ? 1400 : (currentSpeed === 'fast' ? 400 : 800);
+        const phaseDelay = currentSpeed === 'slow' ? 1200 : (currentSpeed === 'fast' ? 300 : 600);
         timer = setTimeout(() => botStep(nextBot), phaseDelay);
       } else {
         botBusy = false;
