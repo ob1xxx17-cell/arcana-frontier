@@ -469,6 +469,16 @@
             "key": "cube_blacksmith_forge",
             "count": 1
           },
+          "condition": [
+            {
+              "op": "controls",
+              "zone": "spell",
+              "filter": {
+                "tag": "sword"
+              },
+              "min": 1
+            }
+          ],
           "do": [
             {
               "op": "sendToGrave",
@@ -1152,6 +1162,16 @@
           "cost": {
             "mana": 1
           },
+          "condition": [
+            {
+              "op": "controls",
+              "zone": "spell",
+              "filter": {
+                "tag": "sword"
+              },
+              "min": 1
+            }
+          ],
           "do": [
             {
               "op": "sendToGrave",

@@ -249,7 +249,7 @@
         "leader": false,
         "proposed_level": false,
         "tags": ["luna", "transform_form"],
-        "text": "LUNA GUARDIANS เอมเบอร์ ร่างอัคนี\n[เมื่ออัญเชิญ - จ่าย 1 Arcana]: เมื่ออัญเชิญด้วยแปลงกาย ยิง Effect Damage 500 ใส่ LP ฝ่ายตรงข้าม\n[End Phase - 0 Arcana]: นำการ์ดนี้จากสนามขึ้นมือ แล้วอัญเชิญพิเศษ \"เอมเบอร์\" จากมือหรือสุสานลงสนาม",
+        "text": "LUNA GUARDIANS เอมเบอร์ ร่างอัคนี\n[เมื่ออัญเชิญด้วยแปลงกาย]: ยิง Effect Damage 500 ใส่ LP ฝ่ายตรงข้าม\n[End Phase - 0 Arcana]: นำการ์ดนี้จากสนามขึ้นมือ แล้วอัญเชิญพิเศษ \"เอมเบอร์\" จากมือหรือสุสานลงสนาม",
         "effects": [
           {
             "id": "luna_ember_blaze_damage",
@@ -290,7 +290,7 @@
         "leader": false,
         "proposed_level": false,
         "tags": ["luna", "transform_form"],
-        "text": "LUNA GUARDIANS มาริน่า ร่างมหานที\n[เมื่ออัญเชิญ - จ่าย 1 Arcana]: เมื่ออัญเชิญด้วยแปลงกาย ดีดมอนสเตอร์ฝ่ายตรงข้าม 1 ตัวกลับขึ้นมือ\n[End Phase - 0 Arcana]: นำการ์ดนี้จากสนามขึ้นมือ แล้วอัญเชิญพิเศษ \"มาริน่า\" จากมือหรือสุสานลงสนาม",
+        "text": "LUNA GUARDIANS มาริน่า ร่างมหานที\n[เมื่ออัญเชิญด้วยแปลงกาย]: ดีดมอนสเตอร์ฝ่ายตรงข้าม 1 ตัวกลับขึ้นมือ\n[End Phase - 0 Arcana]: นำการ์ดนี้จากสนามขึ้นมือ แล้วอัญเชิญพิเศษ \"มาริน่า\" จากมือหรือสุสานลงสนาม",
         "effects": [
           {
             "id": "luna_marina_ocean_bounce",
@@ -370,7 +370,7 @@
         "leader": false,
         "proposed_level": false,
         "tags": ["luna", "transform_form"],
-        "text": "LUNA GUARDIANS ไอวี่ ร่างพฤกษา\n[เมื่ออัญเชิญ - จ่าย 1 Arcana]: เมื่ออัญเชิญด้วยแปลงกาย ฟื้นฟู 500 LP\n[End Phase - 0 Arcana]: นำการ์ดนี้จากสนามขึ้นมือ แล้วอัญเชิญพิเศษ \"ไอวี่\" จากมือหรือสุสานลงสนาม",
+        "text": "LUNA GUARDIANS ไอวี่ ร่างพฤกษา\n[เมื่ออัญเชิญด้วยแปลงกาย]: ฟื้นฟู 500 LP\n[End Phase - 0 Arcana]: นำการ์ดนี้จากสนามขึ้นมือ แล้วอัญเชิญพิเศษ \"ไอวี่\" จากมือหรือสุสานลงสนาม",
         "effects": [
           {
             "id": "luna_ivy_forest_heal",
@@ -648,7 +648,7 @@
             "name": "เพลิงพิโรธราชินี",
             "trigger": "onSummon",
             "speed": 1,
-            "cost": { "mana": 0 },
+            "cost": { "mana": 1 },
             "do": [
               { "op": "damage", "player": "opp", "amount": 1000 },
               { "op": "destroy", "target": { "side": "opp", "zone": "monster", "filter": { "maxAtk": 1500 }, "count": 1, "choose": "player" } }
@@ -690,7 +690,7 @@
             "name": "มหาคลื่นย้อนซัด",
             "trigger": "onSummon",
             "speed": 1,
-            "cost": { "mana": 0 },
+            "cost": { "mana": 1 },
             "do": [
               { "op": "returnToHand", "target": { "side": "opp", "zone": "monster", "count": 2, "choose": "player" } }
             ]
@@ -773,7 +773,7 @@
             "name": "พฤกษาฟื้นแดนจันทร์",
             "trigger": "onSummon",
             "speed": 1,
-            "cost": { "mana": 0 },
+            "cost": { "mana": 1 },
             "do": [
               { "op": "heal", "player": "self", "amount": 1000 },
               { "op": "specialSummon", "from": ["grave"], "filter": { "tag": "luna", "level": 1 }, "count": 1, "choose": "player" }
@@ -819,7 +819,7 @@
             "name": "เนตรยามค่ำนำทาง",
             "trigger": "onSummon",
             "speed": 1,
-            "cost": { "mana": 0 },
+            "cost": { "mana": 1 },
             "do": [
               { "op": "search", "filter": { "tag": "luna" }, "to": "hand", "choose": "player" }
             ]

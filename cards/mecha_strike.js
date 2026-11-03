@@ -1183,8 +1183,12 @@
           {
             "id": "trinity_shield",
             "name": "บาเรียทรินิตี้",
-            "trigger": "ignition",
-            "speed": 1,
+            "trigger": "quick",
+            "speed": 2,
+            "timingWindow": [
+              "anyActivation",
+              "attackDeclared"
+            ],
             "cost": {
               "mana": 1
             },

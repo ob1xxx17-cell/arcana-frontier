@@ -260,12 +260,24 @@
     const p = state.players[ctx.player];
     return !p.monsters[leaderSlotOf(state)];
   });
-  // controls {side?:'self'|'opp', filter, min?:1, count?:1} : ฝั่งนั้นมีมอนสเตอร์หงายที่ตรงตัวกรองอย่างน้อย min/count ตัว
+  // controls {side?:'self'|'opp', filter, min?:1, count?:1, zone?:string} : ฝั่งนั้นมีการ์ดหงายที่ตรงตัวกรองอย่างน้อย min/count ตัว
   FX.registerCondition('controls', function (state, step, ctx) {
     const idx = step.side === 'opp' ? 1 - ctx.player : ctx.player;
-    const mons = state.players[idx].monsters.filter(m => m && !m.faceDown);
+    const p = state.players[idx];
+    let items;
+    if (step.zone === 'spell' || step.zone === 'equip') {
+      items = (p.spells || []).filter(s => s && !s.faceDown);
+      if (p.fieldSpell) items.push(p.fieldSpell);
+      (p.monsters || []).forEach(m => {
+        if (m && Array.isArray(m.under)) {
+          m.under.forEach(u => items.push(u));
+        }
+      });
+    } else {
+      items = (p.monsters || []).filter(m => m && !m.faceDown);
+    }
     const need = step.count !== undefined ? step.count : (step.min === undefined ? 1 : step.min);
-    return countMatching(mons, step.filter, ctx) >= need;
+    return countMatching(items, step.filter, ctx) >= need;
   });
   // hasUnder {filter?, min?:1} : ต้นทางมีตัวซ้อนใต้การ์ด (inst.under) ที่ตรงตัวกรองอย่างน้อย min ใบ
   FX.registerCondition('hasUnder', function (state, step, ctx) {
