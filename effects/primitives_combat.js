@@ -308,6 +308,7 @@
       const curId = (ctx && ctx.linkId !== undefined) ? ctx.linkId : Infinity;
       for (let i = state.chain.length - 1; i >= 0; i--) {
         const l = state.chain[i];
+        if (ctx && ctx.linkId !== undefined && l.linkId === ctx.linkId) continue;
         if (l.linkId < curId && !l.negated) {
           targetLink = l;
           break;

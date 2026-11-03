@@ -720,6 +720,9 @@
           "cost": {
             "mana": 1
           },
+          "condition": [
+            { "op": "controls", "side": "self", "filter": { "tag": "egg" }, "min": 1 }
+          ],
           "do": [
             {
               "op": "fireEffect",
@@ -916,7 +919,7 @@
           "cost": { "mana": 2 },
           "condition": [
             { "op": "controls", "filter": { "tag": "dino" }, "min": 1 },
-            { "op": "targetLink", "side": "opp" }
+            { "op": "targetLink", "side": "opp", "cardType": "monster" }
           ],
           "do": [
             { "op": "sendToGrave", "target": { "side": "self", "zone": "monster", "filter": { "tag": "dino" }, "count": 1, "choose": "player" } },

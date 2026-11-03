@@ -427,6 +427,17 @@
     for (let i = startIndex; i < steps.length; i++) {
       const s = steps[i];
       if ((s.requireSuccess || s.ifSuccess) && ctx.lastResult && !ctx.lastResult.ok) continue;
+      if (s.condition) {
+        const cList = Array.isArray(s.condition) ? s.condition : [s.condition];
+        let condPass = true;
+        for (const c of cList) {
+          if (FX.conditions[c.op] && !FX.conditions[c.op](state, c, ctx)) {
+            condPass = false;
+            break;
+          }
+        }
+        if (!condPass) continue;
+      }
       ctx._stepIndex = i;
       if (s.op === 'destroy' && s.target && s.target.zone === 'under') {
         FX.destroyUnder(state, events, s, ctx);
@@ -618,6 +629,7 @@
       ctx: {
         player: ctx.player,
         trigger: ctx.trigger,
+        linkId: ctx.linkId,
         lastResult: ctx.lastResult ? JSON.parse(JSON.stringify(ctx.lastResult)) : null,
         watchedUid: ctx.watched ? ctx.watched.uid : null,
         _fusionData: ctx._fusionData ? JSON.parse(JSON.stringify(ctx._fusionData)) : undefined,
@@ -635,6 +647,7 @@
       source: source,
       player: resume.ctx.player,
       trigger: resume.ctx.trigger,
+      linkId: resume.ctx && resume.ctx.linkId,
       lastResult: resume.ctx.lastResult,
       watched: watched,
       effect: resume.effect,
@@ -720,8 +733,9 @@
     if (!link) return false;
     if (cond.side === 'opp' && link.controller === ctx.player) return false;
     if (cond.side === 'self' && link.controller !== ctx.player) return false;
-    if (cond.cardType && link.cardType !== cond.cardType) return false;
-    if (cond.type && link.cardType !== cond.type) return false;
+    const cardType = link.cardType || (link.isSpell ? 'spell' : 'monster');
+    if (cond.cardType && cardType !== cond.cardType) return false;
+    if (cond.type && cardType !== cond.type) return false;
     return true;
   });
 

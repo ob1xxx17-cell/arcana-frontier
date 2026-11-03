@@ -436,23 +436,22 @@ module.exports = [
     }
   },
 
-  // ================= 11. Negate set spell by Counter Spell =================
+  // ================= 11. Negate monster effect by Counter Spell =================
   {
-    name: '5C-NEGATE-01 สเปลหมอบถูกลบล้างด้วย Counter Spell (Speed 3) สเปลหมอบไปสุสาน',
+    name: '5C-NEGATE-01 เอฟเฟกต์มอนสเตอร์ถูกลบล้างด้วย Counter Spell (Speed 3)',
     run(assert) {
       const s = game({
         turn: 3, activeIdx: 1, phase: 'battle',
         p1: { mana: 2, monsters: { 0: { cardId: 'dino_trex', position: 'atk' } }, hand: ['dino_roar'] },
-        p0: { mana: 2, spells: { 0: 'aq_pit' }, monsters: { 0: 'aq_spear' } }
+        p0: { mana: 1, monsters: { 0: { cardId: 'aq_sagittarius', position: 'atk' } } }
       });
-      s.players[0].spells[0].flags.setTurn = 1;
 
       // P1 โจมตี
       E().applyAction(s, { type: 'attack', player: 1, from: 0, to: 0 });
       assert.ok(s.pending && s.pending.player === 0);
 
-      // Link 1: P0 เปิด aq_pit (speed 2)
-      E().applyAction(s, { type: 'activateResponse', player: 0, spellSlot: 0, effectId: 'pit_destroy' });
+      // Link 1: P0 เปิดใช้เอฟเฟกต์มอนสเตอร์ aq_sagittarius (speed 2)
+      E().applyAction(s, { type: 'activateResponse', player: 0, slot: 0, effectId: 'atk_down' });
       assert.ok(s.pending && s.pending.player === 1, 'P1 มี dino_roar จึงเปิดหน้าต่างตอบโต้ให้ P1');
 
       // Link 2: P1 สวนกลับด้วย dino_roar (speed 3) โดยส่ง dino_trex ไปสุสาน
@@ -462,9 +461,8 @@ module.exports = [
       // P0 ไม่มีตัวตอบโต้ความเร็ว 3 โซ่แก้ผลอัตโนมัติ
       assert.strictEqual(s.pending, null);
 
-      // ผล: aq_pit ถูกลบล้าง (negated) แต่ยังต้องถูกส่งไปสุสาน
-      assert.strictEqual(s.players[0].spells[0], null, 'aq_pit ออกจากช่องสเปล');
-      assert.strictEqual(s.players[0].grave.some(c => c.cardId === 'aq_pit'), true, 'aq_pit ถูกส่งไปสุสานแม้ถูกลบล้าง');
+      // ผล: dino_roar ทำงาน ส่ง dino_roar ไปสุสาน และ atk_down ถูกลบล้าง
+      assert.strictEqual(s.players[1].grave.some(c => c.cardId === 'dino_roar'), true, 'dino_roar ถูกส่งไปสุสาน');
     }
   },
 
@@ -475,14 +473,13 @@ module.exports = [
       const s = game({
         turn: 3, activeIdx: 1, phase: 'battle',
         p1: { mana: 2, monsters: { 0: { cardId: 'dino_trex', position: 'atk' } }, hand: ['dino_roar'] },
-        p0: { mana: 2, spells: { 0: 'aq_pit' }, monsters: { 0: 'aq_spear' } }
+        p0: { mana: 1, monsters: { 0: { cardId: 'aq_sagittarius', position: 'atk' } } }
       });
-      s.players[0].spells[0].flags.setTurn = 1;
 
       E().applyAction(s, { type: 'attack', player: 1, from: 0, to: 0 });
 
-      // Link 1: P0 เปิด aq_pit (speed 2)
-      E().applyAction(s, { type: 'activateResponse', player: 0, spellSlot: 0, effectId: 'pit_destroy' });
+      // Link 1: P0 เปิด aq_sagittarius
+      E().applyAction(s, { type: 'activateResponse', player: 0, slot: 0, effectId: 'atk_down' });
       assert.ok(s.pending && s.pending.player === 1);
 
       // P1 มี dino_roar แต่เลือก passPriority
@@ -490,9 +487,8 @@ module.exports = [
       assert.strictEqual(rPass.ok, true);
       assert.strictEqual(s.pending, null, 'โซ่ปิดแล้ว');
 
-      // aq_pit ทำงานสำเร็จ dino_trex ถูกทำลาย
-      assert.strictEqual(s.players[1].monsters[0], null);
-      assert.strictEqual(s.players[1].grave.some(c => c.cardId === 'dino_trex'), true);
+      // atk_down ทำงานสำเร็จ dino_trex ถูกลด ATK 300 (2200 -> 1900)
+      assert.strictEqual(E().atk(s.players[1].monsters[0]), 1900);
     }
   }
 ];

@@ -231,6 +231,7 @@
       targetSlot: a.targetSlot,
       targetUid: targetUid,
       isSpell: def.type === 'spell',
+      cardType: def.type === 'spell' ? 'spell' : 'monster',
       spellCard: spellCard
     };
 
@@ -614,6 +615,7 @@
       targetSlot: a.targetSlot,
       targetUid: targetUid,
       isSpell: def.type === 'spell',
+      cardType: def.type === 'spell' ? 'spell' : 'monster',
       spellCard: spellCard
     };
 

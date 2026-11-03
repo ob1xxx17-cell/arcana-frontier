@@ -386,7 +386,7 @@
       "tags": [
         "เหลี่ยม"
       ],
-      "text": "[เมื่ออัญเชิญสำเร็จ]: จ่าย 1 Arcana ค้น \"ดาบโลหะ\" 1 ใบจาก Chronicle ขึ้นมือ",
+      "text": "[เมื่ออัญเชิญ หรือ กดใช้บนสนาม 1 ครั้ง/เทิร์น]: จ่าย 1 Arcana ค้น \"ดาบโลหะ\" 1 ใบจาก Chronicle ขึ้นมือ",
       "effects": [
         {
           "id": "cube_giant_search",
@@ -395,6 +395,36 @@
           "speed": 1,
           "cost": {
             "mana": 1
+          },
+          "limit": {
+            "per": "turn",
+            "key": "cube_giant_search",
+            "count": 1
+          },
+          "do": [
+            {
+              "op": "search",
+              "from": "deck",
+              "filter": {
+                "cardId": "cube_iron_sword"
+              },
+              "to": "hand",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "cube_giant_search_ignition",
+          "name": "หาดาบโลหะ",
+          "trigger": "ignition",
+          "speed": 1,
+          "cost": {
+            "mana": 1
+          },
+          "limit": {
+            "per": "turn",
+            "key": "cube_giant_search",
+            "count": 1
           },
           "do": [
             {

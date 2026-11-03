@@ -220,11 +220,12 @@
     if (!opts.length) return;
 
     // 5A: chooseOption pending
-    if (state.config && state.config.autoChoose === false && step.choose === 'player' && ctx._stepChoice === undefined) {
+    const askPlayer = state.config && state.config.autoChoose === false && (step.choose === 'player' || (state.config && state.config.interactiveChoice)) && ctx._stepChoice === undefined;
+    if (askPlayer) {
       if (opts.length > 1) {
         const kind = 'chooseOption';
         const prompt = step.prompt || 'CHOOSE_OPTION';
-        const options = opts.map((o, idx) => ({ index: idx, name: o.name || ('option_' + idx), text: o.text || '' }));
+        const options = opts.map((o, idx) => ({ index: idx, name: o.label || o.name || ('option_' + idx), text: o.text || o.desc || o.label || '' }));
         FX.openPending(state, events, {
           kind: kind,
           player: ctx.player,
