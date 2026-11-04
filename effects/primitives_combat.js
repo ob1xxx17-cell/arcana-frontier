@@ -228,6 +228,7 @@
         m.extraAttacksTurn = state.turn;
       }
       m.extraAttacks += count;
+      m.flags = m.flags || {};
       m.flags.attackedThisTurn = false;
       events.push({ type: 'extraAttack', uid: m.uid, count });
     }
