@@ -623,6 +623,21 @@
     if (o.isExtraTarget) {
       extraBadges += '<div class="extra-target-badge-overlay"><span class="et-icon">🎯</span> <span class="et-badge-txt">แตะใช้วางทับ</span></div>';
     }
+    if (o.chainLink) {
+      cls.push('is-chained-card');
+      const isResolvingThis = (CG.ui && CG.ui.resolvingLinkId === o.chainLink);
+      if (isResolvingThis) cls.push('resolving-chain-link');
+      const isNegatedThis = (CG.ui && CG.ui.resolvingNegated && isResolvingThis);
+      const badgeCls = 'card-chain-badge' + (isNegatedThis ? ' negated-badge' : (isResolvingThis ? ' resolving-badge' : ''));
+      const badgeText = isNegatedThis ? '🚫 NEGATED' : (isResolvingThis ? ('⚡ RESOLVING ' + o.chainLink) : ('⚡ CHAIN ' + o.chainLink));
+      extraBadges += '<div class="' + badgeCls + '"><span class="ccb-text">' + badgeText + '</span></div>';
+    } else if (CG.ui && CG.ui.resolvingUid && inst && inst.uid === CG.ui.resolvingUid) {
+      cls.push('is-chained-card', 'resolving-chain-link');
+      const isNegatedThis = CG.ui.resolvingNegated;
+      const badgeCls = 'card-chain-badge' + (isNegatedThis ? ' negated-badge' : ' resolving-badge');
+      const badgeText = isNegatedThis ? '🚫 NEGATED' : ('⚡ RESOLVING ' + (CG.ui.resolvingLinkId || 1));
+      extraBadges += '<div class="' + badgeCls + '"><span class="ccb-text">' + badgeText + '</span></div>';
+    }
 
     if (o.isTributeMat) cls.push('tribute-mat-card');
     if (o.isExtraTarget) cls.push('extra-target-card');
@@ -1066,6 +1081,22 @@
     const sel = ctx.sel || {};
     const botTurn = st.mode === 'bot' && st.phase !== 'mulligan' && st.activeIdx === 1;
 
+    // ระบบตรวจจับการ์ดที่อยู่ใน Chain เพื่อติดป้าย Chain Link Badge บนสนาม
+    const chainMap = {};
+    const chainSlotMap = {};
+    if (st.chain && st.chain.length > 0) {
+      st.chain.forEach(lk => {
+        if (lk.uid) chainMap[lk.uid] = lk.linkId;
+        if (lk.sourceUid) chainMap[lk.sourceUid] = lk.linkId;
+        if (lk.controller !== undefined) {
+          if (lk.slot !== undefined) chainSlotMap[lk.controller + ':mon:' + lk.slot] = lk.linkId;
+          if (lk.spellSlot !== undefined) chainSlotMap[lk.controller + ':spell:' + lk.spellSlot] = lk.linkId;
+        }
+      });
+    }
+    ctx.chainMap = chainMap;
+    ctx.chainSlotMap = chainSlotMap;
+
     const phases = ['draw', 'standby', 'main1', 'battle', 'main2', 'end'].map(p => '<span class="' + (st.phase === p ? 'on' : '') + '">' + s.phase[p] + '</span>').join('');
     const botStatus = ctx.botBusy ? (a.botPlaying || 'บอทกำลังเล่น…') : (botTurn ? a.botThinking : a.oppTurn);
     const spKey = ctx.speed || 'normal';
@@ -1452,12 +1483,15 @@
         const at = ' data-p="' + idx + '" data-slot="' + i + '" data-zone2="mon"';
         const hl = ctx.cardHl && m ? ctx.cardHl[m.uid] : null;
         const ghost = !m && ctx.ghosts ? ctx.ghosts[idx + ':' + i] : null;
+        const chainLink = (m && ctx.chainMap && ctx.chainMap[m.uid]) ||
+                          (ctx.chainSlotMap && ctx.chainSlotMap[idx + ':mon:' + i]) || null;
         let cHtml = '';
         if (m) {
           cHtml = cardHtml(m, {
             field: true,
             reveal: isMe,
             hlClass: hl,
+            chainLink: chainLink,
             sel: (sel.kind === 'attack' && isMe && sel.slot === i) || isTributeMat,
             isTributeMat: isTributeMat,
             tributeOrder: tributeOrder,
@@ -1485,14 +1519,19 @@
         if (isMe && sel.kind === 'spell' && sel.slot === i) cls.push('sel');
         const at = ' data-p="' + idx + '" data-spell-slot="' + i + '" data-zone2="spell"';
         const wm = c ? '' : '<span class="slot-watermark spell-wm">Entity</span>';
-        h += '<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>';
+        const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) ||
+                          (ctx.chainSlotMap && ctx.chainSlotMap[idx + ':spell:' + i]) || null;
+        h += '<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, chainLink: chainLink, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>';
       }
       return '<div class="zone">' + h + '</div>';
     }
 
     // มือ
     const handSel = ctx.handSel || new Set();
-    const handHtml = me.hand.map((c, i) => cardHtml(c, { reveal: true, sel: (sel.kind === 'hand' && sel.idx === i) || handSel.has(c.uid), attrs: ' data-hand="' + i + '"' })).join('');
+    const handHtml = me.hand.map((c, i) => {
+      const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) || null;
+      return cardHtml(c, { reveal: true, chainLink: chainLink, sel: (sel.kind === 'hand' && sel.idx === i) || handSel.has(c.uid), attrs: ' data-hand="' + i + '"' });
+    }).join('');
     const oppHand = op.hand.map(() => cardHtml(null, { back: true })).join('');
 
     // แถบกลาง: คำแนะนำ + ปุ่ม

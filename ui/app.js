@@ -3614,6 +3614,68 @@
     return actor() === 1 ? 1 : null;
   }
 
+  // ⛓️ วาดเส้นสายพลังเชื่อมโยงระหว่างการ์ดใน Chain บนกระดาน (Inspired by Unity LineRenderer)
+  function updateChainLines(st) {
+    if (typeof document === 'undefined') return;
+    let svg = document.getElementById('chainSvgOverlay');
+    if (!st || !st.chain || st.chain.length < 2) {
+      if (svg && svg.parentNode) svg.parentNode.removeChild(svg);
+      return;
+    }
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.id = 'chainSvgOverlay';
+      svg.setAttribute('style', 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:30;');
+      svg.innerHTML = '<defs>' +
+        '<linearGradient id="chainLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="#ff007f" />' +
+          '<stop offset="100%" stop-color="#00e5ff" />' +
+        '</linearGradient>' +
+        '<filter id="chainGlow">' +
+          '<feGaussianBlur stdDeviation="3" result="coloredBlur"/>' +
+          '<feMerge>' +
+            '<feMergeNode in="coloredBlur"/>' +
+            '<feMergeNode in="SourceGraphic"/>' +
+          '</feMerge>' +
+        '</filter>' +
+      '</defs>';
+      document.body.appendChild(svg);
+    }
+    const oldLines = svg.querySelectorAll('.chain-conn-line');
+    oldLines.forEach(l => l.parentNode.removeChild(l));
+
+    for (let i = 0; i < st.chain.length - 1; i++) {
+      const lk1 = st.chain[i];
+      const lk2 = st.chain[i + 1];
+      const el1 = (lk1.uid ? document.querySelector('.card[data-uid="' + lk1.uid + '"]') : null) ||
+                  (lk1.slot !== undefined ? document.querySelector('.slot[data-p="' + lk1.controller + '"][data-slot="' + lk1.slot + '"]') : null) ||
+                  (lk1.spellSlot !== undefined ? document.querySelector('.slot[data-p="' + lk1.controller + '"][data-spell-slot="' + lk1.spellSlot + '"]') : null);
+      const el2 = (lk2.uid ? document.querySelector('.card[data-uid="' + lk2.uid + '"]') : null) ||
+                  (lk2.slot !== undefined ? document.querySelector('.slot[data-p="' + lk2.controller + '"][data-slot="' + lk2.slot + '"]') : null) ||
+                  (lk2.spellSlot !== undefined ? document.querySelector('.slot[data-p="' + lk2.controller + '"][data-spell-slot="' + lk2.spellSlot + '"]') : null);
+      if (el1 && el2) {
+        const r1 = el1.getBoundingClientRect();
+        const r2 = el2.getBoundingClientRect();
+        const x1 = r1.left + r1.width / 2;
+        const y1 = r1.top + r1.height / 2;
+        const x2 = r2.left + r2.width / 2;
+        const y2 = r2.top + r2.height / 2;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'chain-conn-line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', 'url(#chainLineGrad)');
+        line.setAttribute('stroke-width', '4');
+        line.setAttribute('stroke-dasharray', '8 4');
+        line.setAttribute('filter', 'url(#chainGlow)');
+        svg.appendChild(line);
+      }
+    }
+  }
+
   // ---------------- วาด ----------------
   function render() {
     if (!state) return;
@@ -3649,6 +3711,7 @@
     }
     animate(v);
     overlays(v);
+    updateChainLines(state);
   }
   function selStale() {
     if (!sel) return false;
@@ -4639,16 +4702,15 @@
     const isResolving = r.events.some(e => e.type === 'chainResolving');
     const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
     const isActivation = ['activateSpell', 'activateEffect', 'activateResponse'].includes(action.type) || r.events.some(e => e.type === 'chainLinkAdded');
-    const hasMultipleChainLinks = resolveEvents.length > 1 || resolveEvents.some(e => e.linkId > 1);
 
     if (isActivation) {
-      const bannerDelay = currentSpeed === 'slow' ? 5600 : (currentSpeed === 'fast' ? 2400 : 4200);
+      const bannerDelay = currentSpeed === 'slow' ? 4800 : (currentSpeed === 'fast' ? 2000 : 3200);
       const bannerData = formatBotBanner(state, action, r.events, cardBeforeAct, actor);
       if (globalThis.AudioFX && globalThis.AudioFX.play) {
         globalThis.AudioFX.play('spell');
       }
       showBotBanner(bannerData, bannerDelay, () => {
-        if (isResolving && hasMultipleChainLinks) {
+        if (isResolving && resolveEvents.length >= 1) {
           playChainResolutionSequence(resolveEvents, () => {
             afterAction();
           });
@@ -4659,7 +4721,7 @@
       return true;
     }
 
-    if (isResolving && hasMultipleChainLinks) {
+    if (isResolving && resolveEvents.length >= 1) {
       playChainResolutionSequence(resolveEvents, () => {
         afterAction();
       });
@@ -5582,7 +5644,7 @@
 
   // ⛓️ เล่นแอนิเมชันแก้ผล Chain ทีละใบตามกฎยูกิโอ (LIFO: จากใบล่าสุดย้อนไปใบแรก)
   function playChainResolutionSequence(resolveEvents, onDone) {
-    if (!resolveEvents || resolveEvents.length <= 1) {
+    if (!resolveEvents || resolveEvents.length === 0) {
       if (typeof onDone === 'function') onDone();
       return;
     }
@@ -5593,18 +5655,30 @@
 
     function nextStep() {
       if (idx >= resolveEvents.length) {
-        // แบนเนอร์แสดงว่าแก้ผล Chain ครบสมบูรณ์แล้ว
-        const doneBanner = {
-          icon: '✅',
-          title: 'จบการแก้ผล Chain ครบทุกใบ!',
-          cardName: 'การแก้ผลสำเร็จสมบูรณ์',
-          stats: 'แก้ผลตามลำดับ Chain Link เรียบร้อย (LIFO)',
-          desc: 'ผลของการ์ดทั้งหมดใน Chain ได้ถูกคลี่คลายตามกฎยูกิโอเรียบร้อยแล้ว'
-        };
-        showBotBanner(doneBanner, Math.max(1000, stepDelay - 400), () => {
+        CG.ui.resolvingLinkId = null;
+        CG.ui.resolvingUid = null;
+        CG.ui.resolvingNegated = false;
+        render();
+
+        // แบนเนอร์แสดงว่าแก้ผล Chain ครบสมบูรณ์แล้ว (เมื่อมีมากกว่า 1 ลิงก์)
+        if (resolveEvents.length > 1) {
+          const doneBanner = {
+            icon: '✅',
+            title: 'จบการแก้ผล Chain ครบทุกใบ!',
+            cardName: 'การแก้ผลสำเร็จสมบูรณ์',
+            stats: 'แก้ผลตามลำดับ Chain Link เรียบร้อย (LIFO)',
+            desc: 'ผลของการ์ดทั้งหมดใน Chain ได้ถูกคลี่คลายตามกฎยูกิโอเรียบร้อยแล้ว'
+          };
+          showBotBanner(doneBanner, Math.max(1000, stepDelay - 400), () => {
+            botBusy = false;
+            render();
+            if (typeof onDone === 'function') onDone();
+          });
+        } else {
           botBusy = false;
+          render();
           if (typeof onDone === 'function') onDone();
-        });
+        }
         return;
       }
 
@@ -5615,24 +5689,32 @@
       const cname = def ? def.name : (rev.cardId || 'การ์ด');
       const effText = def ? (def.text || '') : '';
 
+      CG.ui.resolvingLinkId = linkNum;
+      CG.ui.resolvingUid = rev.uid;
+      CG.ui.resolvingNegated = (rev.type === 'chainLinkNegated');
+
       let statusTitle = '';
       let statusDesc = '';
+      let icon = '⚡';
       if (rev.type === 'chainLinkNegated') {
-        statusTitle = '⛔ Chain Link ' + linkNum + ': ถูกขัดขวาง (Negated)!';
-        statusDesc = 'เอฟเฟกต์ของการ์ดใบนี้ถูกไร้ผล ไม่เกิดผลลัพธ์ใดๆ';
+        icon = '🚫';
+        statusTitle = '🚫 Chain Link ' + linkNum + ': ถูกขัดขวาง (Negated)!';
+        statusDesc = 'เอฟเฟกต์ของการ์ด "' + cname + '" ถูกยกเลิก ไร้ผลลัพธ์ในเชนนี้';
       } else if (rev.type === 'chainLinkFizzled') {
+        icon = '💨';
         statusTitle = '💨 Chain Link ' + linkNum + ': เป้าหมายหายไป (Fizzled)!';
         statusDesc = 'เป้าหมายของเอฟเฟกต์ไม่อยู่ในเงื่อนไข ผลลัพธ์จึงสลายไป';
       } else {
+        icon = '⚡';
         statusTitle = '⛓️ กำลังแก้ผล Chain Link ' + linkNum + (isFirstResolved ? ' (ล่าสุด)' : '');
-        statusDesc = effText ? ('แสดงผล: ' + effText) : 'เอฟเฟกต์ของการ์ดเริ่มทำงานตามลำดับ LIFO';
+        statusDesc = effText ? ('⚡ ' + effText) : 'เอฟเฟกต์ของการ์ดเริ่มทำงานตามลำดับ LIFO';
       }
 
       const resBanner = {
-        icon: '⛓️',
+        icon: icon,
         title: statusTitle,
         cardName: cname,
-        stats: 'Chain Link ' + linkNum + ' • แก้ผลตามลำดับยูกิ',
+        stats: 'Chain Link ' + linkNum + (rev.type === 'chainLinkNegated' ? ' • 🚫 ถูกยกเลิก' : ' • ⚡ กำลังแสดงผล'),
         desc: statusDesc,
         cardId: rev.cardId,
         inst: {
@@ -5648,10 +5730,15 @@
       };
 
       if (globalThis.AudioFX && globalThis.AudioFX.play) {
-        globalThis.AudioFX.play('spell');
+        if (rev.type === 'chainLinkNegated') {
+          globalThis.AudioFX.play('destroy');
+        } else {
+          globalThis.AudioFX.play('spell');
+        }
       }
 
       idx++;
+      render();
       showBotBanner(resBanner, stepDelay, () => {
         nextStep();
       });
@@ -5707,6 +5794,26 @@
     evBuf = evBuf.concat(r.events);
     processEventHighlights(r.events);
 
+    const isResolving = r.events.some(e => e.type === 'chainResolving');
+    const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
+
+    // ถ้าการกระทำทำให้เกิดการแก้ผล Chain (เช่น การ passPriority ที่บอทและผู้เล่นไม่เชนต่อ)
+    if (isResolving && resolveEvents.length >= 1) {
+      botBusy = true;
+      playChainResolutionSequence(resolveEvents, () => {
+        const nextBot = botToAct();
+        if (nextBot !== null) {
+          botBusy = true;
+          const nextDelay = currentSpeed === 'slow' ? 2200 : (currentSpeed === 'fast' ? 600 : 1400);
+          timer = setTimeout(() => botStep(nextBot), nextDelay);
+        } else {
+          botBusy = false;
+          render();
+        }
+      });
+      return;
+    }
+
     // 1. การเปลี่ยนเฟส (advancePhase), จบเทิร์น (endTurn), หรือคำสั่งระบบ (respond, passPriority, pass, mulligan)
     // ไม่ใช่การร่ายการ์ด จึงไม่ขึ้นแบนเนอร์การ์ดใบใหญ่
     const isSilentAction = ['advancePhase', 'endTurn', 'pass', 'passPriority', 'respond', 'changePosition', 'mulligan'].includes(a.type);
@@ -5739,9 +5846,6 @@
     }
 
     const bannerData = formatBotBanner(state, a, r.events, cardBeforeAct, idx);
-    const isResolving = r.events.some(e => e.type === 'chainResolving');
-    const resolveEvents = r.events.filter(e => e.type === 'chainLinkResolved' || e.type === 'chainLinkNegated' || e.type === 'chainLinkFizzled');
-    const hasMultipleChainLinks = resolveEvents.length > 1 || resolveEvents.some(e => e.linkId > 1);
 
     if (isMajor && globalThis.AudioFX && globalThis.AudioFX.play) {
       if (['activateSpell', 'activateEffect', 'activateResponse'].includes(a.type)) {
@@ -5751,7 +5855,7 @@
 
     botBusy = true;
     showBotBanner(bannerData, bannerDelay, () => {
-      if (isResolving && hasMultipleChainLinks) {
+      if (isResolving && resolveEvents.length >= 1) {
         playChainResolutionSequence(resolveEvents, () => {
           botBusy = false;
           render();

@@ -1819,6 +1819,66 @@ button.gold:hover:not(:disabled) {
 .chain-link .lname { flex: 1; }
 .chain-link.negated { text-decoration: line-through; opacity: .5; }
 
+/* In-Board Chain Badges & Effects (Inspired by Unity Chain Visualization) */
+.card-chain-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 40;
+  background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  box-shadow: 0 0 14px rgba(255, 0, 127, 0.85), 0 2px 6px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: chainBadgePulse 1.2s infinite alternate ease-in-out;
+}
+.card-chain-badge .ccb-text {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.card-chain-badge.resolving-badge {
+  background: linear-gradient(135deg, #00e5ff 0%, #0077ff 100%);
+  border-color: #ffffff;
+  box-shadow: 0 0 20px #00e5ff, 0 0 35px rgba(0, 229, 255, 0.8);
+  transform: scale(1.1);
+  animation: chainResolvingPulse 0.8s infinite alternate ease-in-out;
+}
+.card-chain-badge.negated-badge {
+  background: linear-gradient(135deg, #ff1744 0%, #b71c1c 100%);
+  border-color: #ffcdd2;
+  box-shadow: 0 0 20px #ff1744, 0 0 35px rgba(255, 23, 68, 0.8);
+  animation: shakeNegate 0.5s ease-in-out;
+}
+.card.is-chained-card {
+  box-shadow: 0 0 16px rgba(255, 0, 127, 0.75), inset 0 0 10px rgba(255, 255, 255, 0.4) !important;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+}
+.card.resolving-chain-link {
+  transform: translateY(-8px) scale(1.15) !important;
+  box-shadow: 0 0 28px #00e5ff, 0 0 45px rgba(0, 229, 255, 0.85), inset 0 0 15px #ffffff !important;
+  z-index: 100 !important;
+}
+
+@keyframes chainBadgePulse {
+  0% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 0, 127, 0.7); }
+  100% { transform: scale(1.08); box-shadow: 0 0 20px rgba(255, 0, 127, 1), 0 0 30px rgba(121, 40, 202, 0.8); }
+}
+@keyframes chainResolvingPulse {
+  0% { transform: scale(1.08); box-shadow: 0 0 15px #00e5ff; }
+  100% { transform: scale(1.18); box-shadow: 0 0 28px #00e5ff, 0 0 45px rgba(0, 119, 255, 0.9); }
+}
+@keyframes shakeNegate {
+  0%, 100% { transform: translateX(0) scale(1); }
+  20%, 60% { transform: translateX(-4px) scale(1.1); }
+  40%, 80% { transform: translateX(4px) scale(1.1); }
+}
+
 /* 10: หน้าต่างเลือกการ์ด (chooseTarget / chooseCards) */
 .card-picker-modal {
   max-width: 96vw !important;
