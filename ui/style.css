@@ -7391,52 +7391,235 @@ button.gold:hover:not(:disabled) {
   overflow: visible !important;
 }
 
-.cosmic-pioneer {
+/* ================= OPPONENT (AI) PASTEL THEME ================= */
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-distortion,
+.cosmic-side.opp-side .slot.cosmic-distortion,
+.cosmic-side.opp-side .cosmic-distortion {
+  background: #ccfbf1 !important;
+  background-image: none !important;
+  border: 2px solid #5eead4 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-distortion .cosmic-slot-wm,
+.cosmic-side.opp-side .cosmic-distortion .cosmic-slot-wm {
+  color: #0f766e !important;
+  font-weight: 700 !important;
+  font-size: clamp(0.72rem, calc(var(--sq-size) * 0.15), 1.1rem) !important;
+  text-shadow: none !important;
+}
+
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-entity,
+.cosmic-side.opp-side .slot.cosmic-entity,
+.cosmic-side.opp-side .cosmic-entity {
+  background: #ffedd5 !important;
+  background-image: none !important;
+  border: 2px solid #fdba74 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-entity .cosmic-slot-wm,
+.cosmic-side.opp-side .cosmic-entity .cosmic-slot-wm {
+  color: #c2410c !important;
+  font-weight: 700 !important;
+  font-size: clamp(0.75rem, calc(var(--sq-size) * 0.16), 1.15rem) !important;
+  text-shadow: none !important;
+}
+
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-pioneer,
+.cosmic-side.opp-side .slot.cosmic-pioneer,
+.cosmic-side.opp-side .cosmic-pioneer {
+  background: #ffedd5 !important;
+  background-image: none !important;
+  border: 2.5px solid #f97316 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25) !important;
+}
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-pioneer .cosmic-slot-wm,
+.cosmic-side.opp-side .cosmic-pioneer .cosmic-slot-wm {
+  color: #c2410c !important;
+  font-weight: 800 !important;
+  font-size: clamp(0.8rem, calc(var(--sq-size) * 0.17), 1.25rem) !important;
+  text-shadow: none !important;
+}
+
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-chronicle,
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-abyss,
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-astral,
+.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-exile,
+.cosmic-side.opp-side .slot.cosmic-chronicle,
+.cosmic-side.opp-side .slot.cosmic-abyss,
+.cosmic-side.opp-side .slot.cosmic-astral,
+.cosmic-side.opp-side .slot.cosmic-exile {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+.cosmic-side.opp-side .cosmic-pile-name {
+  color: #64748b !important;
+  font-weight: 700 !important;
+  font-size: clamp(0.68rem, calc(var(--sq-size) * 0.14), 1rem) !important;
+  text-shadow: none !important;
+}
+.cosmic-side.opp-side .cosmic-pile-num {
+  color: #1e293b !important;
+  font-weight: 900 !important;
+  font-size: clamp(1.4rem, calc(var(--sq-size) * 0.38), 2.6rem) !important;
+  text-shadow: none !important;
+}
+
+/* ================= SELF (PLAYER) GLOWING PORTAL THEME ================= */
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-pioneer,
+.cosmic-side.self-side .slot.cosmic-pioneer,
+.cosmic-side.self-side .cosmic-pioneer {
   background: #0d1629 url('assets/board/slot_pioneer.png') center center / cover no-repeat !important;
-  border: 2.5px solid #ecc94b !important;
-  box-shadow: 0 0 16px rgba(236, 201, 75, 0.6), inset 0 0 10px rgba(236, 201, 75, 0.4) !important;
+  border: 2.5px solid #facc15 !important;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.7), inset 0 0 10px rgba(250, 204, 21, 0.4) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-pioneer .cosmic-slot-wm {
+  color: #fef08a !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
+  font-weight: 900 !important;
 }
 
-.cosmic-entity {
-  background: rgba(26, 17, 10, 0.8) !important;
-  border: 2.5px solid #dd6b20 !important;
-  box-shadow: inset 0 0 14px rgba(237, 137, 54, 0.5), 0 0 12px rgba(237, 137, 54, 0.4) !important;
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-entity,
+.cosmic-side.self-side .slot.cosmic-entity,
+.cosmic-side.self-side .cosmic-entity {
+  background: radial-gradient(circle at center, rgba(160, 60, 10, 0.65) 0%, rgba(30, 15, 8, 0.85) 100%) url('assets/board/slot_pioneer_frame.png') center center / cover no-repeat !important;
+  border: 2.5px solid #f97316 !important;
+  box-shadow: inset 0 0 14px rgba(249, 115, 22, 0.5), 0 0 14px rgba(249, 115, 22, 0.4) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-entity .cosmic-slot-wm {
+  color: #fed7aa !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+  font-weight: 800 !important;
 }
 
-.cosmic-distortion {
-  background: rgba(8, 28, 24, 0.8) url('assets/board/slot_distortion.png') center center / cover no-repeat !important;
-  border: 2.5px solid #38b2ac !important;
-  box-shadow: inset 0 0 14px rgba(56, 178, 172, 0.5), 0 0 12px rgba(56, 178, 172, 0.4) !important;
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-distortion,
+.cosmic-side.self-side .slot.cosmic-distortion,
+.cosmic-side.self-side .cosmic-distortion {
+  background: rgba(8, 28, 24, 0.85) url('assets/board/slot_distortion.png') center center / cover no-repeat !important;
+  border: 2.5px solid #2dd4bf !important;
+  box-shadow: inset 0 0 14px rgba(45, 212, 191, 0.5), 0 0 12px rgba(45, 212, 191, 0.4) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-distortion .cosmic-slot-wm {
+  color: #5eead4 !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+  font-weight: 800 !important;
 }
 
-.cosmic-chronicle {
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-chronicle,
+.cosmic-side.self-side .slot.cosmic-chronicle,
+.cosmic-side.self-side .cosmic-chronicle {
   background: #091329 url('assets/board/slot_chronicle.png') center center / cover no-repeat !important;
-  border: 2px solid #63b3ed !important;
-  box-shadow: 0 0 12px rgba(99, 179, 237, 0.45) !important;
+  border: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-chronicle .cosmic-pile-name {
+  color: #bae6fd !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+.cosmic-side.self-side .cosmic-chronicle .cosmic-pile-num {
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
-.cosmic-abyss {
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-abyss,
+.cosmic-side.self-side .slot.cosmic-abyss,
+.cosmic-side.self-side .cosmic-abyss {
   background: #19092c url('assets/board/slot_abyss.png') center center / cover no-repeat !important;
-  border: 2px solid #9f7aea !important;
-  box-shadow: 0 0 14px rgba(159, 122, 234, 0.55) !important;
+  border: 2px solid #a855f7 !important;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.6) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-abyss .cosmic-pile-name {
+  color: #e9d5ff !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+.cosmic-side.self-side .cosmic-abyss .cosmic-pile-num {
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
-.cosmic-astral {
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-astral,
+.cosmic-side.self-side .slot.cosmic-astral,
+.cosmic-side.self-side .cosmic-astral {
   background: #07192c url('assets/board/slot_astral.png') center center / cover no-repeat !important;
-  border: 2px solid #4fd1c5 !important;
-  box-shadow: 0 0 14px rgba(79, 209, 197, 0.55) !important;
+  border: 2px solid #06b6d4 !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.6) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-astral .cosmic-pile-name {
+  color: #a5f3fc !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+.cosmic-side.self-side .cosmic-astral .cosmic-pile-num {
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
-.cosmic-exile {
+.cosmic-arena-layout .self-side .cosmic-slot.cosmic-exile,
+.cosmic-side.self-side .slot.cosmic-exile,
+.cosmic-side.self-side .cosmic-exile {
   background: #2b0808 url('assets/board/slot_exile.png') center center / cover no-repeat !important;
-  border: 2px solid #f56565 !important;
-  box-shadow: 0 0 14px rgba(245, 101, 101, 0.55) !important;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.6) !important;
+  border-radius: 8px !important;
+}
+.cosmic-side.self-side .cosmic-exile .cosmic-pile-name {
+  color: #fecaca !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+.cosmic-side.self-side .cosmic-exile .cosmic-pile-num {
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
+/* ================= CENTER FIELD SLOT ================= */
+.cosmic-arena-layout .cosmic-slot.cosmic-field-slot,
 .cosmic-field-slot {
-  background: #0d1a38 url('assets/board/slot_field.png') center center / cover no-repeat !important;
-  border: 2px solid #63b3ed !important;
-  box-shadow: 0 0 16px rgba(99, 179, 237, 0.6) !important;
+  background: #3730a3 url('assets/board/slot_field.png') center center / cover no-repeat !important;
+  border: 2px solid #818cf8 !important;
+  box-shadow: 0 0 18px rgba(129, 140, 248, 0.6) !important;
+  border-radius: 8px !important;
+}
+.cosmic-field-slot .cosmic-slot-wm {
+  color: #e0e7ff !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* ================= AI HAND ROW (TOP CENTER) ================= */
+.cosmic-mat-board .handrow.opp {
+  position: static !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 auto clamp(2px, 0.5vh, 6px) auto !important;
+  height: clamp(20px, 3vh, 28px) !important;
+  z-index: 5 !important;
+}
+.cosmic-mat-board .handrow.opp .card.back {
+  width: clamp(26px, 2.8vw, 38px) !important;
+  height: clamp(18px, 2.4vh, 26px) !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* ================= HIDE TOP BAR TO MAXIMIZE BOARD ================= */
+#game .topbar {
+  display: none !important;
 }
 
 .cosmic-pile-name {
@@ -7519,24 +7702,15 @@ button.gold:hover:not(:disabled) {
   align-items: center !important;
 }
 
-/* ช่องสนามสี่เหลี่ยมจัตุรัส 1:1 สีขาวคมชัด ขอบหนา 3.5px มุมฉาก 4 ด้าน */
+/* ช่องสนามสี่เหลี่ยมจัตุรัส 1:1 แบบดั้งเดิม (คงไว้เฉพาะคลาส sketch-slot) */
 .sketch-slot,
-.slot.sketch-slot,
-.slot {
+.slot.sketch-slot {
   width: var(--sq-size) !important;
   height: var(--sq-size) !important;
   aspect-ratio: 1 / 1 !important;
   border-radius: 6px !important;
   border: 3.5px solid var(--wood-border) !important;
   background-color: var(--slot-bg) !important;
-  background-image:
-    linear-gradient(135deg, var(--slot-corner) 0, var(--slot-corner) 10px, transparent 10.5px),
-    linear-gradient(225deg, var(--slot-corner) 0, var(--slot-corner) 10px, transparent 10.5px),
-    linear-gradient(45deg, var(--slot-corner) 0, var(--slot-corner) 10px, transparent 10.5px),
-    linear-gradient(315deg, var(--slot-corner) 0, var(--slot-corner) 10px, transparent 10.5px) !important;
-  background-position: top left, top right, bottom left, bottom right !important;
-  background-size: 11px 11px, 11px 11px, 11px 11px, 11px 11px !important;
-  background-repeat: no-repeat !important;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.22) !important;
   color: #1a1510 !important;
   display: flex !important;

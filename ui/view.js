@@ -558,7 +558,7 @@
     const iconArea = '<div class="card-icon-area">' + iconHtml + '</div>';
 
     // 2. ภาพการ์ด (ดึงจาก assets/cards/[id].png หรือ d.image พร้อม cache buster ป้องกันเบราว์เซอร์จำภาพเก่า)
-    const cardVer = '?v=4.2';
+    const cardVer = '?v=5.5';
     const rawArt = d.image || ('assets/cards/' + d.id + '.png');
     const artImg = rawArt.includes('?') ? rawArt : (rawArt + cardVer);
     const fallbackArt = 'assets/cards/' + d.id + '.jpg' + cardVer;
