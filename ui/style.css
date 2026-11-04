@@ -158,6 +158,10 @@ button, input, select, .card, .slot, .wf-pill-btn, .wf-top-btn, .wf-btn,
   cursor: pointer;
 }
 
+.card[data-hand] {
+  touch-action: none !important;
+}
+
 button:active, .wf-start-hero-btn:active, .wf-start-side-btn:active,
 .wf-pill-btn:active, .wf-top-btn:active, .gold:active, .wf-profile-box:active {
   transform: scale(0.96);

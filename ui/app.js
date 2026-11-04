@@ -4970,8 +4970,8 @@
     }
   }
 
-    function promptSummonPosition(slotIdx, actSummon, actSet) {
-    const root = $('overlayRoot');
+  function promptSummonPosition(slotIdx, actSummon, actSet) {
+    const root = $('overlayRoot') || document.body;
     if (!root) return;
     const existing = document.getElementById('posChoiceOverlay');
     if (existing) existing.remove();
@@ -4979,55 +4979,85 @@
     const ov = document.createElement('div');
     ov.id = 'posChoiceOverlay';
     ov.className = 'overlay';
-    ov.style.zIndex = '9999';
+    ov.style.zIndex = '99999';
     ov.style.display = 'flex';
     ov.style.alignItems = 'center';
     ov.style.justifyContent = 'center';
-    ov.style.background = 'rgba(0,0,0,0.8)';
-    ov.style.backdropFilter = 'blur(4px)';
+    ov.style.background = 'rgba(0,0,0,0.75)';
+    ov.style.backdropFilter = 'blur(6px)';
 
-    const card = state.players[actSummon.player].hand[actSummon.handIdx];
+    const v = (actSummon && actSummon.player != null) ? actSummon.player : ((actSet && actSet.player != null) ? actSet.player : viewer());
+    const hIdx = (actSummon && actSummon.handIdx != null) ? actSummon.handIdx : ((actSet && actSet.handIdx != null) ? actSet.handIdx : 0);
+    const card = state && state.players[v] && state.players[v].hand[hIdx];
     const def = card ? E().cardOf(card) : {};
     const cardName = def.name || 'มอนสเตอร์';
+    const cardAtk = def.atk != null ? def.atk : (card ? card.baseAtk : 0);
+    const cardDef = def.def != null ? def.def : (card ? card.baseDef : 0);
+    const cardLv = def.level != null ? def.level : (card ? card.level : 1);
 
-    ov.innerHTML = '<div class="modal" style="text-align:center;max-width:380px;background:#101428;border:2px solid var(--gold);padding:24px 20px;border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,0.95);animation:scaleIn 0.15s ease-out;">' +
-      '<div style="font-size:0.85rem;color:var(--gold);font-weight:700;letter-spacing:1px;text-transform:uppercase;">เลือกรูปแบบการลงสนาม</div>' +
-      '<div style="font-size:1.15rem;font-weight:900;color:#fff;margin:6px 0 16px 0;">' + V().esc(cardName) + ' (ช่อง ' + (slotIdx + 1) + ')</div>' +
-      '<div style="display:flex;gap:12px;justify-content:center;">' +
-        '<button id="btnChooseAtk" style="flex:1;background:linear-gradient(135deg, #dc2626, #991b1b);border:2px solid #f87171;color:#fff;font-weight:800;padding:14px 10px;border-radius:10px;cursor:pointer;font-size:0.95rem;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 4px 12px rgba(220,38,38,0.4);transition:transform 0.1s;">' +
-          '<span style="font-size:1.3rem;">⚔️</span>' +
-          '<span>ตั้งโจมตี</span>' +
-          '<span style="font-size:0.75rem;font-weight:600;opacity:0.85;color:#fecaca;">(หงายหน้า)</span>' +
-        '</button>' +
-        '<button id="btnChooseDef" style="flex:1;background:linear-gradient(135deg, #2563eb, #1e40af);border:2px solid #60a5fa;color:#fff;font-weight:800;padding:14px 10px;border-radius:10px;cursor:pointer;font-size:0.95rem;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 4px 12px rgba(37,99,235,0.4);transition:transform 0.1s;">' +
-          '<span style="font-size:1.3rem;">🛡️</span>' +
-          '<span>ตั้งป้องกัน</span>' +
-          '<span style="font-size:0.75rem;font-weight:600;opacity:0.85;color:#bfdbfe;">(เซ็ตคว่ำหน้า)</span>' +
-        '</button>' +
+    const slotName = slotIdx === 2 ? 'ช่อง Pioneer (ผู้นำ)' : ('ช่อง Entity ' + (slotIdx + 1));
+
+    ov.innerHTML = '<div class="modal" style="text-align:center;max-width:390px;width:90%;background:#0d1124;border:2px solid #ecc94b;padding:24px 20px;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.95), 0 0 24px rgba(236,201,75,0.3);animation:scaleIn 0.15s ease-out;">' +
+      '<div style="font-size:0.82rem;color:#ecc94b;font-weight:800;letter-spacing:1px;text-transform:uppercase;">เลือกรูปแบบการลงสนาม</div>' +
+      '<div style="font-size:1.25rem;font-weight:900;color:#fff;margin:8px 0 4px 0;">' + V().esc(cardName) + '</div>' +
+      '<div style="font-size:0.85rem;color:#94a3b8;margin-bottom:14px;">วางลง ' + V().esc(slotName) + ' &bull; ★' + cardLv + '</div>' +
+      '<div style="display:flex;gap:12px;justify-content:center;margin-top:6px;">' +
+        (actSummon ? (
+          '<button id="btnChooseAtk" style="flex:1;background:linear-gradient(135deg, #dc2626, #991b1b);border:2px solid #f87171;color:#fff;font-weight:800;padding:14px 10px;border-radius:12px;cursor:pointer;font-size:0.95rem;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 4px 14px rgba(220,38,38,0.45);transition:transform 0.1s;">' +
+            '<span style="font-size:1.4rem;">⚔️</span>' +
+            '<span>ตั้งโจมตี</span>' +
+            '<span style="font-size:0.78rem;font-weight:700;color:#fecaca;">ATK ' + cardAtk + ' (หงายหน้า)</span>' +
+          '</button>'
+        ) : '') +
+        (actSet ? (
+          '<button id="btnChooseDef" style="flex:1;background:linear-gradient(135deg, #2563eb, #1e40af);border:2px solid #60a5fa;color:#fff;font-weight:800;padding:14px 10px;border-radius:12px;cursor:pointer;font-size:0.95rem;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 4px 14px rgba(37,99,235,0.45);transition:transform 0.1s;">' +
+            '<span style="font-size:1.4rem;">🛡️</span>' +
+            '<span>ตั้งป้องกัน</span>' +
+            '<span style="font-size:0.78rem;font-weight:700;color:#bfdbfe;">DEF ' + cardDef + ' (เซ็ตคว่ำ)</span>' +
+          '</button>'
+        ) : '') +
       '</div>' +
-      '<button id="btnChooseCancel" style="margin-top:16px;background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:0.85rem;font-weight:600;padding:6px 12px;">ยกเลิก</button>' +
+      '<button id="btnChooseCancel" style="margin-top:16px;background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:0.85rem;font-weight:600;padding:6px 14px;border-radius:6px;">ยกเลิก / คืนการ์ดเข้ามือ</button>' +
     '</div>';
 
     root.appendChild(ov);
 
-    document.getElementById('btnChooseAtk').onclick = () => {
-      ov.remove();
-      act(actSummon);
-    };
-    document.getElementById('btnChooseDef').onclick = () => {
-      ov.remove();
-      act(actSet);
-    };
-    document.getElementById('btnChooseCancel').onclick = () => {
-      ov.remove();
-      sel = null;
-      render();
+    const btnAtk = document.getElementById('btnChooseAtk');
+    if (btnAtk) {
+      btnAtk.onclick = () => {
+        ov.remove();
+        if (actSummon) act(actSummon);
+      };
+    }
+    const btnDef = document.getElementById('btnChooseDef');
+    if (btnDef) {
+      btnDef.onclick = () => {
+        ov.remove();
+        if (actSet) act(actSet);
+      };
+    }
+    const btnCancel = document.getElementById('btnChooseCancel');
+    if (btnCancel) {
+      btnCancel.onclick = () => {
+        ov.remove();
+        sel = null;
+        render();
+      };
+    }
+
+    ov.onclick = (e) => {
+      if (e.target === ov) {
+        ov.remove();
+        sel = null;
+        render();
+      }
     };
   }
 
   function onClick(e) {
     if (justDragged) { justDragged = false; return; }
     if (!state || state.ended) return;
+    if (e.target.closest('#posChoiceOverlay')) return;
     const v = viewer(), p = state.players[v];
 
     // ปิดหน้าต่างดูการ์ด หรือเมนูปิด (ทำได้ตลอดเวลาไม่ว่าเทิร์นใคร)
@@ -5993,7 +6023,7 @@
     if (!dragState.isDragging && dist > threshold) {
       dragState.isDragging = true;
       AudioFX.play('card_drag');
-      const v = viewer(), legals = E().getLegalActions(state, v);
+      const v = viewer(), p = state.players[v], legals = E().getLegalActions(state, v);
 
       if (dragState.type === 'hand') {
         ghostEl = dragState.sourceEl.cloneNode(true);
@@ -6014,9 +6044,9 @@
           }
           if (a.type === 'activateSpell') {
             const c = p.hand[dragState.handIdx];
-            const d = E().cardOf(c);
+            const d = c ? E().cardOf(c) : null;
             if (d && (d.field || d.group === 'field')) {
-              const fieldEl = document.querySelector('.sketch-field-slot');
+              const fieldEl = document.querySelector('.sketch-field-slot, .cosmic-field-slot, [data-zone2="field"]');
               if (fieldEl) fieldEl.classList.add('drag-legal-slot');
             }
             const boardEl = document.querySelector('.board');
@@ -6034,7 +6064,7 @@
             const targetEl = document.querySelector('.slot[data-p="' + (1 - v) + '"][data-slot="' + a.to + '"]');
             if (targetEl) targetEl.classList.add('attack-target-legal');
           } else {
-            const lpEl = document.querySelector('[data-lp="' + (1 - v) + '"]') || document.querySelector('.opp .player-avatar-circle');
+            const lpEl = document.querySelector('[data-lp="' + (1 - v) + '"]') || document.querySelector('.opp .player-avatar-circle') || document.querySelector('.opp-side');
             if (lpEl) lpEl.classList.add('attack-target-legal');
           }
         });
@@ -6065,13 +6095,28 @@
     if (!dragState) return;
     let didAction = false;
     if (dragState.isDragging) {
-      const v = viewer(), legals = E().getLegalActions(state, v);
+      const v = viewer(), p = state.players[v], legals = E().getLegalActions(state, v);
       const hoverEl = document.elementFromPoint(e.clientX, e.clientY);
 
       if (dragState.type === 'hand' && hoverEl) {
         const myLegals = legals.filter(a => a.handIdx === dragState.handIdx);
 
-        const monSlotEl = hoverEl.closest('.slot[data-p="' + v + '"][data-slot]');
+        let monSlotEl = hoverEl.closest('.slot[data-p="' + v + '"][data-slot]');
+        if (!monSlotEl) {
+          // หากลากปล่อยใกล้แถวมอนสเตอร์ ให้เล็งช่องที่ใกล้พอยน์เตอร์ที่สุด
+          const monRowEl = hoverEl.closest('.cosmic-grid-row.self-monsters, .self-monsters, .self-side .cosmic-grid-row');
+          if (monRowEl) {
+            const slots = Array.from(monRowEl.querySelectorAll('.slot[data-p="' + v + '"][data-slot]'));
+            let nearest = null, minDist = Infinity;
+            for (const sEl of slots) {
+              const r = sEl.getBoundingClientRect();
+              const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+              if (dist < minDist) { minDist = dist; nearest = sEl; }
+            }
+            if (nearest && minDist < 140) monSlotEl = nearest;
+          }
+        }
+
         if (monSlotEl) {
           const slot = Number(monSlotEl.dataset.slot);
           const handCard = p.hand[dragState.handIdx];
@@ -6084,21 +6129,36 @@
             const actSummon = myLegals.find(a => a.type === 'normalSummon' && a.slot === slot);
             const actSet = myLegals.find(a => a.type === 'setMonster' && a.slot === slot);
             const actOverlay = myLegals.find(a => a.type === 'overlay' && a.targetSlot === slot);
-            if (actSummon && actSet) {
+            if (actSummon || actSet) {
               promptSummonPosition(slot, actSummon, actSet);
               didAction = true;
-            } else if (actSummon) { act(actSummon); didAction = true; }
-            else if (actSet) { act(actSet); didAction = true; }
-            else if (actOverlay) { act(actOverlay); didAction = true; }
+            } else if (actOverlay) {
+              act(actOverlay);
+              didAction = true;
+            }
           }
         } else {
-          const spellSlotEl = hoverEl.closest('.slot[data-p="' + v + '"][data-spell-slot]');
+          let spellSlotEl = hoverEl.closest('.slot[data-p="' + v + '"][data-spell-slot]');
+          if (!spellSlotEl) {
+            const spellRowEl = hoverEl.closest('.cosmic-grid-row.self-spells, .self-spells');
+            if (spellRowEl) {
+              const slots = Array.from(spellRowEl.querySelectorAll('.slot[data-p="' + v + '"][data-spell-slot]'));
+              let nearest = null, minDist = Infinity;
+              for (const sEl of slots) {
+                const r = sEl.getBoundingClientRect();
+                const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+                if (dist < minDist) { minDist = dist; nearest = sEl; }
+              }
+              if (nearest && minDist < 140) spellSlotEl = nearest;
+            }
+          }
+
           if (spellSlotEl) {
             const slot = Number(spellSlotEl.dataset.spellSlot);
             const actSetSpell = myLegals.find(a => a.type === 'setSpell' && a.slot === slot);
             if (actSetSpell) { act(actSetSpell); didAction = true; }
           } else {
-            const fieldSlotEl = hoverEl.closest('.sketch-field-slot');
+            const fieldSlotEl = hoverEl.closest('.sketch-field-slot, .cosmic-field-slot, [data-zone2="field"]');
             if (fieldSlotEl) {
               const actSpell = myLegals.find(a => a.type === 'activateSpell');
               if (actSpell) { act(actSpell); didAction = true; }
@@ -6122,7 +6182,8 @@
         } else {
           const isOppArea = hoverEl.closest('[data-lp="' + (1 - v) + '"]') ||
                             hoverEl.closest('.opp') ||
-                            hoverEl.closest('.opp-row');
+                            hoverEl.closest('.opp-row') ||
+                            hoverEl.closest('.opp-side');
           if (isOppArea) {
             const directAct = atkLegals.find(a => a.to === null);
             if (directAct) { act(directAct); didAction = true; }
