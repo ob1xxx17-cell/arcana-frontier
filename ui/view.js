@@ -1148,86 +1148,76 @@
       '</div>';
     }
 
-    // แผงขวาตามแบบร่าง: 3 กล่องเรียงแนวตั้ง (Frontier Point, ข้อมูลผู้เล่น, acana)
+    // แผงข้อมูลผู้เล่นตามแบบร่าง (ฝั่งซ้าย: Profile, Frontier Point, acana)
     function playerPanel(p, idx, isOpponent) {
       const act = st.activeIdx === idx && st.phase !== 'mulligan';
       const fpPct = Math.max(0, Math.min(100, (p.lp / 8000) * 100));
-      const manaPct = Math.max(0, Math.min(100, (p.mana / 10) * 100));
       const name = esc(V.pname(st, idx));
       const timers = (ctx.timers || (CG.ui && CG.ui.timers)) || {};
       const timeVal = fmtTime(timers['p' + idx]);
       const isLowFp = p.lp <= 2500;
       const isBot = st.mode === 'bot' && idx === 1;
-      const avatarIcon = isBot ? '🤖' : '👤';
       const userLevel = (CG.account && CG.account.current && CG.account.current.level) || 1;
       const levelText = isBot ? 'Lv.AI' : ('Lv.' + userLevel);
-      const idText = isBot ? 'ID: BOT-AI' : ((CG.account && CG.account.current && CG.account.current.id) ? ('ID: ' + CG.account.current.id) : 'ID: AF-88294');
+      const roleText = isBot ? 'บอท AI' : (name.startsWith('ผู้เล่น') ? ('ผู้ท้าชิง ' + ((CG.account && CG.account.current && CG.account.current.id) || '4196')) : name);
 
-      return '<div class="sketch-panel-stack ' + (act ? 'active' : '') + (isOpponent ? ' is-opp' : ' is-self') + '">' +
-        '<div class="sketch-info-box fp-box">' +
-          '<div class="sketch-box-top-row">' +
-            '<span class="sketch-box-title">Frontier Point</span>' +
-            '<span class="sketch-box-timer" data-time-p="' + idx + '">⏱ ' + timeVal + '</span>' +
+      let manaGemsHtml = '';
+      for (let i = 0; i < 10; i++) {
+        manaGemsHtml += '<span class="mana-gem ' + (i < p.mana ? 'filled' : 'empty') + '"></span>';
+      }
+
+      return '<div class="cosmic-player-card ' + (act ? 'active' : '') + (isOpponent ? ' is-opp' : ' is-self') + '">' +
+        '<div class="cpc-header-row">' +
+          '<div class="cpc-avatar-circle">' + levelText + '</div>' +
+          '<div class="cpc-user-info">' +
+            '<div class="cpc-name">' + roleText + '</div>' +
+            '<div class="cpc-fp-label">Frontier Point <span class="cpc-timer">⏱ ' + timeVal + '</span></div>' +
+            '<div class="cpc-fp-val"><span class="lp bar-num" data-lp="' + idx + '">' + p.lp.toLocaleString() + '</span></div>' +
+            '<div class="cpc-hp-track">' +
+              '<div class="cpc-hp-ghost" data-lp-ghost="' + idx + '" style="width:' + fpPct + '%"></div>' +
+              '<div class="cpc-hp-fill ' + (isLowFp ? 'is-low' : '') + '" data-lp-fill="' + idx + '" style="width:' + fpPct + '%"></div>' +
+            '</div>' +
+            '<div class="cpc-mana-wrap">' +
+              '<div class="cpc-mana-label">acana ' + p.mana + '/10</div>' +
+              '<div class="cpc-mana-gems">' + manaGemsHtml + '</div>' +
+            '</div>' +
           '</div>' +
-          '<div class="sketch-box-val-row"><span class="lp bar-num" data-lp="' + idx + '">' + p.lp.toLocaleString() + '</span></div>' +
-          '<div class="sketch-bar-track fp-track">' +
-            '<div class="sketch-bar-ghost fp-ghost" data-lp-ghost="' + idx + '" style="width:' + fpPct + '%"></div>' +
-            '<div class="sketch-bar-fill fp-fill ' + (isLowFp ? 'is-low' : '') + '" data-lp-fill="' + idx + '" style="width:' + fpPct + '%"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="sketch-profile-box">' +
-          '<div class="sketch-profile-avatar">' +
-            avatarIcon +
-            '<span class="sketch-avatar-level">' + levelText + '</span>' +
-          '</div>' +
-          '<div class="sketch-profile-meta">' +
-            '<div class="sketch-profile-name">' + name + '</div>' +
-            '<div class="sketch-profile-id">' + idText + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="sketch-info-box acana-box">' +
-          '<div class="sketch-box-title">acana</div>' +
-          '<div class="sketch-box-val-row"><span class="mana bar-num">' + p.mana + '</span> <span class="sketch-max-mana">/10</span></div>' +
-          '<div class="sketch-bar-track"><div class="sketch-bar-fill mana-fill" style="width:' + manaPct + '%"></div></div>' +
         '</div>' +
       '</div>';
     }
 
-    // ฟังก์ชันสร้างเลย์เอาต์สนาม 7x2 ช่องสี่เหลี่ยมตามแบบร่าง
+    // ฟังก์ชันสร้างเลย์เอาต์สนาม 7x2 ช่องพอร์ทัลเวทมนตร์ตามดีไซน์ใหม่
     function sketchSideHtml(p, idx, isOpponent) {
       const isMe = idx === ctx.viewer;
-      const resCount = p.extra.filter(c => def(c).type === 'fusion').length;
-      const apexCount = p.extra.filter(c => def(c).type === 'grade4').length;
       const canExtraSummon = idx === ctx.viewer && ctx.legal && ctx.legal.some(x => x.type === 'extraSummon');
 
       // 4 Piles (กองการ์ด 4 กอง)
-      const pileChronicle = '<div class="slot pile-box sketch-slot" data-zone="' + idx + ':deck" title="' + esc(s.app.deck) + '">' +
-        '<div class="sketch-pile-name">Chronicle</div>' +
-        '<div class="sketch-pile-num">' + p.deck.length + '</div>' +
+      const pileChronicle = '<div class="slot pile-box cosmic-slot cosmic-chronicle" data-zone="' + idx + ':deck" title="' + esc(s.app.deck) + '">' +
+        '<div class="cosmic-pile-name">Chronicle</div>' +
+        '<div class="cosmic-pile-num">' + p.deck.length + '</div>' +
       '</div>';
 
-      const pileAbyss = '<div class="slot pile-box sketch-slot" data-zone="' + idx + ':grave" title="' + esc(s.app.grave) + '">' +
-        '<div class="sketch-pile-name">Abyss</div>' +
-        '<div class="sketch-pile-num">' + p.grave.length + '</div>' +
+      const pileAbyss = '<div class="slot pile-box cosmic-slot cosmic-abyss" data-zone="' + idx + ':grave" title="' + esc(s.app.grave) + '">' +
+        '<div class="cosmic-pile-name">Abyss</div>' +
+        '<div class="cosmic-pile-num">' + p.grave.length + '</div>' +
       '</div>';
 
-      const pileAstral = '<div class="slot pile-box sketch-slot' + (canExtraSummon ? ' can-summon' : '') + '" data-zone="' + idx + ':extra" title="' + esc(s.app.extraDeck) + '">' +
-        '<div class="sketch-pile-name">Astral Gate</div>' +
-        '<div class="sketch-pile-num">' + p.extra.length + '</div>' +
-        '<div class="sketch-pile-sub">R:' + resCount + ' A:' + apexCount + '</div>' +
+      const pileAstral = '<div class="slot pile-box cosmic-slot cosmic-astral' + (canExtraSummon ? ' can-summon' : '') + '" data-zone="' + idx + ':extra" title="' + esc(s.app.extraDeck) + '">' +
+        '<div class="cosmic-pile-name">Astral Gate</div>' +
+        '<div class="cosmic-pile-num">' + p.extra.length + '</div>' +
       '</div>';
 
-      const pileExile = '<div class="slot pile-box sketch-slot" data-zone="' + idx + ':removed" title="' + esc(s.app.removed) + '">' +
-        '<div class="sketch-pile-name">Exile</div>' +
-        '<div class="sketch-pile-num">' + p.removed.length + '</div>' +
+      const pileExile = '<div class="slot pile-box cosmic-slot cosmic-exile" data-zone="' + idx + ':removed" title="' + esc(s.app.removed) + '">' +
+        '<div class="cosmic-pile-name">Exile</div>' +
+        '<div class="cosmic-pile-num">' + p.removed.length + '</div>' +
       '</div>';
 
       // 5 Monsters
       let monSlots = [];
       for (let i = 0; i < p.monsters.length; i++) {
         const m = p.monsters[i];
-        const cls = ['slot', 'sketch-slot'];
-        if (i === 2) cls.push('leader');
+        const isLeader = (i === 2);
+        const cls = ['slot', 'cosmic-slot', isLeader ? 'cosmic-pioneer leader' : 'cosmic-entity'];
         if (isMe && hlOwn.has(i)) cls.push('hl');
         if (!isMe && hlOpp.has(i)) cls.push('hlred');
         if (isMe && sel.kind === 'field' && sel.slot === i) cls.push('sel');
@@ -1239,12 +1229,15 @@
         const at = ' data-p="' + idx + '" data-slot="' + i + '" data-zone2="mon"';
         const hl = ctx.cardHl && m ? ctx.cardHl[m.uid] : null;
         const ghost = !m && ctx.ghosts ? ctx.ghosts[idx + ':' + i] : null;
+        const chainLink = (m && ctx.chainMap && ctx.chainMap[m.uid]) ||
+                          (ctx.chainSlotMap && ctx.chainSlotMap[idx + ':mon:' + i]) || null;
         let cHtml = '';
         if (m) {
           cHtml = cardHtml(m, {
             field: true,
             reveal: isMe,
             hlClass: hl,
+            chainLink: chainLink,
             sel: (sel.kind === 'attack' && isMe && sel.slot === i) || isTributeMat,
             isTributeMat: isTributeMat,
             tributeOrder: tributeOrder,
@@ -1253,10 +1246,10 @@
           });
         } else if (ghost) {
           cHtml = cardHtml(ghost.card, { field: true, reveal: ghost.card.owner === ctx.viewer, hlClass: 'ev-destroyed', attrs: at });
-        } else if (i === 2) {
-          cHtml = '<span class="sketch-slot-wm leader-wm">Pioneer</span>';
+        } else if (isLeader) {
+          cHtml = '<span class="cosmic-slot-wm leader-wm">Pioneer</span>';
         } else {
-          cHtml = '<span class="sketch-slot-wm">Entity</span>';
+          cHtml = '<span class="cosmic-slot-wm">Entity</span>';
         }
         monSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + cHtml + '</div>');
       }
@@ -1265,29 +1258,34 @@
       let spellSlots = [];
       for (let i = 0; i < p.spells.length; i++) {
         const c = p.spells[i];
-        const cls = ['slot', 'spellslot', 'sketch-slot'];
+        const cls = ['slot', 'spellslot', 'cosmic-slot', 'cosmic-distortion'];
         if (isMe && sel.kind === 'hand' && sel.mode === 'setSpell' && hlSpellOwn.has(i)) cls.push('hl');
         if (isMe && sel.kind === 'spell' && sel.slot === i) cls.push('sel');
         const at = ' data-p="' + idx + '" data-spell-slot="' + i + '" data-zone2="spell"';
-        const wm = c ? '' : '<span class="sketch-slot-wm">Distortion</span>';
-        spellSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>');
+        const wm = c ? '' : '<span class="cosmic-slot-wm">Distortion</span>';
+        const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) ||
+                          (ctx.chainSlotMap && ctx.chainSlotMap[idx + ':spell:' + i]) || null;
+        spellSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, chainLink: chainLink, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>');
       }
 
       let row1 = '', row2 = '';
       if (isOpponent) {
-        row1 = '<div class="sketch-row">' + pileChronicle + pileAbyss + spellSlots.join('') + '</div>';
-        row2 = '<div class="sketch-row">' + pileAstral + pileExile + monSlots.join('') + '</div>';
+        // แถวบนสุด (สเปลล์ของบอท): Chronicle | 5x Distortion | Abyss
+        row1 = '<div class="cosmic-grid-row opp-spells">' + pileChronicle + spellSlots.join('') + pileAbyss + '</div>';
+        // แถวสอง (มอนสเตอร์ของบอท): Astral Gate | 5x Monsters (Pioneer กลาง) | Exile
+        row2 = '<div class="cosmic-grid-row opp-monsters">' + pileAstral + monSlots.join('') + pileExile + '</div>';
       } else {
-        row1 = '<div class="sketch-row">' + pileChronicle + pileAbyss + monSlots.join('') + '</div>';
-        row2 = '<div class="sketch-row">' + pileAstral + pileExile + spellSlots.join('') + '</div>';
+        // แถวหน้า (มอนสเตอร์ของผู้เล่น): Exile | 5x Monsters (Pioneer กลาง) | Astral Gate
+        row1 = '<div class="cosmic-grid-row self-monsters">' + pileExile + monSlots.join('') + pileAstral + '</div>';
+        // แถวล่าง (สเปลล์ของผู้เล่น): Abyss | 5x Distortion | Chronicle
+        row2 = '<div class="cosmic-grid-row self-spells">' + pileAbyss + spellSlots.join('') + pileChronicle + '</div>';
       }
 
-      return '<div class="sketch-side ' + (isOpponent ? 'opp-side' : 'self-side') + '">' +
-        '<div class="sketch-grid-7x2">' +
+      return '<div class="cosmic-side ' + (isOpponent ? 'opp-side' : 'self-side') + '">' +
+        '<div class="cosmic-grid-7x2">' +
           row1 +
           row2 +
         '</div>' +
-        playerPanel(p, idx, isOpponent) +
       '</div>';
     }
 
@@ -1588,60 +1586,36 @@
 
     const bannerHtml = ctx.botBanner ? renderBotBannerHtml(ctx.botBanner, ctx.botBannerFade) : '';
 
-    // 2) ช่อง Field กลางสนาม (ตามแบบร่าง: สี่เหลี่ยม 1 ช่อง "ช่องสนาม")
+    // 2) ช่อง Field กลางสนาม (สี่เหลี่ยมพอร์ทัลคริสตัลสีฟ้า "ช่องสนาม Field")
     const fsCard = me.fieldSpell || op.fieldSpell;
     let sharedFieldHtml = '';
     if (fsCard) {
-      sharedFieldHtml = '<div class="slot sketch-slot sketch-field-slot has-card" data-zone2="field">' +
+      sharedFieldHtml = '<div class="slot cosmic-slot cosmic-field-slot has-card" data-zone2="field">' +
         cardHtml(fsCard, { field: true, reveal: true, attrs: ' data-zone2="field"' }).replace('class="card', 'style="height:100%" class="card') +
       '</div>';
     } else {
-      sharedFieldHtml = '<div class="slot sketch-slot sketch-field-slot empty" data-zone2="field">' +
-        '<span class="sketch-slot-wm field-slot-wm">ช่องสนาม</span>' +
+      sharedFieldHtml = '<div class="slot cosmic-slot cosmic-field-slot empty" data-zone2="field">' +
+        '<span class="cosmic-slot-wm field-slot-wm">ช่องสนาม<br><small style="font-size:0.75em;opacity:0.85">Field</small></span>' +
       '</div>';
     }
 
-    // 4) เหรียญเฟส: เหรียญกลมที่ด้านขวาของสนาม แสดง "เทิร์น N / ชื่อเฟส" กดแล้วเปิดเมนูเลือก (ไปเฟสถัดไป / ไปเฟสต่อสู้ / จบเทิร์น)
+    // 3) แถบแสดงสถานะและปุ่มควบคุมเฟสแนวตั้งด้านขวา (Phase Tracker) ตามแบบพิมพ์เขียว
     const canPhaseAct = mine && !ctx.botBusy && !st.ended && !st.pending && st.phase !== 'mulligan' && ['main1', 'battle', 'main2'].includes(st.phase);
-    let nextPh = '';
-    if (st.phase === 'main1') nextPh = s.phase.battle || 'ต่อสู้';
-    else if (st.phase === 'battle') nextPh = s.phase.main2 || 'เมน 2';
-    else if (st.phase === 'main2') nextPh = s.phase.end || 'จบเทิร์น';
-    const currentPhName = s.phase[st.phase] || st.phase;
-
-    let phaseDropdownHtml = '';
-    if (ctx.phaseMenuOpen && canPhaseAct) {
-      phaseDropdownHtml = '<div class="phase-dropdown-menu" id="phaseDropdownMenu">' +
-        '<button class="phase-dropdown-item" data-act="next">▶ ' + esc(a.nextPhasePrefix || 'ไปเฟสถัดไป') + ' (' + esc(nextPh) + ')</button>' +
-        (st.phase === 'main1' ? '<button class="phase-dropdown-item battle-opt" data-act="next">⚔️ ' + esc(a.goToBattle || 'ไปเฟสต่อสู้') + '</button>' : '') +
-        '<button class="phase-dropdown-item danger" data-act="end">⏭ ' + esc(a.endTurn) + '</button>' +
-      '</div>';
-    }
-
-    const coinBtnClass = 'phase-coin-btn ' + (canPhaseAct ? 'active' : 'disabled');
-    const phaseCoinHtml = '<div class="phase-coin-wrap phase-btn-wrap">' +
-      '<button class="' + coinBtnClass + '" data-act="togglePhaseMenu" ' + (canPhaseAct ? '' : 'disabled') + ' title="เลือกเฟส">' +
-        '<span class="coin-turn">' + esc(a.turn) + '</span>' +
-        '<span class="coin-phase">' + esc(currentPhName) + '</span>' +
-      '</button>' +
-      phaseDropdownHtml +
+    const cosmicPhaseTracker = '<div class="cosmic-phase-pillar">' +
+      '<div class="cpt-turn-circle"><span class="cpt-turn-lbl">เทิร์น</span><span class="cpt-turn-num">' + st.turn + '</span></div>' +
+      '<button class="cpt-phase-btn ' + (st.phase === 'main1' ? 'active' : '') + '" title="เมนเฟส 1">เมน 1</button>' +
+      '<button class="cpt-phase-btn ' + (st.phase === 'battle' ? 'active' : '') + '" ' + (canPhaseAct && st.phase === 'main1' ? 'data-act="next"' : '') + ' title="เฟสต่อสู้">ต่อสู้</button>' +
+      '<button class="cpt-phase-btn ' + (st.phase === 'main2' ? 'active' : '') + '" ' + (canPhaseAct && st.phase === 'battle' ? 'data-act="next"' : '') + ' title="เมนเฟส 2">เมน 2</button>' +
+      '<button class="cpt-phase-btn cpt-end-btn" data-act="end" ' + (canPhaseAct ? '' : 'disabled') + ' title="จบเทิร์น">จบเทิร์น</button>' +
+      '<div class="cpt-turn-circle"><span class="cpt-turn-lbl">เทิร์น</span><span class="cpt-turn-num">' + st.turn + '</span></div>' +
     '</div>';
 
-    const centerDivider = '<div class="sketch-side sketch-center-row">' +
-      '<div class="sketch-row sketch-center-grid-row">' +
-        '<div class="sketch-center-cell-spacer"></div>' +
-        '<div class="sketch-center-cell-spacer"></div>' +
-        '<div class="sketch-center-cell-spacer"></div>' +
-        '<div class="sketch-center-cell-spacer"></div>' +
-        '<div class="sketch-center-field-slot-wrap">' +
-          sharedFieldHtml +
-        '</div>' +
-        '<div class="sketch-center-cell-spacer"></div>' +
-        '<div class="sketch-center-cell-spacer"></div>' +
+    const centerDivider = '<div class="cosmic-center-divider">' +
+      '<div class="cosmic-brand-title brand-arcana">Arcana</div>' +
+      '<div class="cosmic-field-slot-wrap">' +
+        sharedFieldHtml +
       '</div>' +
-      '<div class="sketch-center-panel-space">' +
-        phaseCoinHtml +
-      '</div>' +
+      '<div class="cosmic-brand-title brand-frontier">Frontier</div>' +
     '</div>';
 
     const oppSideHtml = sketchSideHtml(op, 1 - ctx.viewer, true);
@@ -1768,19 +1742,28 @@
       ? '<div class="tutorial-guide-banner"><span>🎓 <b>' + esc(st.tutorial.title) + ':</b> ' + esc(st.tutorial.hint) + '</span><button class="pill" data-act="exitTutorial">↩ จบบทเรียน</button></div>'
       : '';
 
-    root.innerHTML = top + tutorialBar + '<div class="main"><div class="board">' +
+    root.innerHTML = top + tutorialBar + '<div class="main"><div class="board cosmic-mat-board">' +
       bannerHtml +
       quickActionHtml +
       '<div class="handrow opp ' + (op.hand.length > 7 ? 'overlapping' : '') + '">' + oppHand + '</div>' +
-      '<div class="sketch-arena">' +
-        oppSideHtml +
-        centerDivider +
-        selfSideHtml +
+      '<div class="cosmic-arena-layout">' +
+        '<div class="cosmic-left-col">' +
+          playerPanel(op, 1 - ctx.viewer, true) +
+          playerPanel(me, ctx.viewer, false) +
+        '</div>' +
+        '<div class="cosmic-center-col">' +
+          oppSideHtml +
+          centerDivider +
+          selfSideHtml +
+        '</div>' +
+        '<div class="cosmic-right-col">' +
+          cosmicPhaseTracker +
+        '</div>' +
       '</div>' +
       (() => {
         const isPlacing = sel && !!sel.mode;
         const cls = 'handrow' + (isPlacing ? ' mode-placing' : '') + (me.hand.length > 7 ? ' overlapping' : '');
-        return '<div class="' + cls + '" id="handRow">' + handHtml + '</div></div>';
+        return '<div class="cosmic-hand-tray"><div class="' + cls + '" id="handRow">' + handHtml + '</div></div></div>';
       })() +
       '<div class="side ' + (CG.ui.sideOpen ? '' : 'side-collapsed') + '"><div id="inspect"><div class="m">' + a.inspectHint + '</div></div><h3>' + a.logTitle + '</h3><div id="log"></div></div></div>' +
       modalHtml;

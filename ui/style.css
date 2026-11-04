@@ -7032,8 +7032,8 @@ button.gold:hover:not(:disabled) {
 }
 
 #game .main {
-  /* ภาพพื้นหลังสนามคมชัด 100% สดใสตรงตามต้นฉบับ ไม่มืด ไม่เบลอ */
-  background: #3e2413 url('playmat_bg.jpg') center center / cover no-repeat !important;
+  /* ภาพพื้นหลังสนามคอสมิกแห่งดวงดาวและออโรร่า (Cosmic Magic Mat) */
+  background: #0b0d1b url('playmat_cosmic.png') center center / cover no-repeat !important;
   position: relative !important;
   overflow: hidden !important;
   width: 100% !important;
@@ -7097,6 +7097,385 @@ button.gold:hover:not(:disabled) {
 }
 
 /* ผืนสนามวางทับบนกระดาษของภาพพื้นหลังอย่างพอดี สดใสเต็มตา เต็มจอ */
+/* ==================== COSMIC MAGIC PLAYMAT (3-COLUMN ARENA) ==================== */
+.cosmic-mat-board {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  padding: 4px 10px !important;
+}
+
+.cosmic-arena-layout {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(10px, 1.8vw, 24px) !important;
+  width: 100% !important;
+  max-width: 99vw !important;
+  margin: 0 auto !important;
+}
+
+/* Left Column: Player & Bot Cards */
+.cosmic-left-col {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  height: 100% !important;
+  width: clamp(140px, 15vw, 195px) !important;
+  gap: clamp(14px, 2.5vh, 28px) !important;
+}
+
+.cosmic-player-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 2px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+  color: #1a202c !important;
+  box-sizing: border-box !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.cosmic-player-card.active {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.6), 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+}
+
+.cpc-header-row {
+  display: flex !important;
+  gap: 10px !important;
+  align-items: flex-start !important;
+}
+
+.cpc-avatar-circle {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  border: 2px solid #a0aec0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 800 !important;
+  font-size: 0.78rem !important;
+  background: #ffffff !important;
+  color: #2d3748 !important;
+  flex-shrink: 0 !important;
+}
+
+.cpc-user-info {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+}
+
+.cpc-name {
+  font-weight: 800 !important;
+  font-size: 0.88rem !important;
+  color: #2d3748 !important;
+  line-height: 1.2 !important;
+}
+
+.cpc-fp-label {
+  font-size: 0.7rem !important;
+  color: #718096 !important;
+  font-weight: 700 !important;
+  margin-top: 3px !important;
+}
+
+.cpc-timer {
+  float: right !important;
+  font-weight: normal !important;
+  color: #4a5568 !important;
+}
+
+.cpc-fp-val {
+  font-size: 1.2rem !important;
+  font-weight: 900 !important;
+  color: #1a202c !important;
+  line-height: 1.1 !important;
+}
+
+.cpc-hp-track {
+  height: 5px !important;
+  background: rgba(0, 0, 0, 0.12) !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  margin: 3px 0 6px 0 !important;
+}
+
+.cpc-hp-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, #f56565, #ed8936) !important;
+  border-radius: 4px !important;
+  transition: width 0.3s ease !important;
+}
+
+.cpc-mana-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.cpc-mana-label {
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  color: #4a5568 !important;
+}
+
+.cpc-mana-gems {
+  display: flex !important;
+  gap: 3.5px !important;
+  align-items: center !important;
+}
+
+.mana-gem {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+}
+
+.mana-gem.filled {
+  background: #38b2ac !important;
+  border: 1.5px solid #2c7a7b !important;
+  box-shadow: 0 0 5px rgba(56, 178, 172, 0.8) !important;
+}
+
+.mana-gem.empty {
+  background: transparent !important;
+  border: 1.5px solid #cbd5e0 !important;
+}
+
+/* Center Column: Grids & Center Divider */
+.cosmic-center-col {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: clamp(2px, 0.5vh, 6px) !important;
+}
+
+.cosmic-grid-7x2 {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--sq-gap, 6px) !important;
+}
+
+.cosmic-grid-row {
+  display: flex !important;
+  gap: var(--sq-gap, 6px) !important;
+  align-items: center !important;
+}
+
+.cosmic-center-divider {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(14px, 2.5vw, 36px) !important;
+  width: 100% !important;
+  margin: 1px 0 !important;
+}
+
+.cosmic-brand-title {
+  font-family: 'Cinzel', 'Georgia', serif !important;
+  font-size: clamp(1.2rem, 1.8vw, 1.9rem) !important;
+  font-weight: 700 !important;
+  color: #f7fafc !important;
+  letter-spacing: 2px !important;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+  user-select: none !important;
+}
+
+.cosmic-field-slot-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Right Column: Phase Pillar */
+.cosmic-right-col {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cosmic-phase-pillar {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: clamp(4px, 0.8vh, 8px) !important;
+  width: clamp(75px, 8vw, 98px) !important;
+}
+
+.cpt-turn-circle {
+  width: clamp(46px, 4.8vw, 56px) !important;
+  height: clamp(46px, 4.8vw, 56px) !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #1a202c !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+  border: 2px solid #e2e8f0 !important;
+  line-height: 1.15 !important;
+}
+
+.cpt-turn-lbl {
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  color: #718096 !important;
+}
+
+.cpt-turn-num {
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+  color: #1a202c !important;
+}
+
+.cpt-phase-btn {
+  width: 100% !important;
+  padding: 8px 6px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  font-size: clamp(0.78rem, 1vw, 0.92rem) !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #2d3748 !important;
+}
+
+.cpt-phase-btn.active {
+  background: #7359c7 !important;
+  border: 2px solid #b794f4 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(183, 148, 244, 0.8) !important;
+}
+
+.cpt-phase-btn.cpt-end-btn {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #2d3748 !important;
+}
+
+.cpt-phase-btn.cpt-end-btn:hover:not(:disabled) {
+  background: #e53e3e !important;
+  color: #ffffff !important;
+}
+
+/* Cosmic Slots with Asset Backgrounds */
+.slot.cosmic-slot,
+.cosmic-slot {
+  width: var(--sq-size) !important;
+  height: var(--sq-size) !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+  overflow: visible !important;
+}
+
+.cosmic-pioneer {
+  background: #0d1629 url('assets/board/slot_pioneer.png') center center / cover no-repeat !important;
+  border: 2.5px solid #ecc94b !important;
+  box-shadow: 0 0 16px rgba(236, 201, 75, 0.6), inset 0 0 10px rgba(236, 201, 75, 0.4) !important;
+}
+
+.cosmic-entity {
+  background: rgba(26, 17, 10, 0.8) !important;
+  border: 2.5px solid #dd6b20 !important;
+  box-shadow: inset 0 0 14px rgba(237, 137, 54, 0.5), 0 0 12px rgba(237, 137, 54, 0.4) !important;
+}
+
+.cosmic-distortion {
+  background: rgba(8, 28, 24, 0.8) url('assets/board/slot_distortion.png') center center / cover no-repeat !important;
+  border: 2.5px solid #38b2ac !important;
+  box-shadow: inset 0 0 14px rgba(56, 178, 172, 0.5), 0 0 12px rgba(56, 178, 172, 0.4) !important;
+}
+
+.cosmic-chronicle {
+  background: #091329 url('assets/board/slot_chronicle.png') center center / cover no-repeat !important;
+  border: 2px solid #63b3ed !important;
+  box-shadow: 0 0 12px rgba(99, 179, 237, 0.45) !important;
+}
+
+.cosmic-abyss {
+  background: #19092c url('assets/board/slot_abyss.png') center center / cover no-repeat !important;
+  border: 2px solid #9f7aea !important;
+  box-shadow: 0 0 14px rgba(159, 122, 234, 0.55) !important;
+}
+
+.cosmic-astral {
+  background: #07192c url('assets/board/slot_astral.png') center center / cover no-repeat !important;
+  border: 2px solid #4fd1c5 !important;
+  box-shadow: 0 0 14px rgba(79, 209, 197, 0.55) !important;
+}
+
+.cosmic-exile {
+  background: #2b0808 url('assets/board/slot_exile.png') center center / cover no-repeat !important;
+  border: 2px solid #f56565 !important;
+  box-shadow: 0 0 14px rgba(245, 101, 101, 0.55) !important;
+}
+
+.cosmic-field-slot {
+  background: #0d1a38 url('assets/board/slot_field.png') center center / cover no-repeat !important;
+  border: 2px solid #63b3ed !important;
+  box-shadow: 0 0 16px rgba(99, 179, 237, 0.6) !important;
+}
+
+.cosmic-pile-name {
+  font-size: clamp(0.75rem, calc(var(--sq-size) * 0.15), 1.2rem) !important;
+  font-weight: 800 !important;
+  color: #f7fafc !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+  z-index: 2 !important;
+}
+
+.cosmic-pile-num {
+  font-size: clamp(1.4rem, calc(var(--sq-size) * 0.38), 2.8rem) !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
+  z-index: 2 !important;
+}
+
+.cosmic-slot-wm {
+  font-size: clamp(0.8rem, calc(var(--sq-size) * 0.16), 1.3rem) !important;
+  font-weight: 800 !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+  text-align: center !important;
+  user-select: none !important;
+}
+
+.cosmic-hand-tray {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-top: clamp(2px, 0.6vh, 8px) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 2px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 12px !important;
+  padding: 4px 10px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+}
+
 .sketch-arena {
   display: flex !important;
   flex-direction: column !important;
