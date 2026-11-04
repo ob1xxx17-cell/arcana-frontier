@@ -7395,192 +7395,99 @@ button.gold:hover:not(:disabled) {
   overflow: visible !important;
 }
 
-/* ================= OPPONENT (AI) PASTEL THEME ================= */
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-distortion,
-.cosmic-side.opp-side .slot.cosmic-distortion,
-.cosmic-side.opp-side .cosmic-distortion {
-  background: #ccfbf1 !important;
-  background-image: none !important;
-  border: 2px solid #5eead4 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-}
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-distortion .cosmic-slot-wm,
-.cosmic-side.opp-side .cosmic-distortion .cosmic-slot-wm {
-  color: #0f766e !important;
-  font-weight: 700 !important;
-  font-size: clamp(0.72rem, calc(var(--sq-size) * 0.15), 1.1rem) !important;
-  text-shadow: none !important;
-}
-
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-entity,
-.cosmic-side.opp-side .slot.cosmic-entity,
-.cosmic-side.opp-side .cosmic-entity {
-  background: #ffedd5 !important;
-  background-image: none !important;
-  border: 2px solid #fdba74 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-}
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-entity .cosmic-slot-wm,
-.cosmic-side.opp-side .cosmic-entity .cosmic-slot-wm {
-  color: #c2410c !important;
-  font-weight: 700 !important;
-  font-size: clamp(0.75rem, calc(var(--sq-size) * 0.16), 1.15rem) !important;
-  text-shadow: none !important;
-}
-
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-pioneer,
-.cosmic-side.opp-side .slot.cosmic-pioneer,
-.cosmic-side.opp-side .cosmic-pioneer {
-  background: #ffedd5 !important;
-  background-image: none !important;
-  border: 2.5px solid #f97316 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25) !important;
-}
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-pioneer .cosmic-slot-wm,
-.cosmic-side.opp-side .cosmic-pioneer .cosmic-slot-wm {
-  color: #c2410c !important;
-  font-weight: 800 !important;
-  font-size: clamp(0.8rem, calc(var(--sq-size) * 0.17), 1.25rem) !important;
-  text-shadow: none !important;
-}
-
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-chronicle,
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-abyss,
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-astral,
-.cosmic-arena-layout .opp-side .cosmic-slot.cosmic-exile,
-.cosmic-side.opp-side .slot.cosmic-chronicle,
-.cosmic-side.opp-side .slot.cosmic-abyss,
-.cosmic-side.opp-side .slot.cosmic-astral,
-.cosmic-side.opp-side .slot.cosmic-exile {
-  background: #ffffff !important;
-  background-image: none !important;
-  border: 2px solid #e2e8f0 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-}
-.cosmic-side.opp-side .cosmic-pile-name {
-  color: #64748b !important;
-  font-weight: 700 !important;
-  font-size: clamp(0.68rem, calc(var(--sq-size) * 0.14), 1rem) !important;
-  text-shadow: none !important;
-}
-.cosmic-side.opp-side .cosmic-pile-num {
-  color: #1e293b !important;
-  font-weight: 900 !important;
-  font-size: clamp(1.4rem, calc(var(--sq-size) * 0.38), 2.6rem) !important;
-  text-shadow: none !important;
-}
-
-/* ================= SELF (PLAYER) GLOWING PORTAL THEME ================= */
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-pioneer,
-.cosmic-side.self-side .slot.cosmic-pioneer,
-.cosmic-side.self-side .cosmic-pioneer {
+/* ================= PORTAL SLOT ARTWORK ON BOTH SIDES (OPPONENT & PLAYER) ================= */
+.cosmic-slot.cosmic-pioneer {
   background: #0d1629 url('assets/board/slot_pioneer.png') center center / cover no-repeat !important;
   border: 2.5px solid #facc15 !important;
   box-shadow: 0 0 18px rgba(250, 204, 21, 0.7), inset 0 0 10px rgba(250, 204, 21, 0.4) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-pioneer .cosmic-slot-wm {
+.cosmic-slot.cosmic-pioneer .cosmic-slot-wm {
   color: #fef08a !important;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
   font-weight: 900 !important;
 }
 
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-entity,
-.cosmic-side.self-side .slot.cosmic-entity,
-.cosmic-side.self-side .cosmic-entity {
-  background: radial-gradient(circle at center, rgba(160, 60, 10, 0.65) 0%, rgba(30, 15, 8, 0.85) 100%) url('assets/board/slot_pioneer_frame.png') center center / cover no-repeat !important;
+.cosmic-slot.cosmic-entity {
+  background: radial-gradient(circle at center, rgba(160, 60, 10, 0.65) 0%, rgba(30, 15, 8, 0.85) 100%) url('assets/board/hand_zone.png') center center / cover no-repeat !important;
   border: 2.5px solid #f97316 !important;
   box-shadow: inset 0 0 14px rgba(249, 115, 22, 0.5), 0 0 14px rgba(249, 115, 22, 0.4) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-entity .cosmic-slot-wm {
+.cosmic-slot.cosmic-entity .cosmic-slot-wm {
   color: #fed7aa !important;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
   font-weight: 800 !important;
 }
 
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-distortion,
-.cosmic-side.self-side .slot.cosmic-distortion,
-.cosmic-side.self-side .cosmic-distortion {
+.cosmic-slot.cosmic-distortion {
   background: rgba(8, 28, 24, 0.85) url('assets/board/slot_distortion.png') center center / cover no-repeat !important;
   border: 2.5px solid #2dd4bf !important;
   box-shadow: inset 0 0 14px rgba(45, 212, 191, 0.5), 0 0 12px rgba(45, 212, 191, 0.4) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-distortion .cosmic-slot-wm {
+.cosmic-slot.cosmic-distortion .cosmic-slot-wm {
   color: #5eead4 !important;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
   font-weight: 800 !important;
 }
 
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-chronicle,
-.cosmic-side.self-side .slot.cosmic-chronicle,
-.cosmic-side.self-side .cosmic-chronicle {
+.cosmic-slot.cosmic-chronicle {
   background: #091329 url('assets/board/slot_chronicle.png') center center / cover no-repeat !important;
   border: 2px solid #38bdf8 !important;
   box-shadow: 0 0 16px rgba(56, 189, 248, 0.6) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-chronicle .cosmic-pile-name {
+.cosmic-slot.cosmic-chronicle .cosmic-pile-name {
   color: #bae6fd !important;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
 }
-.cosmic-side.self-side .cosmic-chronicle .cosmic-pile-num {
+.cosmic-slot.cosmic-chronicle .cosmic-pile-num {
   color: #ffffff !important;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-abyss,
-.cosmic-side.self-side .slot.cosmic-abyss,
-.cosmic-side.self-side .cosmic-abyss {
+.cosmic-slot.cosmic-abyss {
   background: #19092c url('assets/board/slot_abyss.png') center center / cover no-repeat !important;
   border: 2px solid #a855f7 !important;
   box-shadow: 0 0 16px rgba(168, 85, 247, 0.6) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-abyss .cosmic-pile-name {
+.cosmic-slot.cosmic-abyss .cosmic-pile-name {
   color: #e9d5ff !important;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
 }
-.cosmic-side.self-side .cosmic-abyss .cosmic-pile-num {
+.cosmic-slot.cosmic-abyss .cosmic-pile-num {
   color: #ffffff !important;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-astral,
-.cosmic-side.self-side .slot.cosmic-astral,
-.cosmic-side.self-side .cosmic-astral {
+.cosmic-slot.cosmic-astral {
   background: #07192c url('assets/board/slot_astral.png') center center / cover no-repeat !important;
   border: 2px solid #06b6d4 !important;
   box-shadow: 0 0 16px rgba(6, 182, 212, 0.6) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-astral .cosmic-pile-name {
+.cosmic-slot.cosmic-astral .cosmic-pile-name {
   color: #a5f3fc !important;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
 }
-.cosmic-side.self-side .cosmic-astral .cosmic-pile-num {
+.cosmic-slot.cosmic-astral .cosmic-pile-num {
   color: #ffffff !important;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
 
-.cosmic-arena-layout .self-side .cosmic-slot.cosmic-exile,
-.cosmic-side.self-side .slot.cosmic-exile,
-.cosmic-side.self-side .cosmic-exile {
+.cosmic-slot.cosmic-exile {
   background: #2b0808 url('assets/board/slot_exile.png') center center / cover no-repeat !important;
   border: 2px solid #ef4444 !important;
   box-shadow: 0 0 16px rgba(239, 68, 68, 0.6) !important;
   border-radius: 8px !important;
 }
-.cosmic-side.self-side .cosmic-exile .cosmic-pile-name {
+.cosmic-slot.cosmic-exile .cosmic-pile-name {
   color: #fecaca !important;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
 }
-.cosmic-side.self-side .cosmic-exile .cosmic-pile-num {
+.cosmic-slot.cosmic-exile .cosmic-pile-num {
   color: #ffffff !important;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
 }
@@ -7599,26 +7506,138 @@ button.gold:hover:not(:disabled) {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
 }
 
-/* ================= AI HAND ROW (TOP CENTER) ================= */
-.cosmic-mat-board .handrow.opp {
-  position: static !important;
+/* ================= AI HAND SECTION (TOP CENTER 5 SLOTS) ================= */
+.ai-hand-section {
   display: flex !important;
-  justify-content: center !important;
   align-items: center !important;
+  justify-content: center !important;
   gap: 6px !important;
   margin: 0 auto clamp(2px, 0.5vh, 6px) auto !important;
-  height: clamp(20px, 3vh, 28px) !important;
-  z-index: 5 !important;
+  height: clamp(24px, 3.2vh, 32px) !important;
+  z-index: 10 !important;
 }
-.cosmic-mat-board .handrow.opp .card.back {
-  width: clamp(26px, 2.8vw, 38px) !important;
-  height: clamp(18px, 2.4vh, 26px) !important;
+
+.ai-hand-slot {
+  width: clamp(28px, 3vw, 42px) !important;
+  height: clamp(20px, 2.5vh, 28px) !important;
+  border-radius: 5px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+.ai-hand-slot.empty {
+  border: 1.5px dashed rgba(148, 163, 184, 0.4) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.ai-hand-slot.filled .card.back {
+  width: 100% !important;
+  height: 100% !important;
   background: #ffffff !important;
   border: 1.5px solid #cbd5e1 !important;
   border-radius: 4px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
   transform: none !important;
   margin: 0 !important;
+}
+
+/* ================= PLAYER HAND SECTION (BOTTOM TRAY 6 SLOTS + BADGE) ================= */
+.cosmic-hand-section {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(8px, 1.2vw, 16px) !important;
+  width: 100% !important;
+  max-width: 95vw !important;
+  margin-top: clamp(2px, 0.6vh, 8px) !important;
+  z-index: 30 !important;
+  position: relative !important;
+}
+
+.cosmic-hand-badge {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: clamp(52px, 5vw, 68px) !important;
+  height: clamp(64px, 7.5vh, 86px) !important;
+  background: rgba(22, 27, 46, 0.92) !important;
+  border: 2px solid #64748b !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  color: #f1f5f9 !important;
+  user-select: none !important;
+  line-height: 1.2 !important;
+  flex-shrink: 0 !important;
+}
+
+.cosmic-hand-badge .chb-title {
+  font-size: clamp(0.78rem, 0.9vw, 0.95rem) !important;
+  font-weight: 800 !important;
+  color: #94a3b8 !important;
+}
+
+.cosmic-hand-badge .chb-count {
+  font-size: clamp(0.95rem, 1.1vw, 1.2rem) !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+}
+
+.cosmic-hand-slots-tray {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(6px, 0.8vw, 10px) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  border: 2px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 12px !important;
+  padding: 6px 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(0, 0, 0, 0.4) !important;
+  position: static !important;
+  height: auto !important;
+  pointer-events: auto !important;
+}
+
+.cosmic-hand-slot {
+  width: clamp(55px, 6.2vw, 82px) !important;
+  height: clamp(77px, calc(6.2vw * 1.4), 115px) !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.cosmic-hand-slot.empty {
+  border: 2px dashed rgba(148, 163, 184, 0.4) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.cosmic-hand-slot.filled {
+  border: none !important;
+  background: transparent !important;
+}
+
+.cosmic-hand-slot.filled .card {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  transform: none !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.cosmic-hand-slot.filled .card:hover,
+.cosmic-hand-slot.filled .card.sel {
+  transform: translateY(-16px) scale(1.08) !important;
+  z-index: 50 !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.85), 0 0 16px #ecc94b !important;
 }
 
 /* ================= HIDE TOP BAR TO MAXIMIZE BOARD ================= */
@@ -7649,18 +7668,6 @@ button.gold:hover:not(:disabled) {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
   text-align: center !important;
   user-select: none !important;
-}
-
-.cosmic-hand-tray {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  margin-top: clamp(2px, 0.6vh, 8px) !important;
-  background: rgba(255, 255, 255, 0.88) !important;
-  border: 2px solid rgba(226, 232, 240, 0.9) !important;
-  border-radius: 12px !important;
-  padding: 4px 10px !important;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
 }
 
 .sketch-arena {
@@ -9526,9 +9533,9 @@ button.gold:hover:not(:disabled) {
     font-weight: 900 !important;
   }
 
-  /* มือผู้เล่นด้านล่างสุด ชัดเจน แตะง่าย เด้งลอยสวยงาม */
-  .handrow#handRow,
-  .board > .handrow:not(.opp) {
+  /* มือผู้เล่นด้านล่างสุด (เฉพาะกระดานดั้งเดิม) */
+  .board:not(.cosmic-mat-board) .handrow#handRow,
+  .board:not(.cosmic-mat-board) > .handrow:not(.opp) {
     position: absolute !important;
     bottom: 2px !important;
     left: 0 !important;

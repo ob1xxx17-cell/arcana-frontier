@@ -1270,15 +1270,15 @@
 
       let row1 = '', row2 = '';
       if (isOpponent) {
-        // แถวบนสุด (สเปลล์ของบอท): Chronicle | 5x Distortion | Abyss
-        row1 = '<div class="cosmic-grid-row opp-spells">' + pileChronicle + spellSlots.join('') + pileAbyss + '</div>';
-        // แถวสอง (มอนสเตอร์ของบอท): Astral Gate | 5x Monsters (Pioneer กลาง) | Exile
-        row2 = '<div class="cosmic-grid-row opp-monsters">' + pileAstral + monSlots.join('') + pileExile + '</div>';
+        // แถวบนสุด (สเปลล์ของบอท ตาม Wireframe): Chronicle 35 | 5x Distortion | Astral Gate 3
+        row1 = '<div class="cosmic-grid-row opp-spells">' + pileChronicle + spellSlots.join('') + pileAstral + '</div>';
+        // แถวสอง (มอนสเตอร์ของบอท ตาม Wireframe): Abyss 0 | 5x Monsters (Pioneer กลาง) | Exile 0
+        row2 = '<div class="cosmic-grid-row opp-monsters">' + pileAbyss + monSlots.join('') + pileExile + '</div>';
       } else {
-        // แถวหน้า (มอนสเตอร์ของผู้เล่น): Exile | 5x Monsters (Pioneer กลาง) | Astral Gate
-        row1 = '<div class="cosmic-grid-row self-monsters">' + pileExile + monSlots.join('') + pileAstral + '</div>';
-        // แถวล่าง (สเปลล์ของผู้เล่น): Abyss | 5x Distortion | Chronicle
-        row2 = '<div class="cosmic-grid-row self-spells">' + pileAbyss + spellSlots.join('') + pileChronicle + '</div>';
+        // แถวหน้า (มอนสเตอร์ของผู้เล่น ตาม Wireframe): Exile 0 | 5x Monsters (Pioneer กลาง) | Abyss 0
+        row1 = '<div class="cosmic-grid-row self-monsters">' + pileExile + monSlots.join('') + pileAbyss + '</div>';
+        // แถวล่าง (สเปลล์ของผู้เล่น ตาม Wireframe): Astral Gate 5 | 5x Distortion | Chronicle 34
+        row2 = '<div class="cosmic-grid-row self-spells">' + pileAstral + spellSlots.join('') + pileChronicle + '</div>';
       }
 
       return '<div class="cosmic-side ' + (isOpponent ? 'opp-side' : 'self-side') + '">' +
@@ -1524,13 +1524,48 @@
       return '<div class="zone">' + h + '</div>';
     }
 
-    // มือ
+    // มือผู้เล่น (ถาด 6 ช่องตาม Wireframe พร้อมป้าย "มือ X ใบ")
+    const handCount = me.hand.length;
+    const maxHandSlots = Math.max(6, handCount);
     const handSel = ctx.handSel || new Set();
-    const handHtml = me.hand.map((c, i) => {
-      const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) || null;
-      return cardHtml(c, { reveal: true, chainLink: chainLink, sel: (sel.kind === 'hand' && sel.idx === i) || handSel.has(c.uid), attrs: ' data-hand="' + i + '"' });
-    }).join('');
-    const oppHand = op.hand.map(() => cardHtml(null, { back: true })).join('');
+    let handSlotsHtml = '';
+    for (let i = 0; i < maxHandSlots; i++) {
+      if (i < handCount) {
+        const c = me.hand[i];
+        const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) || null;
+        const isSel = (sel.kind === 'hand' && sel.idx === i) || handSel.has(c.uid);
+        handSlotsHtml += '<div class="cosmic-hand-slot filled">' +
+          cardHtml(c, { reveal: true, chainLink: chainLink, sel: isSel, attrs: ' data-hand="' + i + '"' }) +
+        '</div>';
+      } else {
+        handSlotsHtml += '<div class="cosmic-hand-slot empty"><div class="empty-card-frame"></div></div>';
+      }
+    }
+
+    const isPlacing = sel && !!sel.mode;
+    const handCls = 'cosmic-hand-slots-tray' + (isPlacing ? ' mode-placing' : '');
+    const handSectionHtml = '<div class="cosmic-hand-section">' +
+      '<div class="cosmic-hand-badge">' +
+        '<div class="chb-title">มือ</div>' +
+        '<div class="chb-count">' + handCount + ' ใบ</div>' +
+      '</div>' +
+      '<div class="' + handCls + '" id="handRow">' +
+        handSlotsHtml +
+      '</div>' +
+    '</div>';
+
+    // มือของ AI ด้านบน (5 ช่องตาม Wireframe)
+    const oppHandCount = op.hand.length;
+    const maxOppSlots = Math.max(5, oppHandCount);
+    let oppSlotsHtml = '';
+    for (let i = 0; i < maxOppSlots; i++) {
+      if (i < oppHandCount) {
+        oppSlotsHtml += '<div class="ai-hand-slot filled"><div class="card back"></div></div>';
+      } else {
+        oppSlotsHtml += '<div class="ai-hand-slot empty"></div>';
+      }
+    }
+    const oppHandSectionHtml = '<div class="ai-hand-section">' + oppSlotsHtml + '</div>';
 
     // แถบกลาง: คำแนะนำ + ปุ่ม
     let mid = '';
@@ -1745,7 +1780,7 @@
     root.innerHTML = top + tutorialBar + '<div class="main"><div class="board cosmic-mat-board">' +
       bannerHtml +
       quickActionHtml +
-      '<div class="handrow opp ' + (op.hand.length > 7 ? 'overlapping' : '') + '">' + oppHand + '</div>' +
+      oppHandSectionHtml +
       '<div class="cosmic-arena-layout">' +
         '<div class="cosmic-left-col">' +
           playerPanel(op, 1 - ctx.viewer, true) +
@@ -1760,11 +1795,7 @@
           cosmicPhaseTracker +
         '</div>' +
       '</div>' +
-      (() => {
-        const isPlacing = sel && !!sel.mode;
-        const cls = 'handrow' + (isPlacing ? ' mode-placing' : '') + (me.hand.length > 7 ? ' overlapping' : '');
-        return '<div class="cosmic-hand-tray"><div class="' + cls + '" id="handRow">' + handHtml + '</div></div></div>';
-      })() +
+      handSectionHtml +
       '<div class="side ' + (CG.ui.sideOpen ? '' : 'side-collapsed') + '"><div id="inspect"><div class="m">' + a.inspectHint + '</div></div><h3>' + a.logTitle + '</h3><div id="log"></div></div></div>' +
       modalHtml;
   };
