@@ -1554,18 +1554,21 @@
       '</div>' +
     '</div>';
 
-    // มือของ AI ด้านบน (5 ช่องตาม Wireframe)
+    // มือของ AI ด้านบน (ขนาดกะทัดรัด พอรู้จำนวนตามคำขอ)
     const oppHandCount = op.hand.length;
     const maxOppSlots = Math.max(5, oppHandCount);
     let oppSlotsHtml = '';
     for (let i = 0; i < maxOppSlots; i++) {
       if (i < oppHandCount) {
-        oppSlotsHtml += '<div class="ai-hand-slot filled"><div class="card back"></div></div>';
+        oppSlotsHtml += '<div class="ai-hand-slot filled" title="การ์ดบนมือ AI ใบที่ ' + (i + 1) + '"><div class="card back"></div></div>';
       } else {
         oppSlotsHtml += '<div class="ai-hand-slot empty"></div>';
       }
     }
-    const oppHandSectionHtml = '<div class="ai-hand-section">' + oppSlotsHtml + '</div>';
+    const oppHandSectionHtml = '<div class="ai-hand-section" title="มือ AI: ' + oppHandCount + ' ใบ">' +
+      '<div class="ai-hand-badge"><span>AI</span><span class="ai-hand-badge-num">' + oppHandCount + ' ใบ</span></div>' +
+      '<div class="ai-hand-cards-row">' + oppSlotsHtml + '</div>' +
+    '</div>';
 
     // แถบกลาง: คำแนะนำ + ปุ่ม
     let mid = '';
