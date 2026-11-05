@@ -7717,12 +7717,22 @@ button.gold:hover:not(:disabled) {
   margin: auto !important;
   box-sizing: border-box !important;
   z-index: 2 !important;
-  transform: rotate(0deg) !important;
   transform-origin: center center !important;
   transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease !important;
 }
 
+.cosmic-slot .card:not(.def):not(.fd),
+.cosmic-slot > .card:not(.def):not(.fd) {
+  transform: rotate(0deg) !important;
+}
+
 /* ท่าป้องกันแบบยูกิ: หมุน 90 องศาเป็นแนวนอน (ทั้งการ์ด def และมอนสเตอร์ที่คว่ำ fd) */
+.card.def,
+.card.def.on-field,
+.card.on-field.def,
+.card.on-field.fd,
+.slot[data-zone2="mon"] .card.def,
+.slot[data-zone2="mon"] .card.fd,
 .cosmic-slot[data-zone2="mon"] .card.def,
 .cosmic-slot[data-zone2="mon"] .card.fd,
 .cosmic-slot.cosmic-pioneer .card.def,
@@ -7730,6 +7740,17 @@ button.gold:hover:not(:disabled) {
 .cosmic-slot.cosmic-entity .card.def,
 .cosmic-slot.cosmic-entity .card.fd {
   transform: rotate(90deg) !important;
+}
+
+/* สเปลที่หมอบในโซน Distortion และการ์ดบนมือ ไม่หมุนแนวนอน */
+.cosmic-slot[data-zone2="spell"] .card,
+.cosmic-slot[data-zone2="spell"] .card.fd,
+.cosmic-slot[data-zone2="spell"] .card.mine-fd,
+.cosmic-field-slot .card,
+[data-zone2="field"] .card,
+.handrow .card,
+.hand-scroll-wrap .card {
+  transform: rotate(0deg) !important;
 }
 
 /* การ์ดที่คว่ำ/หมอบอยู่ของเรา (mine-fd) ใน cosmic-slot */
@@ -7763,12 +7784,18 @@ button.gold:hover:not(:disabled) {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
 }
 
+.card.def .pos,
+.slot .card.def .pos,
 .cosmic-slot .card.def .pos,
 .cosmic-slot[data-zone2="mon"] .card.fd .pos {
   transform: rotate(-90deg) !important;
   transform-origin: center center !important;
 }
 
+.card.def .tribute-badge-overlay,
+.card.def .extra-target-badge-overlay,
+.slot .card.def .tribute-badge-overlay,
+.slot .card.def .extra-target-badge-overlay,
 .cosmic-slot .card.def .tribute-badge-overlay,
 .cosmic-slot .card.def .extra-target-badge-overlay,
 .cosmic-slot[data-zone2="mon"] .card.fd .tribute-badge-overlay,

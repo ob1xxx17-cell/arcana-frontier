@@ -1717,7 +1717,7 @@
               const isField = cd && (cd.field || cd.group === 'field');
               const isEquip = cd && (cd.equip || cd.group === 'equip' || ((cd.tags || []).includes('equip')));
               const actText = isField ? (a.activateField || 'ร่ายเวทสนาม') : isEquip ? 'สวมใส่' : (a.activateSpell || 'ใช้สเปล');
-              btns += '<button class="quick-act-btn gold" data-act="actSpell">' + (isEquip ? '⚔️ ' : '⚡ ') + esc(actText) + '</button>';
+              btns += '<button class="quick-act-btn gold" data-act="actSpell:' + sel.idx + '">' + (isEquip ? '⚔️ ' : '⚡ ') + esc(actText) + '</button>';
             }
             if (canSetSpell) btns += '<button class="quick-act-btn" data-act="mode:setSpell">🛡️ ' + esc(a.setSpell || 'Set สเปล') + '</button>';
 

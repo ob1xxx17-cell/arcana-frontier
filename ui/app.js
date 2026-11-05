@@ -5382,27 +5382,62 @@
     if (k === 'cancel') { sel = null; CG.ui.inspectCard = null; render(); }
     else if (k === 'next') { phaseMenuOpen = false; act({ type: 'advancePhase', player: v }); }
     else if (k === 'end') { phaseMenuOpen = false; act({ type: 'endTurn', player: v }); }
-    else if (k.startsWith('mode:')) { sel.mode = k.slice(5); sel.mats = []; sel.matsOk = false; CG.ui.inspectCard = null; render(); }
+    else if (k.startsWith('mode:')) {
+      const modeName = k.slice(5);
+      const hIdx = sel ? sel.idx : undefined;
+      const legals = E().getLegalActions(state, v);
+
+      if (modeName === 'normal' && hIdx !== undefined) {
+        const summonActs = legals.filter(a => a.type === 'normalSummon' && a.handIdx === hIdx);
+        if (summonActs.length > 0) {
+          const chosen = summonActs.find(a => a.slot === 2) || summonActs[0];
+          act(chosen);
+          return;
+        }
+      } else if (modeName === 'set' && hIdx !== undefined) {
+        const setActs = legals.filter(a => a.type === 'setMonster' && a.handIdx === hIdx);
+        if (setActs.length > 0) {
+          const chosen = setActs.find(a => a.slot === 2) || setActs[0];
+          act(chosen);
+          return;
+        }
+      } else if (modeName === 'setSpell' && hIdx !== undefined) {
+        const setSpellActs = legals.filter(a => a.type === 'setSpell' && a.handIdx === hIdx);
+        if (setSpellActs.length > 0) {
+          const chosen = setSpellActs.find(a => a.slot === 2) || setSpellActs[0];
+          act(chosen);
+          return;
+        }
+      }
+
+      sel.mode = modeName; sel.mats = []; sel.matsOk = false; CG.ui.inspectCard = null; render();
+    }
     else if (k === 'mats') { if (!sel.mats.length) return toast(S().errors.MATERIAL_INVALID); sel.matsOk = true; render(); }
     else if (k === 'flip') act({ type: 'flipSummon', player: v, slot: sel.slot });
     else if (k === 'pos') act({ type: 'changePosition', player: v, slot: sel.slot });
     else if (k === 'atk') { sel = { kind: 'attack', slot: sel.slot }; CG.ui.inspectCard = null; render(); }
     else if (k === 'direct') act({ type: 'attack', player: v, from: sel.slot, to: null });
-    else if (k === 'actSpell') {
-      const card = p.hand[sel.idx];
+    else if (k === 'actSpell' || k.startsWith('actSpell:')) {
+      let hIdx = sel ? sel.idx : undefined;
+      if (k.startsWith('actSpell:')) {
+        const parsed = Number(k.slice(9));
+        if (!isNaN(parsed)) hIdx = parsed;
+      }
+      if (hIdx === undefined && sel) hIdx = sel.idx;
+      const card = p.hand[hIdx];
       const cd = card ? E().cardOf(card) : null;
       const isEquip = Boolean(cd && (cd.equip || cd.group === 'equip' || ((cd.tags || []).includes('equip'))));
       if (isEquip) {
         const ownMons = p.monsters.map((m, s) => ({ m, s })).filter(x => x.m && !x.m.faceDown);
         if (ownMons.length === 1) {
-          act({ type: 'activateSpell', player: v, handIdx: sel.idx, targetSlot: ownMons[0].s });
+          act({ type: 'activateSpell', player: v, handIdx: hIdx, targetSlot: ownMons[0].s });
         } else if (ownMons.length > 1) {
           toast('👉 แตะมอนสเตอร์บนสนามเพื่อสวมใส่ ' + (cd.name || 'การ์ดนี้'));
         } else {
           toast('⚠ ไม่มีมอนสเตอร์บนสนามที่จะสวมใส่การ์ดนี้ได้');
         }
       } else {
-        act({ type: 'activateSpell', player: v, handIdx: sel.idx });
+        act({ type: 'activateSpell', player: v, handIdx: hIdx });
       }
     }
     else if (k === 'actSpellField') act({ type: 'activateSpell', player: v, spellSlot: sel.slot });
