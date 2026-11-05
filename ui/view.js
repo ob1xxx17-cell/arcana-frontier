@@ -1265,7 +1265,7 @@
         const wm = c ? '' : '<span class="cosmic-slot-wm">Distortion</span>';
         const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) ||
                           (ctx.chainSlotMap && ctx.chainSlotMap[idx + ':spell:' + i]) || null;
-        spellSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, chainLink: chainLink, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>');
+        spellSlots.push('<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, chainLink: chainLink, attrs: at }) : wm) + '</div>');
       }
 
       let row1 = '', row2 = '';
@@ -1519,7 +1519,7 @@
         const wm = c ? '' : '<span class="slot-watermark spell-wm">Entity</span>';
         const chainLink = (c && ctx.chainMap && ctx.chainMap[c.uid]) ||
                           (ctx.chainSlotMap && ctx.chainSlotMap[idx + ':spell:' + i]) || null;
-        h += '<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, chainLink: chainLink, attrs: at }).replace('class="card', 'style="height:100%" class="card') : wm) + '</div>';
+        h += '<div class="' + cls.join(' ') + '"' + at + '>' + (c ? cardHtml(c, { field: true, reveal: isMe, chainLink: chainLink, attrs: at }) : wm) + '</div>';
       }
       return '<div class="zone">' + h + '</div>';
     }
@@ -1629,7 +1629,7 @@
     let sharedFieldHtml = '';
     if (fsCard) {
       sharedFieldHtml = '<div class="slot cosmic-slot cosmic-field-slot has-card" data-zone2="field">' +
-        cardHtml(fsCard, { field: true, reveal: true, attrs: ' data-zone2="field"' }).replace('class="card', 'style="height:100%" class="card') +
+        cardHtml(fsCard, { field: true, reveal: true, attrs: ' data-zone2="field"' }) +
       '</div>';
     } else {
       sharedFieldHtml = '<div class="slot cosmic-slot cosmic-field-slot empty" data-zone2="field">' +
@@ -1649,11 +1649,15 @@
     '</div>';
 
     const centerDivider = '<div class="cosmic-center-divider">' +
-      '<div class="cosmic-brand-title brand-arcana">Arcana</div>' +
+      '<div class="cosmic-divider-side cosmic-divider-left">' +
+        '<div class="cosmic-brand-title brand-arcana">Arcana</div>' +
+      '</div>' +
       '<div class="cosmic-field-slot-wrap">' +
         sharedFieldHtml +
       '</div>' +
-      '<div class="cosmic-brand-title brand-frontier">Frontier</div>' +
+      '<div class="cosmic-divider-side cosmic-divider-right">' +
+        '<div class="cosmic-brand-title brand-frontier">Frontier</div>' +
+      '</div>' +
     '</div>';
 
     const oppSideHtml = sketchSideHtml(op, 1 - ctx.viewer, true);

@@ -7012,13 +7012,13 @@ button.gold:hover:not(:disabled) {
 }
 
 :root {
-  /* ขนาดช่องสนาม - ย่อลงพอดีเพื่อไม่ให้ล้นจอ และเห็นการ์ดบนมือล่างเต็มใบ 100% */
-  --sq-size: clamp(48px, min(calc((92vw - 190px) / 7.6), calc((100vh - 150px) / 5.2)), 106px);
+  /* ขนาดช่องสนาม - พอดีจอ สัดส่วน 1:1 และการ์ดบนสนามเป็นสี่เหลี่ยมผืนผ้า (5:7) */
+  --sq-size: clamp(46px, min(calc((92vw - 190px) / 7.6), calc((100vh - 85px) / 6.1)), 102px);
   --sq-gap: clamp(2.5px, calc(var(--sq-size) * 0.045), 5px);
   --sketch-panel-w: clamp(120px, calc(var(--sq-size) * 1.35), 170px);
   --sketch-side-gap: clamp(6px, calc(var(--sq-size) * 0.1), 14px);
   --sketch-total-w: calc(7 * var(--sq-size) + 6 * var(--sq-gap) + var(--sketch-side-gap) + var(--sketch-panel-w));
-  --hand-card-h: clamp(68px, calc(var(--sq-size) * 0.94), 102px);
+  --hand-card-h: clamp(66px, calc(var(--sq-size) * 0.92), 98px);
   --hand-card-w: calc(var(--hand-card-h) * 5 / 7);
   --wood-border: #201206;
   --slot-bg: #ffffff;
@@ -7108,19 +7108,20 @@ button.gold:hover:not(:disabled) {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
+  gap: clamp(2px, 0.6vh, 6px) !important;
   width: 100% !important;
   height: 100vh !important;
   max-height: 100vh !important;
   min-height: 0 !important;
   position: relative !important;
   box-sizing: border-box !important;
-  padding: clamp(2px, 0.4vh, 5px) clamp(6px, 1vw, 14px) clamp(4px, 0.6vh, 8px) clamp(6px, 1vw, 14px) !important;
+  padding: clamp(2px, 0.3vh, 5px) clamp(6px, 1vw, 14px) !important;
   overflow: hidden !important;
 }
 
 .cosmic-arena-layout {
-  flex: 1 1 auto !important;
+  flex: 0 0 auto !important;
   min-height: 0 !important;
   display: flex !important;
   flex-direction: row !important;
@@ -7288,25 +7289,38 @@ button.gold:hover:not(:disabled) {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: clamp(14px, 2.5vw, 36px) !important;
-  width: 100% !important;
-  margin: 1px 0 !important;
+  gap: var(--sq-gap, 4px) !important;
+  width: calc(7 * var(--sq-size) + 6 * var(--sq-gap, 4px)) !important;
+  max-width: 100% !important;
+  margin: 1px auto !important;
+}
+
+.cosmic-divider-side {
+  width: calc(3 * var(--sq-size) + 2 * var(--sq-gap, 4px)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 .cosmic-brand-title {
   font-family: 'Cinzel', 'Georgia', serif !important;
-  font-size: clamp(1.2rem, 1.8vw, 1.9rem) !important;
+  font-size: clamp(1rem, calc(var(--sq-size) * 0.22), 1.6rem) !important;
   font-weight: 700 !important;
   color: #f7fafc !important;
-  letter-spacing: 2px !important;
+  letter-spacing: 3px !important;
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.8) !important;
   user-select: none !important;
+  text-align: center !important;
 }
 
 .cosmic-field-slot-wrap {
+  width: var(--sq-size) !important;
+  height: var(--sq-size) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 /* Right Column: Phase Pillar */
@@ -7404,9 +7418,9 @@ button.gold:hover:not(:disabled) {
 
 /* ================= PORTAL SLOT ARTWORK ON BOTH SIDES (OPPONENT & PLAYER) ================= */
 .cosmic-slot.cosmic-pioneer {
-  background: #0d1629 url('assets/board/slot_pioneer.png') center center / cover no-repeat !important;
-  border: 2.5px solid #facc15 !important;
-  box-shadow: 0 0 18px rgba(250, 204, 21, 0.7), inset 0 0 10px rgba(250, 204, 21, 0.4) !important;
+  background: #0d1629 url('assets/board/slot_pioneer.png?v=6.0') center center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.7), inset 0 0 10px rgba(250, 204, 21, 0.3) !important;
   border-radius: 8px !important;
 }
 .cosmic-slot.cosmic-pioneer .cosmic-slot-wm {
@@ -7503,11 +7517,11 @@ button.gold:hover:not(:disabled) {
 .cosmic-arena-layout .cosmic-slot.cosmic-field-slot,
 .cosmic-field-slot {
   width: var(--sq-size) !important;
-  height: clamp(34px, calc(var(--sq-size) * 0.72), 64px) !important;
-  aspect-ratio: auto !important;
+  height: var(--sq-size) !important;
+  aspect-ratio: 1 / 1 !important;
   background: #3730a3 url('assets/board/slot_field.png') center center / cover no-repeat !important;
-  border: 2px solid #818cf8 !important;
-  box-shadow: 0 0 16px rgba(129, 140, 248, 0.6) !important;
+  border: 2.5px solid #818cf8 !important;
+  box-shadow: 0 0 18px rgba(129, 140, 248, 0.6) !important;
   border-radius: 8px !important;
 }
 .cosmic-field-slot .cosmic-slot-wm {
@@ -7685,6 +7699,119 @@ button.gold:hover:not(:disabled) {
   transform: translateY(-16px) scale(1.08) !important;
   z-index: 50 !important;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.85), 0 0 16px #ecc94b !important;
+}
+
+/* ================= CARDS INSIDE COSMIC BOARD SLOTS ================= */
+/* การ์ดในช่องสนาม: ทรงสี่เหลี่ยมผืนผ้า (5:7) พอดีช่อง ไม่ล้นกรอบ ไม่บังขอบช่อง */
+.cosmic-slot .card,
+.cosmic-slot > .card {
+  position: relative !important;
+  height: calc(var(--sq-size) * 0.88) !important;
+  width: calc(var(--sq-size) * 0.88 * 5 / 7) !important;
+  max-height: calc(var(--sq-size) * 0.88) !important;
+  max-width: calc(var(--sq-size) * 0.88 * 5 / 7) !important;
+  aspect-ratio: 5 / 7 !important;
+  border-radius: 5px !important;
+  border-width: 1.5px !important;
+  border-style: solid !important;
+  margin: auto !important;
+  box-sizing: border-box !important;
+  z-index: 2 !important;
+  transform: rotate(0deg) !important;
+  transform-origin: center center !important;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease !important;
+}
+
+/* ท่าป้องกันแบบยูกิ: หมุน 90 องศาเป็นแนวนอน (ทั้งการ์ด def และมอนสเตอร์ที่คว่ำ fd) */
+.cosmic-slot[data-zone2="mon"] .card.def,
+.cosmic-slot[data-zone2="mon"] .card.fd,
+.cosmic-slot.cosmic-pioneer .card.def,
+.cosmic-slot.cosmic-pioneer .card.fd,
+.cosmic-slot.cosmic-entity .card.def,
+.cosmic-slot.cosmic-entity .card.fd {
+  transform: rotate(90deg) !important;
+}
+
+/* การ์ดที่คว่ำ/หมอบอยู่ของเรา (mine-fd) ใน cosmic-slot */
+.cosmic-slot .card.mine-fd,
+.cosmic-slot > .card.mine-fd {
+  opacity: 0.58 !important;
+  filter: grayscale(35%) brightness(0.78) contrast(0.92) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  transition: opacity 0.2s ease, filter 0.2s ease, transform 0.22s ease !important;
+}
+
+.cosmic-slot .card.mine-fd:hover,
+.cosmic-slot > .card.mine-fd:hover {
+  opacity: 0.9 !important;
+  filter: grayscale(10%) brightness(0.95) contrast(0.98) !important;
+}
+
+/* ตราสัญลักษณ์สถานะ (⚔ / 🛡) */
+.cosmic-slot .card .pos {
+  position: absolute !important;
+  top: 2px !important;
+  right: 2px !important;
+  bottom: auto !important;
+  left: auto !important;
+  font-size: clamp(0.64rem, calc(var(--sq-size) * 0.1), 0.9rem) !important;
+  z-index: 6 !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  border-radius: 4px !important;
+  padding: 1px 3px !important;
+  line-height: 1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+}
+
+.cosmic-slot .card.def .pos,
+.cosmic-slot[data-zone2="mon"] .card.fd .pos {
+  transform: rotate(-90deg) !important;
+  transform-origin: center center !important;
+}
+
+.cosmic-slot .card.def .tribute-badge-overlay,
+.cosmic-slot .card.def .extra-target-badge-overlay,
+.cosmic-slot[data-zone2="mon"] .card.fd .tribute-badge-overlay,
+.cosmic-slot[data-zone2="mon"] .card.fd .extra-target-badge-overlay {
+  transform: rotate(-90deg) !important;
+  transform-origin: center center !important;
+}
+
+.cosmic-slot .card .card-stats {
+  padding: 0 1px !important;
+  gap: 1px !important;
+  margin-bottom: 1px !important;
+}
+
+.cosmic-slot .card .card-name {
+  font-size: clamp(0.5rem, calc(var(--sq-size) * 0.08), 0.74rem) !important;
+  padding: 1px 2px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.cosmic-slot .card .stat-pill {
+  font-size: clamp(0.52rem, calc(var(--sq-size) * 0.08), 0.74rem) !important;
+  padding: 0 2px !important;
+  min-width: 14px !important;
+  height: clamp(12px, calc(var(--sq-size) * 0.13), 17px) !important;
+}
+
+.cosmic-slot .card .stat-circle {
+  font-size: clamp(0.55rem, calc(var(--sq-size) * 0.084), 0.78rem) !important;
+  width: clamp(13px, calc(var(--sq-size) * 0.135), 18px) !important;
+  height: clamp(13px, calc(var(--sq-size) * 0.135), 18px) !important;
+}
+
+.cosmic-slot .card .icon-circle {
+  width: clamp(13px, calc(var(--sq-size) * 0.14), 19px) !important;
+  height: clamp(13px, calc(var(--sq-size) * 0.14), 19px) !important;
+}
+.cosmic-slot .card .icon-circle img {
+  width: 75% !important;
+  height: 75% !important;
 }
 
 /* ================= HIDE TOP BAR TO MAXIMIZE BOARD ================= */
