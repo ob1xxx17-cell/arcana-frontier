@@ -1723,7 +1723,7 @@
 
             const effActs = menuActions.filter(x => x.type === 'activateEffect' && x.enabled);
             effActs.forEach(eb => {
-              btns += '<button class="quick-act-btn gold" data-act="actEff:hand:' + esc(eb.action.effectId) + '">✨ ' + esc(eb.label) + '</button>';
+              btns += '<button class="quick-act-btn gold" data-act="actEff:hand:' + sel.idx + ':' + esc(eb.action.effectId) + '">✨ ' + esc(eb.label) + '</button>';
             });
           } else if (sel.kind === 'field') {
             if (cardInst.faceDown) {
@@ -1743,7 +1743,7 @@
 
               const effActs = menuActions.filter(x => x.type === 'activateEffect' && x.enabled);
               effActs.forEach(eb => {
-                btns += '<button class="quick-act-btn gold" data-act="actEff:field:' + esc(eb.action.effectId) + '">✨ ' + esc(eb.label) + '</button>';
+                btns += '<button class="quick-act-btn gold" data-act="actEff:field:' + sel.slot + ':' + esc(eb.action.effectId) + '">✨ ' + esc(eb.label) + '</button>';
               });
             }
           } else if (sel.kind === 'spell') {

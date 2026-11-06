@@ -5159,6 +5159,14 @@
 
     // 3) การ์ดฟิลด์สเปล
     if (fz) {
+      if (sel && sel.kind === 'hand') {
+        const legals = E().getLegalActions(state, v);
+        const actSpell = legals.find(a => a.type === 'activateSpell' && a.handIdx === sel.idx);
+        if (actSpell) {
+          act(actSpell);
+          return;
+        }
+      }
       const fsCard = p.fieldSpell || state.players[1 - v].fieldSpell;
       if (fsCard) {
         CG.ui.inspectCard = { inst: fsCard, isOpponent: !p.fieldSpell };
@@ -5258,15 +5266,16 @@
     }
     if (!slot) {
       if (sel && sel.kind === 'hand' && !b) {
-        const card = p.hand[sel.idx];
-        const cd = card ? E().cardOf(card) : null;
-        if (cd && cd.type === 'spell' && cd.group === 'normal') {
-          const legals = E().getLegalActions(state, v);
-          const actSpell = legals.find(a => a.type === 'activateSpell' && a.handIdx === sel.idx);
-          if (actSpell) {
-            act(actSpell);
-            return;
-          }
+        const legals = E().getLegalActions(state, v);
+        const actSpell = legals.find(a => a.type === 'activateSpell' && a.handIdx === sel.idx);
+        if (actSpell) {
+          act(actSpell);
+          return;
+        }
+        const actEff = legals.find(a => a.type === 'activateEffect' && a.handIdx === sel.idx);
+        if (actEff) {
+          act(actEff);
+          return;
         }
       }
       if (sel && !b) {
@@ -5359,6 +5368,7 @@
   }
 
   function onAct(k, v) {
+    const p = state.players[v];
     if (k === 'exitTutorial') { lobby(); return; }
     if (k === 'closeModal') { sel = null; CG.ui.inspectCard = null; CG.ui.inspectPendingCard = null; render(); return; }
     if (k === 'deselectMulligan') {
@@ -5395,11 +5405,17 @@
         if (!isNaN(parsed)) hIdx = parsed;
       }
       if (hIdx === undefined && sel) hIdx = sel.idx;
-      const card = p.hand[hIdx];
+      const legals = E().getLegalActions(state, v);
+      const legalSpell = legals.find(a => a.type === 'activateSpell' && a.handIdx === hIdx);
+      if (legalSpell) {
+        act(legalSpell);
+        return;
+      }
+      const card = p && p.hand ? p.hand[hIdx] : null;
       const cd = card ? E().cardOf(card) : null;
       const isEquip = Boolean(cd && (cd.equip || cd.group === 'equip' || ((cd.tags || []).includes('equip'))));
       if (isEquip) {
-        const ownMons = p.monsters.map((m, s) => ({ m, s })).filter(x => x.m && !x.m.faceDown);
+        const ownMons = p ? p.monsters.map((m, s) => ({ m, s })).filter(x => x.m && !x.m.faceDown) : [];
         if (ownMons.length === 1) {
           act({ type: 'activateSpell', player: v, handIdx: hIdx, targetSlot: ownMons[0].s });
         } else if (ownMons.length > 1) {
@@ -5421,8 +5437,14 @@
         handIdx = Number(parts[0]);
         effectId = parts[1];
       }
+      const legals = E().getLegalActions(state, v);
+      const legalEff = legals.find(a => a.type === 'activateEffect' && a.handIdx === handIdx && a.effectId === effectId);
       CG.ui.inspectCard = null;
-      act({ type: 'activateEffect', player: v, handIdx, effectId });
+      if (legalEff) {
+        act(legalEff);
+      } else {
+        act({ type: 'activateEffect', player: v, handIdx, effectId });
+      }
     }
     else if (k.startsWith('actEff:field:')) {
       const rest = k.slice(13);
@@ -5433,8 +5455,14 @@
         slot = Number(parts[0]);
         effectId = parts[1];
       }
+      const legals = E().getLegalActions(state, v);
+      const legalEff = legals.find(a => a.type === 'activateEffect' && a.slot === slot && a.effectId === effectId);
       CG.ui.inspectCard = null;
-      act({ type: 'activateEffect', player: v, slot, effectId });
+      if (legalEff) {
+        act(legalEff);
+      } else {
+        act({ type: 'activateEffect', player: v, slot, effectId });
+      }
     }
   }
 
