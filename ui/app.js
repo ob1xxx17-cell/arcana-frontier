@@ -5382,36 +5382,7 @@
     if (k === 'cancel') { sel = null; CG.ui.inspectCard = null; render(); }
     else if (k === 'next') { phaseMenuOpen = false; act({ type: 'advancePhase', player: v }); }
     else if (k === 'end') { phaseMenuOpen = false; act({ type: 'endTurn', player: v }); }
-    else if (k.startsWith('mode:')) {
-      const modeName = k.slice(5);
-      const hIdx = sel ? sel.idx : undefined;
-      const legals = E().getLegalActions(state, v);
-
-      if (modeName === 'normal' && hIdx !== undefined) {
-        const summonActs = legals.filter(a => a.type === 'normalSummon' && a.handIdx === hIdx);
-        if (summonActs.length > 0) {
-          const chosen = summonActs.find(a => a.slot === 2) || summonActs[0];
-          act(chosen);
-          return;
-        }
-      } else if (modeName === 'set' && hIdx !== undefined) {
-        const setActs = legals.filter(a => a.type === 'setMonster' && a.handIdx === hIdx);
-        if (setActs.length > 0) {
-          const chosen = setActs.find(a => a.slot === 2) || setActs[0];
-          act(chosen);
-          return;
-        }
-      } else if (modeName === 'setSpell' && hIdx !== undefined) {
-        const setSpellActs = legals.filter(a => a.type === 'setSpell' && a.handIdx === hIdx);
-        if (setSpellActs.length > 0) {
-          const chosen = setSpellActs.find(a => a.slot === 2) || setSpellActs[0];
-          act(chosen);
-          return;
-        }
-      }
-
-      sel.mode = modeName; sel.mats = []; sel.matsOk = false; CG.ui.inspectCard = null; render();
-    }
+    else if (k.startsWith('mode:')) { sel.mode = k.slice(5); sel.mats = []; sel.matsOk = false; CG.ui.inspectCard = null; render(); }
     else if (k === 'mats') { if (!sel.mats.length) return toast(S().errors.MATERIAL_INVALID); sel.matsOk = true; render(); }
     else if (k === 'flip') act({ type: 'flipSummon', player: v, slot: sel.slot });
     else if (k === 'pos') act({ type: 'changePosition', player: v, slot: sel.slot });
