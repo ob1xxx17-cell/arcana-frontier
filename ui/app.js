@@ -4704,7 +4704,10 @@
     const isActivation = ['activateSpell', 'activateEffect', 'activateResponse'].includes(action.type) || r.events.some(e => e.type === 'chainLinkAdded');
 
     if (isActivation) {
-      const bannerDelay = currentSpeed === 'slow' ? 4800 : (currentSpeed === 'fast' ? 2000 : 3200);
+      const isPlayer = actor === viewer();
+      const bannerDelay = isPlayer
+        ? (currentSpeed === 'slow' ? 2200 : (currentSpeed === 'fast' ? 800 : 1300))
+        : (currentSpeed === 'slow' ? 4200 : (currentSpeed === 'fast' ? 1600 : 2600));
       const bannerData = formatBotBanner(state, action, r.events, cardBeforeAct, actor);
       if (globalThis.AudioFX && globalThis.AudioFX.play) {
         globalThis.AudioFX.play('spell');
@@ -4713,7 +4716,7 @@
         if (isResolving && resolveEvents.length >= 1) {
           playChainResolutionSequence(resolveEvents, () => {
             afterAction();
-          });
+          }, true);
         } else {
           afterAction();
         }
@@ -4724,7 +4727,7 @@
     if (isResolving && resolveEvents.length >= 1) {
       playChainResolutionSequence(resolveEvents, () => {
         afterAction();
-      });
+      }, false);
       return true;
     }
 
@@ -5707,42 +5710,32 @@
   }
 
   // ⛓️ เล่นแอนิเมชันแก้ผล Chain ทีละใบตามกฎยูกิโอ (LIFO: จากใบล่าสุดย้อนไปใบแรก)
-  function playChainResolutionSequence(resolveEvents, onDone) {
+  function playChainResolutionSequence(resolveEvents, onDone, skipIfSingleSuccess) {
     if (!resolveEvents || resolveEvents.length === 0) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+
+    // หากเป็นการแก้ผลลิงก์เดียวที่สำเร็จปกติ และเพิ่งประกาศตอนเริ่มร่ายไปแล้ว ไม่ต้องเด้งซ้ำซ้อน
+    if (skipIfSingleSuccess && resolveEvents.length === 1 && resolveEvents[0].type === 'chainLinkResolved') {
+      botBusy = false;
+      render();
       if (typeof onDone === 'function') onDone();
       return;
     }
 
     botBusy = true;
     let idx = 0;
-    const stepDelay = currentSpeed === 'slow' ? 3200 : (currentSpeed === 'fast' ? 1400 : 2400);
+    const stepDelay = currentSpeed === 'slow' ? 2400 : (currentSpeed === 'fast' ? 1000 : 1600);
 
     function nextStep() {
       if (idx >= resolveEvents.length) {
         CG.ui.resolvingLinkId = null;
         CG.ui.resolvingUid = null;
         CG.ui.resolvingNegated = false;
+        botBusy = false;
         render();
-
-        // แบนเนอร์แสดงว่าแก้ผล Chain ครบสมบูรณ์แล้ว (เมื่อมีมากกว่า 1 ลิงก์)
-        if (resolveEvents.length > 1) {
-          const doneBanner = {
-            icon: '✅',
-            title: 'จบการแก้ผล Chain ครบทุกใบ!',
-            cardName: 'การแก้ผลสำเร็จสมบูรณ์',
-            stats: 'แก้ผลตามลำดับ Chain Link เรียบร้อย (LIFO)',
-            desc: 'ผลของการ์ดทั้งหมดใน Chain ได้ถูกคลี่คลายตามกฎยูกิโอเรียบร้อยแล้ว'
-          };
-          showBotBanner(doneBanner, Math.max(1000, stepDelay - 400), () => {
-            botBusy = false;
-            render();
-            if (typeof onDone === 'function') onDone();
-          });
-        } else {
-          botBusy = false;
-          render();
-          if (typeof onDone === 'function') onDone();
-        }
+        if (typeof onDone === 'function') onDone();
         return;
       }
 
@@ -5924,7 +5917,7 @@
           botBusy = false;
           render();
           schedule();
-        });
+        }, true);
       } else {
         const nextBot = botToAct();
         if (nextBot !== null) {
