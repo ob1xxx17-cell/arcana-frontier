@@ -7418,7 +7418,7 @@ button.gold:hover:not(:disabled) {
 
 /* ================= PORTAL SLOT ARTWORK ON BOTH SIDES (OPPONENT & PLAYER) ================= */
 .cosmic-slot.cosmic-pioneer {
-  background: transparent url('assets/board/slot_pioneer.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_pioneer.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 16px rgba(250, 204, 21, 0.45) !important;
   border-radius: 8px !important;
@@ -7430,7 +7430,7 @@ button.gold:hover:not(:disabled) {
 }
 
 .cosmic-slot.cosmic-entity {
-  background: transparent url('assets/board/slot_entity.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_entity.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 14px rgba(249, 115, 22, 0.4) !important;
   border-radius: 8px !important;
@@ -7442,7 +7442,7 @@ button.gold:hover:not(:disabled) {
 }
 
 .cosmic-slot.cosmic-distortion {
-  background: transparent url('assets/board/slot_distortion.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_distortion.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 14px rgba(45, 212, 191, 0.4) !important;
   border-radius: 8px !important;
@@ -7454,7 +7454,7 @@ button.gold:hover:not(:disabled) {
 }
 
 .cosmic-slot.cosmic-chronicle {
-  background: transparent url('assets/board/slot_chronicle.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_chronicle.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.4) !important;
   border-radius: 8px !important;
@@ -7469,7 +7469,7 @@ button.gold:hover:not(:disabled) {
 }
 
 .cosmic-slot.cosmic-abyss {
-  background: transparent url('assets/board/slot_abyss.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_abyss.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 14px rgba(168, 85, 247, 0.4) !important;
   border-radius: 8px !important;
@@ -7484,7 +7484,7 @@ button.gold:hover:not(:disabled) {
 }
 
 .cosmic-slot.cosmic-astral {
-  background: transparent url('assets/board/slot_astral.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_astral.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 14px rgba(6, 182, 212, 0.4) !important;
   border-radius: 8px !important;
@@ -7499,7 +7499,7 @@ button.gold:hover:not(:disabled) {
 }
 
 .cosmic-slot.cosmic-exile {
-  background: transparent url('assets/board/slot_exile.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_exile.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.4) !important;
   border-radius: 8px !important;
@@ -7519,7 +7519,7 @@ button.gold:hover:not(:disabled) {
   width: var(--sq-size) !important;
   height: var(--sq-size) !important;
   aspect-ratio: 1 / 1 !important;
-  background: transparent url('assets/board/slot_field.png?v=6.5') center center / 100% 100% no-repeat !important;
+  background: transparent url('assets/board/slot_field.png?v=7.0') center center / 100% 100% no-repeat !important;
   border: none !important;
   box-shadow: 0 0 16px rgba(129, 140, 248, 0.45) !important;
   border-radius: 8px !important;
@@ -7704,14 +7704,17 @@ button.gold:hover:not(:disabled) {
 /* ================= CARDS INSIDE COSMIC BOARD SLOTS ================= */
 /* การ์ดในช่องสนาม: ทรงสี่เหลี่ยมผืนผ้า (5:7) พอดีช่อง ไม่ล้นกรอบ ไม่บังขอบช่อง */
 .cosmic-slot .card,
-.cosmic-slot > .card {
+.cosmic-slot > .card,
+.slot.cosmic-slot .card,
+.slot.cosmic-slot > .card,
+.card.on-field {
   position: relative !important;
-  height: calc(var(--sq-size) * 0.88) !important;
-  width: calc(var(--sq-size) * 0.88 * 5 / 7) !important;
-  max-height: calc(var(--sq-size) * 0.88) !important;
-  max-width: calc(var(--sq-size) * 0.88 * 5 / 7) !important;
+  height: calc(var(--sq-size) * 0.82) !important;
+  width: calc(var(--sq-size) * 0.82 * 5 / 7) !important;
+  max-height: calc(var(--sq-size) * 0.82) !important;
+  max-width: calc(var(--sq-size) * 0.82 * 5 / 7) !important;
   aspect-ratio: 5 / 7 !important;
-  border-radius: 5px !important;
+  border-radius: 4px !important;
   border-width: 1.5px !important;
   border-style: solid !important;
   margin: auto !important;
@@ -9602,6 +9605,13 @@ button.gold:hover:not(:disabled) {
     padding: 2px !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28) !important;
   }
+  .slot.cosmic-slot,
+  .cosmic-slot {
+    border: none !important;
+    border-width: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
   .sketch-slot-wm {
     font-size: clamp(0.52rem, calc(var(--sq-size) * 0.145), 0.78rem) !important;
     font-weight: 900 !important;
@@ -9642,16 +9652,25 @@ button.gold:hover:not(:disabled) {
     font-weight: 900 !important;
   }
 
-  /* การ์ดในช่องสนาม */
+  /* การ์ดในช่องสนาม: ทรงสี่เหลี่ยมผืนผ้า (5:7) พอดีช่อง ไม่ล้นกรอบ ไม่บังขอบช่อง */
   .sketch-slot .card,
-  .sketch-slot > .card {
-    height: calc(var(--sq-size) - 6px) !important;
-    width: calc((var(--sq-size) - 6px) * 5 / 7) !important;
-    max-height: calc(var(--sq-size) - 6px) !important;
-    max-width: calc((var(--sq-size) - 6px) * 5 / 7) !important;
+  .sketch-slot > .card,
+  .cosmic-slot .card,
+  .cosmic-slot > .card,
+  .slot.cosmic-slot .card,
+  .slot.cosmic-slot > .card,
+  .slot[data-slot] .card,
+  .slot[data-spell-slot] .card,
+  .card.on-field {
+    height: calc(var(--sq-size) * 0.82) !important;
+    width: calc(var(--sq-size) * 0.82 * 5 / 7) !important;
+    max-height: calc(var(--sq-size) * 0.82) !important;
+    max-width: calc(var(--sq-size) * 0.82 * 5 / 7) !important;
+    aspect-ratio: 5 / 7 !important;
     border-width: 1.5px !important;
     border-radius: 4px !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    margin: auto !important;
   }
 
   /* แผงขวาตามแบบร่าง (Frontier Point, Profile, Acana) แสดงข้อมูลคมชัด */
